@@ -182,3 +182,38 @@ CITATION-START and POSITIVITY-START cover the start line of a cited
 range, because only its end line was anchored. NESTED-UNLISTED and
 NESTED-TRACKED cover an initialized nested checkout, whose files no leg
 read before.
+
+## Stage B 2026-09-10
+
+`python3 -P dev/stage-b-mutations.py` runs the following source mutations
+in a temporary repository copy, with positive and restored controls.
+The final result was `PASS STAGE-B-MUTATIONS killed=5 restored=1`.
+
+| Mutant | Change | Failing leg |
+| --- | --- | --- |
+| SIXTH-SHAPE | Append `SSixth` to the pinned shape declaration inventory, rebuild the driver and derive its counts. | R0-COUNT: `built counts differ`; the kernel reports six declared shapes against the inherited five. |
+| HOUSE-EXCEPTION | Append one exception site to `surface/schema.ml`. | `dev/house.sh` runs `panicscan --deny present --min present --strict`, which prints `1 finding(s) at or above --deny=present, gate failed (exit 1)`. |
+| NESTED-OP | Replace an inline positive Script declaration with `Op (Script A)` in a Script constructor field. | The inherited checker returns `not strictly positive`. |
+| LUA-BOUND | Add a 321-line `print/lua.ml` before the implementation stage. | TRUSTED-LINES reports `lua=321/320` and exits nonzero. |
+| MISSING-ENCODER | Remove `vendor/kanon/wasm/gc_encode.ml`. | TRUSTED-LINES reports a missing source and exits nonzero. |
+
+One further control is not a mutant. It strips the final newline from
+`vendor/kanon/lib/order.ml` and requires `dev/trusted-lines.py` and the
+carried `dev/inherited/trusted-lines.sh` to print one kernel number. It
+prints `AGREED NEWLINE-COUNT by both trusted-line counters`. Before the
+counters were aligned, the same tree printed `kernel=3997/4000` from the
+Python leg and `kernel=3996/4000` from the carried leg in one ladder run.
+
+The checker fixture suite separately includes invalid indexes and tags,
+integer overflow and noncanonical spelling, WRONGTYPE, slot mismatch,
+zero fuel, direct refinement construction, binder capture, duplicate
+names, nested and negative recursion, missing imports, import cycles,
+sibling-scope leakage, late and malformed headers, a local binder named
+`schema`, one named `import` and one named `import` that is applied to a
+capitalised name, an imported export
+used as a local binder, source-root escape through a symlink and the
+1 MiB source limit, each of the last three with a positive control.
+Fifty-nine positive and negative checks passed, and the suite now fails
+when its case count differs from the recorded number.
+The existing Stage A battery still killed all 37 of its mutants with
+zero survivors and a restored control.

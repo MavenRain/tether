@@ -1,0 +1,6 @@
+; Build-only imports expose the pin's private library in Tether's scope.
+(copy_files ../../vendor/kanon/lib/*.ml)
+(copy_files ../../vendor/kanon/lib/*.mli)
+(library
+ (name kanon_kernel)
+ (libraries zarith))

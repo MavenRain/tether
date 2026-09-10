@@ -1,7 +1,8 @@
 # tether specification
 
-Stage A, 2026-09-09. The foundation below is implemented. The Redis surface,
-printers and hosts are the M0 contract for subsequent stages.
+Stage B, 2026-09-10. The foundation and single-slot counter surface below
+are implemented. See `dev/STAGE-B.md` for the concrete syntax and current
+limits. Printers and hosts remain subsequent-stage M0 work.
 
 ## Foundation (inherited)
 
@@ -84,8 +85,9 @@ global metatable.
 ## Bounds and milestone limits
 
 Inherited trusted lines: kernel 3997/4000 and encoder 246/600. Future M0
-bounds are lua N/320, sh N/240, store N/200, host-node N/300 and host-rest
-N/300, measured from Stage B. The store and printers live outside `lib`.
+bounds are lua 0/320, sh 0/240, store 0/200, host-node 0/300 and host-rest
+0/300, measured at Stage B before those components are implemented.
+The store and printers live outside `lib`.
 OCaml uses explicit Result/Option errors, exhaustive sum matches and total
 combinators, with no exceptions, partial indexing or imperative loops.
 

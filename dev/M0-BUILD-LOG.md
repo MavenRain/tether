@@ -366,3 +366,126 @@ admitted=3, kernel=3997/4000 and encoder=246/600. Mutations: killed=37,
 survived=0, restored=1. Rounds 1 and 2 ran in run wf_a7b4ced8-ca1,
 rounds 3 and 4 in run wf_8f24505c-10d and the rest in this run.
 Fix rounds: 5.
+
+### Stage B 2026-09-10: surface and checked counter
+
+Built from committed Stage A, `f5ff99e`, in an isolated copy at
+`/Users/oobi/Documents/gpt18/tether-stage-b`. The vendor remains at
+`2c2e6e6` with no edits or patches. The slice adds the surface library,
+module resolver, literal schema expansion, Redis prelude, checked
+constructor wrappers and a development checker. `examples/M0Spine.tet`
+checks and erases through the inherited kernel. `dev/STAGE-B.md` records
+the concrete syntax and remaining milestone limits.
+
+Two integration details were resolved locally. Dune build-only copies
+expose the pin's private libraries across its project boundary. Checked
+ordinary function wrappers bridge the inherited surface's refusal of
+parameterized constructor applications. The wrappers add no axioms.
+Fault uses six byte-payload legs so inherited proof erasure retains its
+runtime tag. The integer fixture retains its decimal bytes beyond 2^53.
+
+Validation used OCaml 5.2.1 and Dune 3.24.2 from `zxcaml-p1`, with the
+recorded host tools and panicscan on PATH. Both commands exited zero:
+
+```sh
+sh dev/stage-b.sh
+python3 -P dev/stage-a-mutations.py
+```
+
+| Gate | Result |
+| --- | --- |
+| PIN / CARRY | `PIN 2c2e6e6 unlisted=0`; `CARRY files=36 diff=0 vendor=32 copies=4` |
+| R0-COUNT | `formers=2 schema=4 shapes=5 admitted=3` |
+| Inherited audit and denominators | `PASS STAGE-A` |
+| Build / house | Warnings as errors; `panicscan --deny present` found no site at present severity or above; `PASS HOUSE` |
+| Surface / erasure fixtures | `PASS STAGE-B-SURFACE cases=59` |
+| Stage B source mutations | `PASS STAGE-B-MUTATIONS killed=5 restored=1` |
+| Stage A mutation regression | `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1` |
+| Complete Stage B ladder | `PASS STAGE-B` |
+
+Measured bounds: kernel=3997/4000, encoder=246/600, lua=0/320, sh=0/240,
+store=0/200, host-node=0/300 and host-rest=0/300. The five zero counts are
+measurements before those components ship. No Redis or timing result is
+claimed. `runtime/redis.kan` is in the ruled trusted base of `prog.wasm`
+and no bound counts it; `dev/STAGE-B.md` records that gap and the
+ratification row Stage C needs to close it.
+
+`.kanon-exec/run-hvujx2` in the isolated copy captures the first Stage B
+ladder run, stdout SHA256
+`ea97f51d6227a9ac2dbe6da68b2270f7e963c42f525fe817f55b7de74a6e3d7a`. That
+capture predates the gate corrections in the table above, so it prints
+`cases=48` and `killed=4`. The Stage A mutation capture is
+`.kanon-exec/run-vUq51z`.
+
+### Review round 2026-09-10 (Stage B)
+
+| Id | Severity | File | Fix or ruling |
+| --- | --- | --- | --- |
+| C-1 | high | `dev/house.sh` | `dev/house.sh:9` runs `panicscan --deny present --min present --strict surface dev/surface_check.ml`, and the new HOUSE-EXCEPTION mutant fails it. |
+| B-2 | high | `dev/stage-b-tests.py` | `EXPECTED_CASES` is compared before the print, so a deleted fixture prints `FAIL STAGE-B-SURFACE` and exits 1. |
+| A-2 | medium | `surface/elab.ml` | `surface/elab.ml:68` reads `base.owners`, so only prelude names and `Constructors.prefix` wrappers stay protected; new fixture `import-shadow-binder`. |
+| A-1 | medium | `surface/parser.ml` | The `body` arm of `headers` refuses a remaining `import` or `schema` token with `Diagnostic.Syntax`; new fixtures `late-schema`, `late-import` and `malformed-schema`. |
+| B-3 | medium | `dev/check.py` | `dev/check.py` names each refusal on standard error as `HOST-REFUSED <request>: ...`; new fixtures `host-escape`, `host-symlink-inside`, `host-oversize` and `host-limit-edge`. |
+| B-4 | medium | `dev/trusted-lines.py` | `dev/trusted-lines.py:30` counts newlines only for the kernel and encoder groups; the NEWLINE-COUNT control asserts that both counters agree. |
+| D-2 | medium | `dev/trusted-lines.py` | `dev/STAGE-B.md` and this block record the member of the ruled trusted base that no bound counts, name Stage C as the closing stage and ask for a ratification row; no group and no bound moved. |
+| ND-1-1 | medium | `surface/parser.ml` | The walk `late_header previous body` refuses exactly two token shapes, so a binder of the same name stays a term; new fixtures `binder-named-schema` and `binder-named-import`. |
+| ND-1-2 | medium | `dev/STAGE-B.md` | The trusted base paragraph now names both `.kan` prelude sources, `runtime/reactor.kan` and `runtime/redis.kan`, as the members that no bound counts. |
+| ND-2-1 | medium | `surface/parser.ml` | The comment above `late_header` loses the false clause and states the real rule; `opens_operand` answers true for eight operand tokens; new fixture `binder-named-import-applied`. |
+
+Refuted: 1. D-1 (`dev/trusted-lines.py:28`, the five new bounds print 0 as
+a measurement): M0-PLAN.md:293 and RATIFICATIONS.md:38 name Stage B as the
+point where a number replaces `N`; `dev/trusted-lines.py:19-33` performs a
+genuine measurement at Stage B, and SPEC.md:88-89,
+`dev/M0-BUILD-LOG.md:407` and `dev/STAGE-B.md:105` all disclose that the
+zeros mean not implemented at Stage B. No document quotes a number before
+Stage B ran the counter, so R-M0-3 is not violated as cited.
+
+Merged and dropped: 11. B-1 merged into C-1 (same file `dev/house.sh`,
+same line 9, same defect; B-1 states the wrong mechanism). Ten cut at the
+7 cap: A-3 (the collapsed `-1` in `dev/check.py:36-37` overlaps kept B-3),
+D-3 (the `dev/MUTATION-LOG.md:195` NESTED-OP row misdescribes a scratch
+module and omits one citation; the substance overlaps B-2 and B-3), A-4
+(low, misleading reason text at `surface/schema.ml:86-88`, refusal
+correct), A-5 (low, `dev/STAGE-B.md:46` overstates what the types enforce,
+lines 47 to 48 already defer cross-slot permission), B-5 (low, a
+depth-limit mutant survives; one more instance of the class kept in B-3),
+B-6 (low, absent files skipped silently, already disclosed at
+`dev/STAGE-B.md:106-108`), C-2 (low, `dev/STAGE-B.md:67` cites the pin's
+line 440 where the refusal is line 449), C-3 (low, no fixture asserts the
+absence of an `AXIOM` line; forward looking), C-4 (low, README.md:11-13
+lists three Stage B commands against four in `dev/STAGE-B.md:8-13`), D-4
+(low, two dune libraries beyond the three R-M0-4 names, a ratification
+request for the user).
+
+Gates after the last fix round, `gates-3.log`, one-minute load 83.66
+(load averages 83.66 65.71 61.82 at the start of the run):
+
+| Leg | Line |
+| --- | --- |
+| PIN | `PIN 2c2e6e6 unlisted=0` |
+| CARRY | `CARRY files=36 diff=0 vendor=32 copies=4` |
+| R0-COUNT | `R0-COUNT formers=2 schema=4 shapes=5 admitted=3` |
+| R0-AUDIT | `R0-AUDIT ok` |
+| Trusted lines, Stage A | `TRUSTED-LINES kernel=3997/4000 encoder=246/600 OK` |
+| Stage A ladder | `PASS STAGE-A` |
+| House | `PASS HOUSE` |
+| Surface fixtures | `PASS STAGE-B-SURFACE cases=59` |
+| Trusted lines, Stage B | `TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=0/320 sh=0/240 store=0/200 host-node=0/300 host-rest=0/300 OK` |
+| Mutant SIXTH-SHAPE | `KILLED SIXTH-SHAPE by rebuilt R0-COUNT` |
+| Mutant HOUSE-EXCEPTION | `KILLED HOUSE-EXCEPTION by panicscan` |
+| Mutant NESTED-OP | `KILLED NESTED-OP by inherited positivity` |
+| Mutant LUA-BOUND | `KILLED LUA-BOUND by TRUSTED-LINES` |
+| Control NEWLINE-COUNT | `AGREED NEWLINE-COUNT by both trusted-line counters` |
+| Mutant MISSING-ENCODER | `KILLED MISSING-ENCODER by TRUSTED-LINES` |
+| Stage B mutations | `PASS STAGE-B-MUTATIONS killed=5 restored=1` |
+| Complete Stage B ladder | `PASS STAGE-B` |
+| Ladder exit | `EXIT 0` |
+| Stage A mutation regression | `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1` |
+
+Carry and count numbers of that run: `files=36 diff=0 vendor=32 copies=4`,
+`kernel=3997`, `encoder=246`, `cases=59`, `lua=0`, `sh=0`, `store=0`,
+`host-node=0` and `host-rest=0`. Mutation summary: Stage B killed=5 and
+restored=1, with no survivor row; Stage A killed=37, survived=0 and
+restored=1.
+
+Fix rounds: 3.

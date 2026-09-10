@@ -1,0 +1,13 @@
+module M0Spine
+schema hits : String -> Key (Str Int64) tag b"counter"
+
+def counter : Script Reply (tag b"counter") :=
+  incr Reply (tag b"counter") (hits b"visits")
+    (fun (previous : Reply) =>
+      get Reply Int64 (tag b"counter") (hits b"visits")
+        (fun (current : Reply) => pure Reply (tag b"counter") current))
+
+def main : Client Reply :=
+  inv Reply (tag b"counter") counter (fun (reply : Reply) => done Reply reply)
+
+def beyond53 : Signed64 := int64 b"9007199254740993"

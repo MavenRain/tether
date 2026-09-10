@@ -1,0 +1,3 @@
+(library
+ (name tether_surface)
+ (libraries kanon_kernel kanon_surface))

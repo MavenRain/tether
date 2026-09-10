@@ -1,0 +1,56 @@
+-- Stage B types over the carried Bytes and Words families.
+def Unit : Type 0 := prod ()
+
+mu Encoding : Type 0 :=
+| Binary : Encoding
+| Int64 : Encoding
+
+mu RedisType : Type 0 :=
+| Str : Encoding -> RedisType
+| Hash : RedisType
+| List : RedisType
+| Set : RedisType
+| ZSet : RedisType
+| Stream : RedisType
+
+mu Tag : Type 0 :=
+| tag : Bytes -> Tag
+
+mu Key : (0 t : RedisType) -> (0 g : Tag) -> Type 0 :=
+| keyBytes : (0 t : RedisType) -> (0 g : Tag) -> Bytes -> Key t g
+
+mu Signed64 : Type 0 :=
+| signed64Bytes : Bytes -> Signed64
+
+mutual
+mu Reply : Type 0 :=
+| nil : Reply
+| int : Signed64 -> Reply
+| bulk : Bytes -> Reply
+| status : Bytes -> Reply
+| err : Bytes -> Reply
+| array : Replies -> Reply
+mu Replies : Type 0 :=
+| repliesNil : Replies
+| repliesCons : Reply -> Replies -> Replies
+end
+
+-- Byte payloads retain the fault tag through the inherited proof erasure
+-- and leave room for the host's diagnostic text.
+def Fault : Type 0 := sum (Bytes, Bytes, Bytes, Bytes, Bytes, Bytes)
+def Noscript : Fault := inj 0 of 6 b""
+def Busy : Fault := inj 1 of 6 b""
+def Oom : Fault := inj 2 of 6 b""
+def Network : Fault := inj 3 of 6 b""
+def Http : Fault := inj 4 of 6 b""
+def Discarded : Fault := inj 5 of 6 b""
+
+mu Script (0 A : Type 0) : (0 g : Tag) -> Type 0 :=
+| pure : (0 g : Tag) -> A -> Script A g
+| incr : (0 g : Tag) -> Key (Str Int64) g -> (Reply -> Script A g) -> Script A g
+| get : (0 e : Encoding) -> (0 g : Tag) -> Key (Str e) g -> (Reply -> Script A g) -> Script A g
+
+mu Client (0 A : Type 0) : Type 0 :=
+| done : A -> Client A
+| inv : (0 g : Tag) -> Script Reply g -> (Reply -> Client A) -> Client A
+| fail : Fault -> Client A

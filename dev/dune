@@ -1,0 +1,3 @@
+(executable
+ (name surface_check)
+ (libraries tether_surface kanon_kernel))

@@ -4,8 +4,17 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
-M0 Stage A: the pinned foundation and its integrity gates. The Redis
-surface, printers and hosts follow in Stages B to F.
+M0 Stage B: the Redis surface and a type-checked counter spine, built on
+the pinned foundation. Printers and hosts follow in Stages C to F.
+
+```sh
+dune build dev/surface_check.exe
+python3 -P dev/check.py --root examples M0Spine.tet
+sh dev/stage-b.sh
+```
+
+See `dev/STAGE-B.md` for module syntax, schemas, erased constructors,
+validation scope and the additional `panicscan` gate dependency.
 
 ## Files
 
@@ -35,7 +44,8 @@ with a control failure.
 
 The submodule URL is the ruled local `/Users/oobi/Documents/kanon` path.
 After initialization, builds and gates use only `vendor/kanon`.
-No compiler or Redis execution command is shipped yet.
+The development checker ships in Stage B. Artifact emission and Redis
+execution commands are not shipped yet.
 
 ## License
 

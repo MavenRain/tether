@@ -1,0 +1,4 @@
+(copy_files ../../vendor/kanon/surface/*.ml)
+(library
+ (name kanon_surface)
+ (libraries kanon_kernel))
