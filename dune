@@ -1,0 +1,5 @@
+(vendored_dirs vendor)
+
+(env
+ (_
+  (flags (:standard -warn-error +a))))

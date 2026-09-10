@@ -86,3 +86,283 @@ The frozen figures were measured at a load average of 62, the judge rerun at 56,
 - S0-D6 the pin read form.  dev/spike-pin.sh reads kanon only through commit objects: `git ls-tree -r --name-only PIN -- lib wasm runtime` for the file list and `git show PIN:PATH` piped into `cmp -s` for the bytes.  `unlisted` counts checkout files under the three directories that the pin tree does not list, through fd and comm.  A usage error exits 4 and a mismatch prints `PIN FAIL <reason>` and exits 1.
 - S0-D7 the submodule flag.  `-c protocol.file.allow=always` is passed per command on `submodule add` and on `submodule update --init` and is never written into a config file.  Without it git 2.50.1 prints `fatal: transport 'file' not allowed` and exits 128.
 - S0-D8 the projection basis.  Each projected leg names the exported file of the same shape as its basis: lua from lib/eterm.ml 117, sh from lib/pp.ml 102, store from lib/eval.ml 297, host-node from runtime/reactor.mjs 275, and host-rest from reactor.mjs 275 plus run.mjs 28.  The five numbers are part sums and not measurements, so each leg prints `N` until Stage B measures it (R-M0-3).
+
+## Stage A (2026-09-09)
+
+Base: committed Stage 0, `d53060e543813d7498e1c851130f41d3b14f49b4`.
+This stage implements section 10 Stage A of the ruled M0 plan. Work was
+prepared and validated in an isolated checkout and then staged in tether.
+No commit is made by the agent. Stage B is the next implementation stage.
+
+### Deliverables and decisions
+
+- `vendor/kanon` is a submodule at `dev/PIN`, with the ruled local URL in
+  `.gitmodules`. Root Dune files build the vendored executable as a scoped
+  target. The main kanon checkout is never built or edited.
+- `SPEC.md` carries the eight inherited R0 rows and explicit naming/refusal
+  citations. It labels the later Redis behavior as the M0 contract.
+- `dev/carry-check.sh` checks the full pin, submodule initialization,
+  submodule HEAD, staged gitlink, staged `.gitmodules`, zero patches,
+  tracked vendor changes and all 32 files under lib/wasm/runtime. It also
+  checks four byte-identical copies: `dev/bench.sh`, the inherited audit
+  and line-counter scripts, and `runtime/reactor.kan`. A last check
+  compares the whole submodule worktree, outside its build outputs,
+  against the file list of the pin, so an extra file under `bin/`,
+  `surface/` or any other compiled directory fails the gate.
+- `dev/r0-count.sh` rebuilds only `vendor/kanon/bin/kanon.exe` before
+  comparing its eight derived rows to both specifications. This prevents
+  a stale executable from hiding source changes.
+- `dev/r0-audit.sh` joins the whole prose surface of `SPEC.md` into
+  sentences, across blank lines, list markers and table lines. A sentence
+  counts as a claim when it links a subject to a naming, refusal,
+  admission or permission word, with a copula or with one of the state
+  verbs stay, remain, become and continue, or when it grants a nesting
+  permission. Every claim sentence must be a ruled one with an audited
+  citation. The script also checks the source locations and runs the
+  inherited shape-isolation rule. That script reads through
+  ripgrep, and it prints its OK line over an empty read, so the gate reads
+  ripgrep first and fails when ripgrep fails. `dev/foundation.py`
+  implements these local gates and keeps the output of a failing command
+  in the printed reason. No gate reads the origin checkout.
+- `dev/stage-a.sh` composes foundation, inherited trusted-line and frozen
+  checksum gates. It reads the printed trusted-line and fails on an empty
+  count, which a broken awk produces under the inherited `set -u`.
+  `dev/stage-a-mutations.py` uses disposable copies with independent Git
+  metadata, requires the printed reason of every case, restores each
+  mutation and reruns the gates.
+- The Stage 0 denominator files are unchanged. Capture directories and
+  Python bytecode caches are ignored. There is no Redis compiler claim at
+  this stage, and no new trusted-line measurement is substituted for `N`.
+
+### Validation
+
+`sh dev/stage-a.sh` exits 0:
+
+```text
+PIN 2c2e6e6 unlisted=0
+CARRY files=36 diff=0 vendor=32 copies=4
+R0-COUNT formers=2 schema=4 shapes=5 admitted=3
+R0-AUDIT ok
+TRUSTED-LINES kernel=3997/4000 encoder=246/600 OK
+PASS STAGE-A
+```
+
+All eight `dev/DENOMINATORS.sha256` entries pass. The scoped Dune build
+reports no warnings or errors. `python3 -P dev/stage-a-mutations.py`
+exits 0 and prints `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`.
+The sixth-shape case rebuilds the edited kernel and observes the changed
+derived count before restoring it. The NO-RG and NO-AWK cases break one
+tool on PATH and mutate no source, and both gates fail. Details are in
+`dev/MUTATION-LOG.md`.
+
+User commit command after reviewing the staged diff:
+
+```sh
+git -C /Users/oobi/Documents/tether commit -s -m "M0 Stage A: pin the foundation and add integrity gates"
+```
+
+### Review round 2026-09-09 (Stage A)
+
+Review of the staged Stage A slice on d53060e. Two fix rounds ran; the
+gate table below is from the last gates log,
+/Users/oobi/Documents/tether-stage-a-review/gates-A-2.log.
+
+| id | severity | file | fix or ruling |
+|----|----------|------|---------------|
+| B-1 | high | dev/foundation.py:111 | R0-AUDIT passes vacuously when ripgrep is not on PATH. Fixed: audit reads `rg --version` and keeps the script output. |
+| A-2 | medium | dev/foundation.py:124 | Gate failures report an opaque CalledProcessError, and the initialization check is unreachable (merges A-1 and C-1). Fixed: `command` prints the failing command with its stdout and stderr; carry checks `.git` and the toplevel before the HEAD comparison. |
+| A-3 | medium | dev/stage-a-mutations.py:60 | The mutation runner asserts instead of verifying: any "<ACTION> FAIL" scores a kill and killed=11 is a literal (merges A-7). Fixed: each case carries the reason text the gate prints, `killed()` requires it, the count is `len(scored)`; round 2 made SHAPE-LEAK require the leaking site and `R0-AUDIT FAIL`. |
+| A-4 | medium | dev/foundation.py:57 | CARRY walks lib, wasm and runtime only, so an added file elsewhere in the pin passes while the gate prints diff=0 unlisted=0. Fixed: whole worktree against `git ls-tree -r PIN`, build outputs excluded. |
+| B-3 | medium | dev/stage-a.sh:8 | The TRUSTED-LINES leg is accepted on exit status alone, so a missing awk makes it vacuous. Fixed: the line must match `TRUSTED-LINES kernel=<digits>/4000 encoder=<digits>/600 OK`. Round 2 replaced the sh glob, which accepted one digit and any tail, with a digit-run check on each count and an exact comparison of the rebuilt line. |
+| D-1 | medium | dev/foundation.py:99 | R0-AUDIT does not implement the ruled "a naming with no citation is a gate failure". Fixed: every naming, refusal or admission sentence in SPEC.md must be a ruled row and every refusal must cite an audited site. |
+| B-2 | medium | README.md:21 | The documented tool list is wrong: ripgrep, shasum and awk are missing and "Python 3" is not enough for python3 -P (merges C-3 and D-4). Fixed: the sentence names Git, Python 3.11 or newer, zsh, ripgrep, shasum, awk, wc, OCaml 5.2.1, Dune 3.24.2 and Zarith 1.14. |
+| ND-1-1 | medium | dev/foundation.py:168 | New defect from the round 1 fixes: the naming audit read lines, not sentences, so a wrapped naming passed. Fixed in round 2: `claim_sentences` joins wrapped paragraphs and list items before the claim scan. |
+
+Ruled: 0. Refuted: 0.
+
+Merged and dropped: 12. A-1 and C-1 merged into A-2 (same file, same
+defect class: a wrong or opaque failure reason). A-7 merged into A-3 (the
+killed=11 literal is the same defect as the kill assertion). C-3 and D-4
+merged into B-2 (same file and line, the tool list). A-6 and D-2 merged
+into C-2, then cut with it by the 7-finding cap. C-2 true but low: the
+pin's .gitignore holds only _build/, *.install and .gatework/, so
+lib/extra.o is untracked, not ignored. The wording was corrected at
+dev/MUTATION-LOG.md:99, where the row now reads "Add lib/extra.o,
+untracked at the pin", and only the case name IGNORED-EXTRA still reads
+ignored; the gate leg named in the row is right. A-5 true but low at review round 1:
+dev/stage-a-mutations.py:30 raised FileNotFoundError with a traceback
+when no kanon.exe was built, which house rules allow, and review round
+3 replaced that raise with the printed control failure `CONTROL FAIL
+missing build ... run sh dev/stage-a.sh first` at exit 1. B-4 true but low: the root dune -warn-error +a is
+inert over the vendored compile, no gate result changes. C-4 true but
+low: the dev/M0-BUILD-LOG.md transcript is abridged by eight checksum
+rows, every number reproduces. D-3 true but low: an unanchored SPEC.md:344
+citation, covered by the D-1 fix surface.
+
+Gate table, one-minute load 40.47 at start and 39.12 at end:
+
+| leg | verbatim line |
+|-----|---------------|
+| PIN | `PIN 2c2e6e6 unlisted=0` |
+| CARRY | `CARRY files=36 diff=0 vendor=32 copies=4` |
+| R0-COUNT | `R0-COUNT formers=2 schema=4 shapes=5 admitted=3` |
+| R0-AUDIT | `R0-AUDIT ok` |
+| TRUSTED-LINES | `TRUSTED-LINES kernel=3997/4000 encoder=246/600 OK` |
+| sha256 | `dev/bench.sh: OK` |
+| sha256 | `dev/denominators.json: OK` |
+| sha256 | `dev/tcc-denominator.sh: OK` |
+| sha256 | `corpus/twin/spine.c: OK` |
+| sha256 | `corpus/twin/sort.c: OK` |
+| sha256 | `corpus/twin/parser.c: OK` |
+| sha256 | `corpus/twin/interp.c: OK` |
+| sha256 | `corpus/lua/m0-spine.lua: OK` |
+| stage-a.sh | `PASS STAGE-A` |
+| stage-a.sh | `EXIT 0` |
+| mutations | `PASS STAGE-A-MUTATIONS killed=15 survived=0 restored=1` |
+
+Carry: files=36 diff=0 vendor=32 copies=4. Count: formers=2 schema=4
+shapes=5 admitted=3, kernel=3997/4000 encoder=246/600. Mutations:
+killed=15 survived=0 restored=1. Verdict GATES-OK.
+
+### Review round 2 2026-09-10 (Stage A)
+
+Second review of the same staged slice. Seven findings were kept and
+fixed. The numbers above are the round-1 log, and the runner scored 26
+cases at review round 2.
+
+| id | severity | file | fix |
+|----|----------|------|-----|
+| A-1 | high | dev/foundation.py:18 | R0-AUDIT read three keyword phrases, so a rephrased or wrapped uncited naming passed while SPEC.md and this log claim every naming sentence is read (merges C-1). Fixed: `claim_sentences` joins across blank lines and reads list and table lines, and a sentence that links a subject to a naming, refusal, admission or permission word, with a copula or with one of the state verbs stay, remain, become and continue, is a claim sentence. Round 3 widened the verb list and dropped the ruled-token requirement, so a refusal written with a state verb and a naming of an unruled name both fail. Five cases added. |
+| A-4 | medium | dev/foundation.py:112 | A recursive submodule init failed CARRY, because the pin carries the nested gitlink `vendor/tot`. Fixed: the pin list is read with modes, files under a nested gitlink are not unlisted files, and each nested gitlink is checked for its directory and, when initialized, for its recorded hash. |
+| B-1 | medium | dev/foundation.py:17 | CARRY failed on the capture directories `.kanon-exec` and `.kanon-wait`, which the root .gitignore and the mutation runner both treat as disposable. Fixed: the three lists agree. |
+| A-3 | medium | dev/foundation.py:193 | The citation checks compared the ruled rows with the ruled anchors, so no SPEC.md content could fail them, and the anchor leg had no case. Fixed: the citation checks read the sentences of SPEC.md before the equality check, and the ANCHOR-MOVED case covers the anchor leg. |
+| A-2 | medium | dev/stage-a-mutations.py:63 | The checksum leg and the submodule HEAD comparison had no case (merges D-4). Fixed: DENOMINATOR-BYTE and HEAD-SHA. |
+| D-1 | medium | dev/M0-BUILD-LOG.md:184 | The C-2 paragraph of the round-1 block cited three lines that carry no such wording. Fixed: the paragraph records the corrected row dev/MUTATION-LOG.md:99 and the case name. |
+| C-2 | medium | dev/M0-BUILD-LOG.md:171 | The round-1 block recorded a digit-run check, but the sh glob `[0-9]*` accepts one digit and any tail. Fixed: dev/stage-a.sh cuts each count out, requires a digit run and compares the rebuilt line with the printed one; the row records the round-2 check. |
+| ND-1-1 | medium | dev/foundation.py:135 | The two nested gitlink requires were unreachable, because the whole tree diff ran first and failed on the nested name. Fixed: the pin ls-tree read, the `listed` and `nested` sets and the two nested requires move above the tree diff, and the diff drops every nested name; cases NESTED-MISSING and NESTED-HEAD. |
+| ND-2-1 | medium | dev/M0-BUILD-LOG.md:147 | The build log recorded 21 mutation cases. Fixed: dev/M0-BUILD-LOG.md:152, :228 and the gate block record the count of the run made after the later edits, and dev/MUTATION-LOG.md carries the same summary line. |
+| ND-3-1 | medium | dev/foundation.py:145 | A nested gitlink that is not initialized had no emptiness leg. Fixed: the `.git` test is bound to `initialized`, a new leg requires an uninitialized nested checkout to be empty with the reason `nested submodule directory is not empty: <inner>`, and the NESTED-EXTRA case covers that leg. |
+
+Refuted, 0. No verified item was refuted in this round.
+
+Merged and dropped, 10. C-1 merged into A-1, same CLAIM keyword defect,
+and A-1 carries the document leg with the correct SPEC.md line numbers.
+C-3 merged into D-1, same file, same line 184, same defect. D-4 merged
+into A-2, same battery and same defect class, and A-2 names both
+uncovered legs. C-5 merged into A-5 and cut with it by the cap. A-5 cut
+by the 7-finding cap, low, only line 1086 of the cited range 1083-1086
+is anchored. B-2 cut by the cap, low, the sentence about ignored capture
+directories becomes true with the B-1 fix. B-3 cut by the cap, low, a
+dune that exits 127 ends the battery with no reason line. C-4 cut by the
+cap, low, the SIXTH-SHAPE row records one of the two required texts. D-2
+cut by the cap, low and overstated, because README.md:21 does resolve to
+the sentence B-2 fixed. D-3 cut by the cap, low, no staged line says the
+Stage B sixth-shape row is still owed.
+
+Gate block after the fixes, the log
+/Users/oobi/Documents/tether-stage-a-review/gates-B-4.log:
+
+```text
+PIN 2c2e6e6 unlisted=0
+CARRY files=36 diff=0 vendor=32 copies=4
+R0-COUNT formers=2 schema=4 shapes=5 admitted=3
+R0-AUDIT ok
+TRUSTED-LINES kernel=3997/4000 encoder=246/600 OK
+dev/bench.sh: OK
+dev/denominators.json: OK
+dev/tcc-denominator.sh: OK
+corpus/twin/spine.c: OK
+corpus/twin/sort.c: OK
+corpus/twin/parser.c: OK
+corpus/twin/interp.c: OK
+corpus/lua/m0-spine.lua: OK
+PASS STAGE-A
+EXIT 0
+PASS STAGE-A-MUTATIONS killed=26 survived=0 restored=1
+```
+
+One-minute load 29.47 at the start and 31.54 at the end. Carry and count
+numbers: files=36 diff=0 vendor=32 copies=4, formers=2 schema=4 shapes=5
+admitted=3, kernel=3997/4000 and encoder=246/600. Mutations: killed=26,
+survived=0, restored=1. Fix rounds: 4. Rounds 1 and 2 ran in run
+wf_1171720a-ae4 and the rest in this run.
+
+### Review round 3 2026-09-10 (Stage A)
+
+Third review of the same staged slice. Fourteen findings were kept and
+fixed. The numbers of the earlier blocks are the logs of those rounds.
+
+| id | severity | file | fix |
+|----|----------|------|-----|
+| A-1 | high | dev/stage-a.sh:33 | The sha256 manifest leg passed vacuously when rows were deleted, and a broken shasum ended the ladder at exit 127 with no reason line (merges B-3). Fixed: the row count of `dev/DENOMINATORS.sha256` is read with `wc -l` and required to equal 8, and `shasum -a 256 -c` carries its own reason line and exit 1. Cases MANIFEST-ROW and NO-SHASUM. |
+| A-2 | high | dev/foundation.py:30 | The naming and citation audit read no negation, so a sentence that reverses a ruled refusal passed. Fixed: hunks at ADVERB, STATE, MODAL, NESTS and VERB, where the copula accepts a run of negation adverbs and modal negation is its own alternative. Cases NEGATED-REFUSAL and MODAL-PERMISSION. |
+| A-3 | medium | dev/r0-count.sh:5 | An absent or broken dune ended the ladder at exit 127 with the shell message and no R0-COUNT FAIL line (merges B-2). Fixed: a `command -v dune` guard and a guarded `dune build`, each with its own reason and exit 1. Cases NO-DUNE and NO-DUNE-PATH. |
+| A-5 | medium | dev/foundation.py:130 | An initialized nested checkout had none of its files compared (merges C-7 as its documentation face). Fixed: `carry()` runs `git diff --no-ext-diff --name-only <head>` and `git ls-files --others -z` inside the nested checkout, with the build directories filtered as the outer leg filters them, and SPEC.md lines 105 to 113 state the three nested legs. Cases NESTED-UNLISTED and NESTED-TRACKED. |
+| B-1 | medium | dev/stage-a-mutations.py:56 | The mutation runner raised FileNotFoundError on a tree with no `_build`, because no documented step guaranteed the binary. Fixed: the runner tests `(ROOT / binary).is_file()` and prints `CONTROL FAIL missing build ...: run sh dev/stage-a.sh first` with exit 1, and README.md gains the ordering paragraph after the command block. |
+| D-1 | medium | dev/foundation.py:226 | A cited range was anchored at its end line only, so the refusal bodies of rules.ml:1083-1086 and positivity.ml:85-90 could be gutted while R0-AUDIT printed ok (merges A-4). Fixed: `anchors` gains rules.ml 1083, 1084 and 1085 and positivity.ml 85 to 89, and the citation leg requires both ends of a range. Cases CITATION-START and POSITIVITY-START. |
+| C-4 | low | SPEC.md:16 | The mu_pack citation pointed at a pin line that does not state the colimit claim. Fixed: line 16 reads that `mu_pack` assembles the mu rule fields and refuses the right former at `lib/rules.ml:1388`, and cites `dev/INITIAL-CHAIN.md` of the pin for the colimit. |
+| ND-1-1 | medium | dev/stage-a.sh:36 | The new manifest guard pinned the row count only, so a swapped or duplicated row passed. Fixed: a missing-file guard with its own reason, then a name guard that reads the name column with `awk`, sorts it under `LC_ALL=C` and requires the eight ruled paths. Case MANIFEST-SWAP. |
+| ND-2-1 | medium | dev/MUTATION-LOG.md:134 | The recorded battery line read killed=36 while the runner scores 37. Fixed: the line reads `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`. |
+| ND-2-2 | medium | dev/M0-BUILD-LOG.md:152 | The Stage A record sentence about the runner read killed=36. Fixed: it reads `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`, and no other number in the record moves. |
+| ND-2-3 | medium | dev/MUTATION-LOG.md:171 | The paragraph that counts and names the cases of the round read ten cases and left MANIFEST-SWAP unnamed. Fixed: it names eleven cases, MANIFEST-ROW, MANIFEST-SWAP, NO-SHASUM, NO-DUNE, NO-DUNE-PATH, NEGATED-REFUSAL, MODAL-PERMISSION, CITATION-START, POSITIVITY-START, NESTED-UNLISTED and NESTED-TRACKED, which with the 26 round-2 cases give the observed 37. |
+| ND-3-1 | medium | dev/MUTATION-LOG.md:171 | Two counts for round 3, because the four fix rounds of review round 2 were labelled review rounds. Fixed: lines 144, 160 and 168 name their fix round of review round 2, and line 174 reads "Review round 3 of the review added eleven cases." |
+| ND-4-1 | medium | dev/M0-BUILD-LOG.md:228 | The round-2 block header stated the runner's case count in the present tense, "The numbers above are the round-1 log; the runner now scores 26 cases.", which is false on the current tree where the runner scores 37. Fixed: the sentence reads "The numbers above are the round-1 log, and the runner scored 26 cases at review round 2." |
+| ND-4-2 | medium | dev/M0-BUILD-LOG.md:193 | The round-1 triage stated in the present tense that dev/stage-a-mutations.py:30 raises FileNotFoundError, which the round-3 B-1 fix replaced. Fixed: the sentence reads "A-5 true but low at review round 1: dev/stage-a-mutations.py:30 raised FileNotFoundError with a traceback when no kanon.exe was built, which house rules allow, and review round 3 replaced that raise with the printed control failure `CONTROL FAIL missing build ... run sh dev/stage-a.sh first` at exit 1." |
+
+Refuted: 0 findings.
+
+Merged and dropped: 12 findings. A-4 merged into D-1, same defect in
+dev/foundation.py, end-line-only anchoring of a cited range. B-2 merged
+into A-3, same file and line, and A-3 keeps both the absent-dune and the
+broken-dune probes. B-3 merged into A-1, same file and line, and one
+guarded rewrite fixes the vacuous manifest and the missing reason line
+together. C-7 merged into A-5 as its documentation face, because the
+scoped build does not compile vendor/kanon/vendor/tot, so an added .ml
+file there does not falsify the consequence clause of SPEC.md:108, and
+the true remainder rides with the A-5 fix. B-4 cut by the seven-finding
+cap, low and diagnostic only, because the gate fails correctly and only
+misnames a broken zsh as an inherited shape isolation failure. C-1 cut
+by the cap, low, because the SIXTH-SHAPE row of dev/MUTATION-LOG.md
+paraphrases the two required texts with no effect on gate behaviour. C-2
+cut by the cap, low, because dev/MUTATION-LOG.md:148 and :155 name review
+rounds 3 and 4 for fix rounds 3 and 4 of review round 2. C-3 cut by the
+cap, low, because dev/M0-BUILD-LOG.md:227 says seven findings were kept
+while its table holds ten rows. C-5 cut by the cap, low, because
+SPEC.md:116 and the comment at dev/foundation.py:233 state a citation
+requirement broader than the code, which requires one for refusals only.
+C-6 cut by the cap, low, because dev/M0-BUILD-LOG.md:192 cites
+dev/stage-a-mutations.py:30 for a raise that lives at line 56. D-2 cut by
+the cap, a low coverage gap, because the .gitmodules path, url and staged
+legs work today but have no mutation case. D-3 cut by the cap, low,
+because no staged line records that the Stage B sixth-shape mutation row
+is still owed after the Stage A SIXTH-SHAPE case.
+
+Gates after the last fix round, log
+`/Users/oobi/Documents/tether-stage-a-review/gates-C-5.log`, verdict
+GATES-OK. One row per leg, each line verbatim.
+
+| leg | line |
+|-----|------|
+| pin | `PIN 2c2e6e6 unlisted=0` |
+| carry | `CARRY files=36 diff=0 vendor=32 copies=4` |
+| count | `R0-COUNT formers=2 schema=4 shapes=5 admitted=3` |
+| audit | `R0-AUDIT ok` |
+| trusted lines | `TRUSTED-LINES kernel=3997/4000 encoder=246/600 OK` |
+| sha256 1 | `dev/bench.sh: OK` |
+| sha256 2 | `dev/denominators.json: OK` |
+| sha256 3 | `dev/tcc-denominator.sh: OK` |
+| sha256 4 | `corpus/twin/spine.c: OK` |
+| sha256 5 | `corpus/twin/sort.c: OK` |
+| sha256 6 | `corpus/twin/parser.c: OK` |
+| sha256 7 | `corpus/twin/interp.c: OK` |
+| sha256 8 | `corpus/lua/m0-spine.lua: OK` |
+| ladder | `PASS STAGE-A` |
+| exit | `EXIT 0` |
+| mutations | `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1` |
+
+One-minute load 45.44 at the start and 45.48 at the end. Carry and count
+numbers: files=36 diff=0 vendor=32 copies=4, formers=2 schema=4 shapes=5
+admitted=3, kernel=3997/4000 and encoder=246/600. Mutations: killed=37,
+survived=0, restored=1. Rounds 1 and 2 ran in run wf_a7b4ced8-ca1,
+rounds 3 and 4 in run wf_8f24505c-10d and the rest in this run.
+Fix rounds: 5.

@@ -77,3 +77,108 @@ Exit code 1.  The first of the three sha comparisons fails, the script prints PI
 ### Result
 
 Three mutants, three killed, none survived.
+
+## Stage A (2026-09-09)
+
+Runner: `python3 -P dev/stage-a-mutations.py`. Each mutation runs in a
+temporary copy with its own Git metadata. Baseline and restored controls
+pass. Every mutant exits 1 from its expected gate, and the runner exits 0.
+
+The runner reads the printed reason of every case. An exit code and the leg
+name alone do not score a kill, so an environment fault cannot pass for a
+caught mutant. A case whose gate calls an inherited script requires the text
+that script prints over the mutated file, so a missing or broken script
+scores no kill. The reason column below is the text the runner requires.
+
+| Case | Mutation | Caught by |
+| --- | --- | --- |
+| PIN-BYTE | Change the first character of dev/PIN from 2 to 3. | CARRY: dev/PIN differs from ratified pin. |
+| VENDOR-BYTE | Append a newline to vendor runtime/run.mjs. | CARRY: tracked vendor file differs from pin: ['runtime/run.mjs']. |
+| COPY-BYTE | Append a newline to the copied runtime/reactor.kan. | CARRY: carried bytes differ: runtime/reactor.kan. |
+| MISSING-FILE | Remove vendor wasm/emit.ml. | CARRY: tracked vendor file differs from pin: ['wasm/emit.ml']. |
+| IGNORED-EXTRA | Add lib/extra.o, untracked at the pin. | CARRY: carried inventory differs: ['lib/extra.o']. |
+| SURFACE-EXTRA | Add surface/extra.ml, a module the scoped build compiles. | CARRY: files in the submodule worktree are not listed by the pin: ['surface/extra.ml']. |
+| NAMED-PATCH | Add dev/PATCHES/unruled.patch. | CARRY: M0 requires zero named patches. |
+| R0-ROW | Change the SPEC former count from 2 to 3. | COUNT: SPEC counts differ from inherited block. |
+| REFUSAL-CITATION | Change the mu refusal citation from line 952 to 953. | AUDIT: refusal citation is not an audited site. |
+| ANCHOR-MOVED | Change the text of the anchored line lib/rules.ml:952 in the submodule. | AUDIT: refusal site moved: lib/rules.ml:952. |
+| UNCITED-NAMING | Append a naming sentence with no refusal citation to SPEC.md, wrapped over two lines as the file wraps. | AUDIT: naming or refusal statements differ from the ruling: ['Key and Tag are namings, not additional Kan formers.']. |
+| BLANK-WRAP-NAMING | Append the same naming sentence wrapped over a blank line. | AUDIT: naming or refusal statements differ from the ruling: ['Key and Tag are namings, not additional Kan formers.']. |
+| LIST-WRAP-NAMING | Append a permission sentence wrapped over two list items. | AUDIT: naming or refusal statements differ from the ruling: ['`SNu` is allowed after M0 and']. |
+| REPHRASED-ADMISSION | Append an admission that uses none of the ruled phrases. | AUDIT: naming or refusal statements differ from the ruling: ['`SPar` is accepted at M0.']. |
+| SHAPE-LEAK | Add a shape name in a comment in lib/eval.ml. | AUDIT: inherited shape isolation audit failed, plus the leaking line `lib/eval.ml:` and the line `R0-AUDIT FAIL` of the inherited script. |
+| NO-RG | Put an rg that exits 127 first on PATH, with no source mutation. | AUDIT: rg is on PATH but exits 127. |
+| GITLINK | Change the staged submodule hash while leaving its HEAD at the pin. | CARRY: staged gitlink differs from pin. |
+| HEAD-SHA | Move the submodule HEAD ref to the parent commit, leaving every worktree file at the pin. | CARRY: submodule HEAD differs from pin. |
+| SIXTH-SHAPE | Add SExtra to Shape.declared and run r0-count.sh. | COUNT: the rebuilt executable prints shapes declared 6. |
+| DENOMINATOR-BYTE | Append a newline to the frozen dev/tcc-denominator.sh and run stage-a.sh. | sha256: dev/tcc-denominator.sh: FAILED. |
+| NO-AWK | Put an awk that exits 127 first on PATH and run stage-a.sh. | TRUSTED-LINES FAIL unexpected line. |
+| NONCOPULA-REFUSAL | Append a refusal that uses the state verb stays instead of the copula, with no citation. | AUDIT: refusal with no citation: `SPar` stays refused after M0. |
+| UNTOKENED-NAMING | Append a naming of two names that no ruled row mentions. | AUDIT: naming or refusal statements differ from the ruling: ['Key and Tag are namings.']. |
+| NESTED-MISSING | Move the nested checkout vendor/kanon/vendor/tot aside. | CARRY: nested submodule directory missing: vendor/tot. |
+| NESTED-HEAD | Initialize the nested checkout vendor/kanon/vendor/tot at a commit of its own. | CARRY: nested submodule HEAD differs from pin: vendor/tot. |
+| NESTED-EXTRA | Add lib/tot.ml in the uninitialized nested checkout vendor/kanon/vendor/tot. | CARRY: nested submodule directory is not empty: vendor/tot. |
+| NESTED-UNLISTED | Add extra_leak.ml in the nested checkout vendor/kanon/vendor/tot, initialized at the pinned head. | CARRY: files in the nested submodule are not listed by the pin: ['vendor/tot/extra_leak.ml']. |
+| NESTED-TRACKED | Append a newline to dune-project in the initialized nested checkout vendor/kanon/vendor/tot. | CARRY: tracked file in the nested submodule differs from pin: ['vendor/tot/dune-project']. |
+| NEGATED-REFUSAL | Append a refusal reversed by the adverb never, with no citation. | AUDIT: refusal with no citation: `SNu` is never refused. |
+| MODAL-PERMISSION | Append a nesting statement written with the modal negation cannot. | AUDIT: naming or refusal statements differ from the ruling: ['Nested `Op (Script A)` cannot be nested.']. |
+| CITATION-START | Change the text of lib/rules.ml:1083, the start line of the cited refusal range. | AUDIT: refusal site moved: lib/rules.ml:1083. |
+| POSITIVITY-START | Change the text of lib/positivity.ml:85, the start line of the cited refusal range. | AUDIT: refusal site moved: lib/positivity.ml:85. |
+| MANIFEST-ROW | Remove the last row of dev/DENOMINATORS.sha256 and run stage-a.sh. | DENOMINATORS FAIL the manifest holds 7 rows and the ruling fixes 8. |
+| MANIFEST-SWAP | Replace the corpus/lua/m0-spine.lua row of dev/DENOMINATORS.sha256 with a copy of the dev/bench.sh row, which keeps eight rows, and run stage-a.sh. | DENOMINATORS FAIL the manifest names corpus/twin/interp.c corpus/twin/parser.c corpus/twin/sort.c corpus/twin/spine.c dev/bench.sh dev/bench.sh dev/denominators.json dev/tcc-denominator.sh and the ruling fixes corpus/lua/m0-spine.lua corpus/twin/interp.c corpus/twin/parser.c corpus/twin/sort.c corpus/twin/spine.c dev/bench.sh dev/denominators.json dev/tcc-denominator.sh. |
+| NO-SHASUM | Put a shasum that exits 127 first on PATH and run stage-a.sh. | DENOMINATORS FAIL the checksum check failed or shasum is broken. |
+| NO-DUNE | Put a dune that exits 127 first on PATH and run stage-a.sh. | R0-COUNT FAIL the scoped dune build failed. |
+| NO-DUNE-PATH | Run r0-count.sh with a PATH that holds no dune. | R0-COUNT FAIL dune is not on PATH. |
+
+```text
+PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1
+```
+
+The Stage A pin mutation required by the M0 plan is PIN-BYTE. The
+SIXTH-SHAPE case additionally establishes the count gate's non-vacuity
+before Stage B. NO-RG and NO-AWK establish that a gate which reads a tool
+fails when that tool fails, because both inherited scripts print their OK
+line over an empty read. The nested Script positivity mutation remains
+Stage B.
+
+Review round 2 of the review, first fix round, added six cases.
+ANCHOR-MOVED covers the anchor leg of the audit, which reads the pin
+sources. BLANK-WRAP-NAMING, LIST-WRAP-NAMING and REPHRASED-ADMISSION
+cover the whole prose surface of SPEC.md, because a keyword list reads
+three phrases only. HEAD-SHA covers the submodule
+HEAD comparison, and DENOMINATOR-BYTE covers the eight frozen checksum
+entries. REFUSAL-CITATION now reads a citation reason, because the audit
+checks the citations of the sentences it read before it compares the set
+of sentences with the ruling.
+
+Review round 2 of the review, second fix round, added NESTED-MISSING and
+NESTED-HEAD. Git reports a nested gitlink as a changed path, so the whole
+tree diff caught both faults first and printed its own reason. The carry
+gate now runs the two nested legs before that diff and drops the nested
+names from it, and each nested fault prints the reason above.
+
+Review round 2 of the review, third fix round, added NONCOPULA-REFUSAL
+and UNTOKENED-NAMING. The claim scan required a copula and a ruled shape
+or former token, so a refusal written with the state verb stays and a
+naming of an unruled name both passed. The scan now reads a copula or one
+of the state verbs stay,
+remain, become and continue with a naming, refusal, admission or
+permission word, and it reads the sentence whatever its subject is.
+
+Review round 2 of the review, fourth fix round, added NESTED-EXTRA. The
+unlisted leg drops every worktree path under a nested gitlink, so a file
+in an uninitialized nested checkout passed the carry gate. The gate now
+requires an uninitialized nested checkout to be empty, and the case reads
+the reason above.
+
+Review round 3 of the review added eleven cases. MANIFEST-ROW, MANIFEST-SWAP
+and NO-SHASUM cover the checksum leg, which read the count of the rows the
+manifest held, accepted a repeated name in place of a ruled name and ended
+the ladder at exit 127 when shasum broke. NO-DUNE and NO-DUNE-PATH cover the
+scoped build, which ended the ladder with the shell message alone.
+NEGATED-REFUSAL and MODAL-PERMISSION cover negation, because a sentence
+that reverses a ruled refusal was no claim sentence at all.
+CITATION-START and POSITIVITY-START cover the start line of a cited
+range, because only its end line was anchored. NESTED-UNLISTED and
+NESTED-TRACKED cover an initialized nested checkout, whose files no leg
+read before.
