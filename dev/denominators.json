@@ -1,0 +1,90 @@
+{
+  "date": "2026-09-09",
+  "role": "Stage 0 spike (b): the three denominator rows of the tether M0 plan, frozen before any ratio prints (R-Q1).  The kanon pin carries no tcc row, so all three rows are new and none is carried.  A re-measurement is a new dated file and never an overwrite of this one.",
+  "kanon_pin": "2c2e6e6831a0b2cf3107fa4aad392606109a2bcf",
+  "tcc": {
+    "version": "tcc version 0.9.28rc 2026-09-04 mob@0fb54300 (AArch64 Darwin)",
+    "command": "tcc -v",
+    "path": "/Users/oobi/.local/bin/tcc"
+  },
+  "host": {
+    "arch": "arm64",
+    "ncpu": 12,
+    "macos": "26.4",
+    "load": "19:20  27 users, load averages: 62.17 62.74 55.09",
+    "commands": [
+      "uname -m",
+      "getconf _NPROCESSORS_ONLN",
+      "sw_vers -productVersion",
+      "uptime"
+    ],
+    "note": "The load line is the LOAD line the script printed at the start of the frozen run (run 3 of spike (b);  runs 1 and 2 used a fixed-cost shape of one empty tcc -c, replaced before freezing).  uptime after the run printed load averages 75.12 66.25 56.74.  Five other spike agents and other sessions ran on the host, so the load was five to six times the core count.  A denominator that differs from the panel figure is information and not a blocker (brief section 6)."
+  },
+  "timer": "dev/bench.sh, carried byte for byte from the kanon pin (sha256 d408fb5a3d88da3334783e0fb67e8c7ce25aa546c4c428853031d83cfd30d5ae): one warm-up run, then RUNS=5 timed runs of /bin/zsh -f -c CMD with stdin, stdout and stderr on /dev/null, perf_counter_ns around one subprocess.run, median, min and max in milliseconds.",
+  "corpus": {
+    "files": [
+      {
+        "path": "corpus/twin/spine.c",
+        "lines": 280
+      },
+      {
+        "path": "corpus/twin/sort.c",
+        "lines": 398
+      },
+      {
+        "path": "corpus/twin/parser.c",
+        "lines": 563
+      },
+      {
+        "path": "corpus/twin/interp.c",
+        "lines": 479
+      }
+    ],
+    "lines": 1720,
+    "line_count_command": "wc -l corpus/twin/spine.c corpus/twin/sort.c corpus/twin/parser.c corpus/twin/interp.c",
+    "sha256_of_concatenation": "9c24ca0f09c9553f468ee849f00ddf05f6a3d3284dc62933a7bb0952feb8d08f",
+    "sha256_command": "cat corpus/twin/spine.c corpus/twin/sort.c corpus/twin/parser.c corpus/twin/interp.c | shasum -a 256",
+    "origin": "Copied byte for byte with cp from /Users/oobi/Documents/trice/corpus/twin/ and checked with cmp (S0-D3)."
+  },
+  "tcc_raw_ms_per_kloc": {
+    "value": 500.413,
+    "median_ms": 860.71,
+    "min_ms": 554.158,
+    "max_ms": 947.648,
+    "runs": 5,
+    "lines": 1720,
+    "command": "zsh dev/tcc-denominator.sh",
+    "method": "One timed command: rm -rf WORK/out && mkdir -p WORK/out, then tcc -c -o WORK/out/NAME.o corpus/twin/NAME.c for spine, sort, parser and interp in sequence (four tcc invocations).  Every timed run starts from a fresh output directory.  value = median_ms / (lines / 1000).",
+    "printed_line": "DENOM tcc_raw_ms_per_kloc value=500.413 median_ms=860.710 min_ms=554.158 max_ms=947.648 runs=5 lines=1720",
+    "brief_reference": 26.28
+  },
+  "tcc_corrected_ms_per_kloc": {
+    "value": 315.185,
+    "median_ms": 542.119,
+    "min_ms": 235.567,
+    "max_ms": 629.057,
+    "runs": 5,
+    "lines": 1720,
+    "command": "zsh dev/tcc-denominator.sh",
+    "method": "The raw row minus the fixed process cost of tcc -c.  The fixed cost is the median of the SAME command shape with every source replaced by one empty translation unit: rm -rf WORK/out && mkdir -p WORK/out, then four times tcc -c -o WORK/out/empty-NAME.o WORK/empty.c on a zero-byte file, measured with the same timer and RUNS in the same run.  median_ms, min_ms and max_ms of the raw row each subtract that one constant.  The empty run printed median_ms=318.591 min_ms=182.933 max_ms=377.427, so the constant is 318.591 ms.  value = median_ms / (lines / 1000).",
+    "empty_translation_unit": {
+      "printed_line": "EMPTY tcc_empty_tu median_ms=318.591 min_ms=182.933 max_ms=377.427 runs=5 invocations=4 fixed_ms=318.591"
+    },
+    "printed_line": "DENOM tcc_corrected_ms_per_kloc value=315.185 median_ms=542.119 min_ms=235.567 max_ms=629.057 runs=5 lines=1720",
+    "brief_reference": 5.38
+  },
+  "trice_end_to_end_ms_per_kloc": {
+    "value": 2149.171,
+    "median_ms": 3696.574,
+    "min_ms": 2419.435,
+    "max_ms": 6952.662,
+    "runs": 5,
+    "lines": 1720,
+    "command": "zsh dev/tcc-denominator.sh",
+    "method": "The form of /Users/oobi/Documents/trice/dev/denominators-tcc-2026-09-07.json: one timed command that removes and recreates the output directory, then for each of spine, sort, parser and interp runs tcc -o WORK/out/NAME corpus/twin/NAME.c && WORK/out/NAME, so compile, link and run of all four programs.  value = median_ms / (lines / 1000).  The trice record measured 453.010 on the same host on 2026-09-07 at a load average of 8 to 9.",
+    "printed_line": "DENOM trice_end_to_end_ms_per_kloc value=2149.171 median_ms=3696.574 min_ms=2419.435 max_ms=6952.662 runs=5 lines=1720",
+    "brief_reference": 453
+  },
+  "rerun": "zsh /Users/oobi/Documents/tether/dev/tcc-denominator.sh [SCRATCH_ROOT]  (SCRATCH_ROOT defaults to TMPDIR; RUNS defaults to 5).  It prints one LOAD line, one EMPTY line and three DENOM lines and no ratio.",
+  "no_ratio": "M0-TCC-RATIO is informational at M0 and needs a tether tree that does not exist at Stage 0.  No ratio is printed here."
+}

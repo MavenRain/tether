@@ -1,0 +1,6 @@
+_build/
+*.install
+.gatework/
+*.o
+*.pid
+*.log
