@@ -125,13 +125,17 @@ Each has a positive control and a restored control in a disposable tree.
 One further control strips the final newline from a trusted kernel source
 and requires the two trusted-line counters to print one kernel number.
 
-The seven bounds currently measure kernel 3997/4000, encoder 246/600,
+At Stage B, the seven bounds measured kernel 3997/4000, encoder 246/600,
 lua 0/320, sh 0/240, store 0/200, host-node 0/300 and host-rest 0/300.
 Zero measures files not implemented at Stage B and does not claim those
 components ship. `trusted-lines.py` lists the counted files explicitly;
 later stages must extend that inventory for additional implementation
 files and require their presence. Surface code is checked by the inherited
 kernel and is outside these seven bounds.
+
+Stage C now requires all Lua implementation files, counts its transport
+adapter in the Lua group, and refuses an uncounted printer source. Its
+mutation runner preserves and restores the implemented Lua printer.
 
 The kernel and encoder groups count newlines only, which is what the
 carried `dev/inherited/trusted-lines.sh` does with `wc -l`. Both counters
@@ -143,9 +147,10 @@ The ruled trusted base of `prog.wasm` is lib, wasm, `runtime/reactor.kan`,
 `runtime/redis.kan` and `runtime/redis-host.mjs`. The two `.kan` prelude
 sources, `runtime/reactor.kan` and `runtime/redis.kan`, are the members
 of that base that no bound counts, so `runtime/redis.kan` can grow
-without a gate. No ruled bound moves at
-Stage B and no group changes here. Stage C closes this, and it needs a
-new ratification row for an eighth counted group that holds the prelude
-sources. The Tether owner must request that row.
+without a gate at Stage B. Stage C closes that integrity gap by pinning
+both sources in `dev/PRELUDES.sha256` and checking their bytes. It reports
+their line count separately. The suggested eighth numeric bound remains
+unratified; neither an eighth bound nor a larger existing bound is needed
+for this checksum check. No ruling is recorded on the user's behalf.
 
 End-to-end Redis and timing claims remain outside Stage B.

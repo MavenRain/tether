@@ -1,8 +1,9 @@
 # tether specification
 
-Stage B, 2026-09-10. The foundation and single-slot counter surface below
-are implemented. See `dev/STAGE-B.md` for the concrete syntax and current
-limits. Printers and hosts remain subsequent-stage M0 work.
+Stage C, 2026-09-10. The foundation, counter surface, Lua printer and Wasm
+byte carrier are implemented. See `dev/STAGE-B.md` and `dev/STAGE-C.md`
+for syntax and current limits. The complete artifact contract below
+includes the Bash printer and Client hosts due in subsequent M0 stages.
 
 ## Foundation (inherited)
 
@@ -84,9 +85,12 @@ global metatable.
 
 ## Bounds and milestone limits
 
-Inherited trusted lines: kernel 3997/4000 and encoder 246/600. Future M0
-bounds are lua 0/320, sh 0/240, store 0/200, host-node 0/300 and host-rest
-0/300, measured at Stage B before those components are implemented.
+Inherited trusted lines: kernel 3997/4000 and encoder 246/600. Stage C
+measures lua 263/320, including flags, SHA-1 and the Wasm transport adapter.
+The later implementations measure sh 0/240, store 0/200, host-node 0/300
+and host-rest 0/300. Both trusted preludes are pinned by
+`dev/PRELUDES.sha256`; their 109 lines are reported separately without
+adding or changing a ruled bound.
 The store and printers live outside `lib`.
 OCaml uses explicit Result/Option errors, exhaustive sum matches and total
 combinators, with no exceptions, partial indexing or imperative loops.

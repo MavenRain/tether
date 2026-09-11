@@ -4,17 +4,22 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
-M0 Stage B: the Redis surface and a type-checked counter spine, built on
-the pinned foundation. Printers and hosts follow in Stages C to F.
+M0 Stage C: checked Redis scripts compile to canonical Lua with a SHA-1
+identifier, derived write flags and a Wasm byte carrier. The Bash artifact,
+Client hosts and full driver follow in Stages D to F.
 
 ```sh
 dune build dev/surface_check.exe
 python3 -P dev/check.py --root examples M0Spine.tet
 sh dev/stage-b.sh
+dune build dev/lua_emit.exe dev/sha1_probe.exe
+python3 -P dev/emit-lua.py --root examples M0Spine.tet -o .gatework/counter
+sh dev/stage-c.sh
 ```
 
 See `dev/STAGE-B.md` for module syntax, schemas, erased constructors,
 validation scope and the additional `panicscan` gate dependency.
+See `dev/STAGE-C.md` for Lua emission, artifact inspection and validation.
 
 ## Files
 
@@ -44,8 +49,8 @@ with a control failure.
 
 The submodule URL is the ruled local `/Users/oobi/Documents/kanon` path.
 After initialization, builds and gates use only `vendor/kanon`.
-The development checker ships in Stage B. Artifact emission and Redis
-execution commands are not shipped yet.
+The development emitter writes `script.lua`, `body.wasm` and `script.json`.
+The `tether` command and complete `prog.wasm`/`prog.sh` pair arrive later.
 
 ## License
 

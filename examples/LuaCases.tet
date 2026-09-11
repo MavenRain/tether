@@ -1,0 +1,62 @@
+module LuaCases
+schema hits : String -> Key (Str Int64) tag b"counter"
+
+def readOnly : Script Reply (tag b"counter") :=
+  get Reply Int64 (tag b"counter") (hits b"visits")
+    (fun (current : Reply) => pure Reply (tag b"counter") current)
+
+def increment : Script Reply (tag b"counter") :=
+  incr Reply (tag b"counter") (hits b"visits")
+    (fun (current : Reply) => pure Reply (tag b"counter") current)
+
+def captured : Script Reply (tag b"counter") :=
+  get Reply Int64 (tag b"counter") (hits b"visits")
+    (fun (first : Reply) =>
+      incr Reply (tag b"counter") (hits b"visits")
+        (fun (second : Reply) => pure Reply (tag b"counter") first))
+
+def classify : Script Reply (tag b"counter") :=
+  get Reply Int64 (tag b"counter") (hits b"visits")
+    (fun (current : Reply) =>
+      case current as r in Reply return Script Reply (tag b"counter") with
+      | nil => pure Reply (tag b"counter") (status b"missing")
+      | int n => pure Reply (tag b"counter") (int n)
+      | bulk b => pure Reply (tag b"counter") (bulk b)
+      | status b => pure Reply (tag b"counter") (status b)
+      | err b => pure Reply (tag b"counter") (err b)
+      | array rs => pure Reply (tag b"counter") (array rs))
+
+def branchWrite : Script Reply (tag b"counter") :=
+  get Reply Int64 (tag b"counter") (hits b"visits")
+    (fun (current : Reply) =>
+      case current as r in Reply return Script Reply (tag b"counter") with
+      | nil => increment
+      | int n => pure Reply (tag b"counter") (int n)
+      | bulk b => pure Reply (tag b"counter") (bulk b)
+      | status b => pure Reply (tag b"counter") (status b)
+      | err b => pure Reply (tag b"counter") (err b)
+      | array rs => pure Reply (tag b"counter") (array rs))
+
+def exact : Script Reply (tag b"counter") :=
+  pure Reply (tag b"counter") (int (int64 b"9007199254740993"))
+
+def maximum : Script Reply (tag b"counter") :=
+  pure Reply (tag b"counter") (int (int64 b"9223372036854775807"))
+
+def minimum : Script Reply (tag b"counter") :=
+  pure Reply (tag b"counter") (int (int64 b"-9223372036854775808"))
+
+def binary : Script Reply (tag b"counter") :=
+  pure Reply (tag b"counter") (bulk b"\x00\xff\"'\\\n\r123")
+
+def replies : Script Reply (tag b"counter") :=
+  pure Reply (tag b"counter") (array
+    (repliesCons nil
+      (repliesCons (int (int64 b"9007199254740993"))
+        (repliesCons (bulk b"b")
+          (repliesCons (status b"OK")
+            (repliesCons (err b"ERR fixture")
+              (repliesCons (array repliesNil) repliesNil)))))))
+
+def wrongResult : Script Nat (tag b"counter") :=
+  pure Nat (tag b"counter") 3

@@ -21,6 +21,11 @@ def kernel_field(text):
     return next((token for token in text.split() if token.startswith("kernel=")), "kernel=absent")
 
 
+def lua_count(text):
+    field = next((token for token in text.split() if token.startswith("lua=")), "lua=0/0")
+    return int(field[len("lua="):].split("/")[0])
+
+
 with tempfile.TemporaryDirectory(prefix="tether-stage-b-") as directory:
     root = Path(directory) / "tree"
     shutil.copytree(ROOT, root, ignore=shutil.ignore_patterns(
@@ -60,12 +65,16 @@ with tempfile.TemporaryDirectory(prefix="tether-stage-b-") as directory:
     print("KILLED NESTED-OP by inherited positivity", flush=True)
     nested.write_text(inline)
     run(root, command, "", True)
-    run(root, [sys.executable, "-P", "dev/trusted-lines.py"], "TRUSTED-LINES", True)
+    counted = run(root, [sys.executable, "-P", "dev/trusted-lines.py"], "TRUSTED-LINES", True)
     printer = root / "print/lua.ml"
-    printer.write_text("\n" * 321)
-    run(root, [sys.executable, "-P", "dev/trusted-lines.py"], "lua=321/320", False)
+    original = printer.read_bytes()
+    printer.write_bytes(original + b"\n" * 321)
+    # The expectation names the overflowed Lua field itself, so a failure in
+    # another group cannot satisfy this mutant.
+    run(root, [sys.executable, "-P", "dev/trusted-lines.py"],
+        f"lua={lua_count(counted) + 321}/320", False)
     print("KILLED LUA-BOUND by TRUSTED-LINES", flush=True)
-    printer.unlink()
+    printer.write_bytes(original)
     run(root, [sys.executable, "-P", "dev/trusted-lines.py"], "TRUSTED-LINES", True)
     # Both counters run in one ladder, so they must report one kernel number
     # even when a trusted source has no final newline.

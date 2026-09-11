@@ -8,18 +8,22 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def check(source_root, entry, erased=False, fuel=1000000):
+def check(source_root, entry, erased=False, fuel=1000000, *, command=None, receive=None):
     source_root = source_root.resolve()
     binary = ROOT / "_build/default/dev/surface_check.exe"
-    if not binary.is_file():
+    if command is None and not binary.is_file():
         print("CHECK build dev/surface_check.exe first", file=sys.stderr)
         return 1
-    command = [str(binary), entry, str(fuel), "erased" if erased else "check"]
+    if command is None:
+        command = [str(binary), entry, str(fuel), "erased" if erased else "check"]
     with subprocess.Popen(command, stdin=subprocess.PIPE,
                           stdout=subprocess.PIPE) as process:
         for line in process.stdout:
             if not line.startswith(b"READ "):
-                sys.stdout.buffer.write(line)
+                if receive is None:
+                    sys.stdout.buffer.write(line)
+                else:
+                    receive(line)
                 continue
             request = line[5:].rstrip(b"\n").decode("utf-8")
             try:

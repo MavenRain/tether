@@ -1,0 +1,4 @@
+(copy_files ../../vendor/kanon/wasm/*.ml)
+(library
+ (name kanon_wasm)
+ (libraries kanon_kernel))

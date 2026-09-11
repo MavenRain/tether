@@ -217,3 +217,33 @@ Fifty-nine positive and negative checks passed, and the suite now fails
 when its case count differs from the recorded number.
 The existing Stage A battery still killed all 37 of its mutants with
 zero survivors and a restored control.
+
+## Stage C 2026-09-10
+
+The artifact tests run in `dev/stage-c-tests.py`; source inventory tests
+run in `dev/stage-c-integrity.py`. All mutations use disposable copies,
+with a positive control before mutation and after restoration.
+
+| Mutant | Change | Failing leg |
+| --- | --- | --- |
+| DROP-LOCAL | Remove `local` from the emitted `bytes` function declaration. Lua syntax still passes. | The strict environment reports `NO-GLOBALS write bytes`. |
+| STUB-GLOBAL | Rename the emitted `text` function to `type` and remove its `local`, so the body writes a name the sandbox binds. | The strict environment reports `NO-GLOBALS write type`. |
+| BODY-BYTE | Append one newline to the Lua file while preserving the Wasm carrier. | The extracted bytes stay unchanged, which proves the extraction reads the carrier, and LUA-SAME then rejects the body bytes and the carried SHA-1. |
+| MISSING-LUA | Remove `print/lua.ml`. | TRUSTED-LINES refuses the missing implemented source. |
+| MISSING-TRANSPORT | Remove `print/transport.ml`. | TRUSTED-LINES refuses the missing counted adapter. |
+| MISSING-REDIS | Remove `runtime/redis.kan`. | PRELUDE-INTEGRITY refuses the missing prelude. |
+| PRELUDE-GROWTH | Append a newline to `runtime/redis.kan`. | PRELUDE-INTEGRITY reports the changed source hash. |
+| UNCOUNTED-PRINTER | Add `print/uncounted.ml`. | TRUSTED-LINES refuses an implementation outside its inventory. |
+
+Results: `PASS STAGE-C-MUTATIONS killed=3 restored=1` and
+`PASS STAGE-C-INTEGRITY killed=5 restored=1`. The inherited batteries
+also pass: Stage B killed=5 and restored=1; Stage A killed=37,
+survived=0 and restored=1.
+
+Stage C updates the Stage B LUA-BOUND mutation for the implemented
+printer: it appends 321 lines to the existing source, requires the counted
+Lua field itself to report the overflowed count against the bound, then
+restores the exact original bytes. The expectation is computed from the
+count before the mutation, so a failure in another group cannot satisfy
+it. The Stage B table above records the earlier pre-implementation
+mutation.

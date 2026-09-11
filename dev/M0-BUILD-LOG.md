@@ -489,3 +489,161 @@ restored=1, with no survivor row; Stage A killed=37, survived=0 and
 restored=1.
 
 Fix rounds: 3.
+
+### Stage C 2026-09-10: Lua printer and Wasm byte carrier
+
+Built from committed Stage B, `358155c`, in the isolated checkout
+`/Users/oobi/Documents/gpt18/tether-stage-c`. The main checkout was clean
+before the work. The implementation and validation ran directly with the
+local command tools. No commit was made.
+
+The new `tether_print` library emits reachable erased definitions as
+Lua 5.1, computes SHA-1, derives the `no-writes` flag and transports the
+same body through the unchanged WasmGC emitter. The development command
+checks a selected Script Reply entry and writes `script.lua`, `body.wasm`
+and `script.json`. Stage D remains next, with the Bash artifact and its
+reply dispatch. Client execution, request caching and the full driver
+remain the later Stage E and F work.
+
+The Lua bound includes `print/transport.ml`, for a total of 263/320.
+Implemented Lua sources are required and uncounted printer files fail.
+The inherited kernel and encoder remain 3997/4000 and 246/600. CARRY
+remains `files=36 diff=0 vendor=32 copies=4` with zero vendor changes.
+
+Stage B's prelude integrity gap is covered by an explicit two-file SHA-256
+manifest. The gate prints `PRELUDE-INTEGRITY lines=109 files=2 OK` and
+detects missing or changed bytes. The suggested eighth numeric bound
+remains unratified; this implementation preserves all seven ruled bounds
+and records no new user ruling.
+
+| Validation | Result |
+| --- | --- |
+| Complete ladder, `sh dev/stage-c.sh` | `PASS STAGE-C` |
+| Stage B checker regression | `PASS STAGE-B-SURFACE cases=59` |
+| SHA-1 against Python hashlib, including padding boundaries and all byte values | `PASS SHA1 vectors=9` |
+| Lua parsing | `LUA-SYNTAX parsed=11 of=11` |
+| Wasm validation and extracted body equality | `LUA-SAME wasm=1 bodies=11` |
+| Strict Lua global environment and reply checks | `NO-GLOBALS leaked=0 runs=18` |
+| Derived flags, including a conditional write | `FLAGS read-only=7 write=3 branch-write=1` |
+| Wrong result type, missing entry and zero fuel | `PASS LUA-REFUSALS cases=3` |
+| Artifact mutations | `PASS STAGE-C-MUTATIONS killed=3 restored=1` |
+| Source inventory mutations | `PASS STAGE-C-INTEGRITY killed=5 restored=1` |
+| Stage B mutation regression | `PASS STAGE-B-MUTATIONS killed=5 restored=1` |
+| Stage A mutation regression | `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1` |
+| Real Redis, five replies and three server-computed hashes | `PASS LUA-REDIS cases=5 sha1=3` |
+| Owned server cleanup | `REDIS-STOPPED owned=1` |
+| SPEC audit after documentation updates | `R0-AUDIT ok` |
+
+The full ladder capture is `.kanon-exec/run-EDBwSf` in the isolated
+checkout. Stage A mutations are in `.kanon-exec/run-4Xb7cq`; the Redis
+check is in `.kanon-exec/run-7UcEP5`. The initial Redis attempt was denied
+by the sandbox's socket restriction before starting a server.
+The successful rerun used tool-approved local socket access. An initial
+baseline command omitted the installed ripgrep from PATH and was retried
+with the existing PATH; that environment issue changed no source.
+
+The optional Redis check verifies exact replies for the counter at
+9007199254740993, INCR at that value and the signed maximum, read-only GET
+and missing GET. The Lua checks also exercise the signed minimum, binary
+payloads, all six Reply variants, captured continuations and case payloads.
+
+User commit command after review:
+
+```sh
+git -C /Users/oobi/Documents/tether commit -s -m "M0 Stage C: emit canonical Lua and carry its bytes through Wasm"
+```
+
+### Review round 2026-09-10 (Stage C)
+
+First review round of the Stage C slice: 29 staged paths, 1027
+insertions and 26 deletions on `358155c`. Seven findings were kept and
+all seven are fixed.
+
+| id | severity | file | fix or ruling |
+| --- | --- | --- | --- |
+| A-1 | high | dev/lua-sandbox.lua:16 | One `invoke` records the call and serves a `getFault` knob for GET; `protected` returns the error table and `unprotected` raises it, so `redis.call` and `redis.pcall` are different stubs. |
+| C-2 | high | dev/lua-sandbox.lua:19 | A strict environment over a frozen proxy: the environment table and the redis table stay empty, so every read and every write reaches the metatable, including bound names. New mutant STUB-GLOBAL is killed by `NO-GLOBALS write type`. |
+| D-1 | high | dev/stage-c-tests.py:133 | `lua_same` re-extracts the carrier and the carried SHA-1 and compares both against `script.lua`; the BODY-BYTE mutant first proves the extraction is carrier only (`CARRIER-INDEPENDENT`), then requires `lua_same` false. |
+| C-1 | high | dev/stage-c-tests.py:112 | The FLAGS census is computed from each `script.json`; a branch writer is the artifact observed both writing and not writing across the reply checks, and the run counter replaces the literal. |
+| A-2 | medium | print/lua.ml:62 | `redis.pcall('GET',k)` replaces `redis.call('GET',k)` and an `err` table becomes `{tag=4,...}`, with the ladder controls `WRITE-READ-FAULT-REPLY` and `READ-FAULT-REPLY`. |
+| C-3 | medium | dev/stage-b-mutations.py:67 | The LUA-BOUND kill expects the overflowed Lua field: the count before the mutation plus 321 gives the expected `lua=584/320`. |
+| C-4 | medium | dev/house.sh:9 | The panicscan argument list is `dev/*.ml`, so the house gate scans every dev OCaml source, including dev/sha1_probe.ml. |
+
+Refuted: 0. No finding of this round was refuted.
+
+Merged and dropped: 10. D-3 merged into C-1: same file and same defect
+(dev/stage-c-tests.py:112 constant FLAGS line recorded in
+dev/M0-BUILD-LOG.md:527); C-1 is kept because its census is right, 7
+read-only and 4 writers, while D-3's detail states 8 and 3. D-2 merged
+into C-4: same file, same line and same defect (dev/house.sh:9 omits
+dev/sha1_probe.ml). D-4 merged into C-3: same file, same line and same
+defect (dev/stage-b-mutations.py:67 expects only the substring `/320`).
+B-1 merged into C-6, then cut with it: the literal `wasm=1` of
+dev/stage-c-tests.py:86 is the same defect C-6 states. D-5 merged into
+C-6, then cut with it: it restates the same `wasm=1` literal from the
+dev/M0-BUILD-LOG.md:525 side. C-6 cut at the cap of 7: low severity and
+reporting only, because the underlying properties are enforced per
+artifact at dev/stage-c-tests.py:57 and :60, which abort the gate. C-5
+cut at the cap of 7: the blind spot of `(ROOT/print).glob("*.ml")` at
+dev/trusted-lines.py:44 needs a file class that does not exist yet. A-3
+cut at the cap of 7: dev/STAGE-C.md:60 documents LUA-NAT-RANGE, but the
+only bare Nat literal in the corpus fails earlier at the Reply shape
+check. A-4 cut at the cap of 7: the refusal text at print/lua.ml:78
+names a Reply condition the erased repr cannot express, while
+print/transport.ml:15 enforces the requirement. A-5 cut at the cap of 7:
+every case in examples/LuaCases.tet scrutinises Reply, so the payload
+order of print/lua.ml:112 is unpinned.
+
+Gates after round 1, log
+`/Users/oobi/Documents/tether-stage-c-review/gates-1.log`, one-minute
+load 14.32. Carry and counts: `files=36 diff=0 vendor=32 copies=4
+kernel=3997/4000 encoder=246/600 cases=59 lua=263/320 sh=0/240
+store=0/200 host-node=0/300 host-rest=0/300 prelude_lines=109 vectors=9
+parsed=11 bodies=11 leaked=0 runs=18 refusals=3 killed_c=3
+killed_integrity=5 killed_b=5 restored_b=1 killed=37 survived=0
+restored=1`. Mutation summary: Stage C killed=3 and restored=1, Stage C
+integrity killed=5 and restored=1, Stage B killed=5 and restored=1,
+Stage A killed=37, survived=0 and restored=1.
+
+| Leg | Line |
+| --- | --- |
+| Pin | `PIN 2c2e6e6 unlisted=0` |
+| Carry | `CARRY files=36 diff=0 vendor=32 copies=4` |
+| R0 count | `R0-COUNT formers=2 schema=4 shapes=5 admitted=3` |
+| R0 audit | `R0-AUDIT ok` |
+| Trusted lines, Stage A | `TRUSTED-LINES kernel=3997/4000 encoder=246/600 OK` |
+| Stage A | `PASS STAGE-A` |
+| House | `PASS HOUSE` |
+| Stage B surface | `PASS STAGE-B-SURFACE cases=59` |
+| Trusted lines, all seven bounds | `TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=263/320 sh=0/240 store=0/200 host-node=0/300 host-rest=0/300 OK` |
+| Stage B mutant | `KILLED SIXTH-SHAPE by rebuilt R0-COUNT` |
+| Stage B mutant | `KILLED HOUSE-EXCEPTION by panicscan` |
+| Stage B mutant | `KILLED NESTED-OP by inherited positivity` |
+| Stage B mutant | `KILLED LUA-BOUND by TRUSTED-LINES` |
+| Stage B mutant | `AGREED NEWLINE-COUNT by both trusted-line counters` |
+| Stage B mutant | `KILLED MISSING-ENCODER by TRUSTED-LINES` |
+| Stage B mutations | `PASS STAGE-B-MUTATIONS killed=5 restored=1` |
+| Stage B | `PASS STAGE-B` |
+| Prelude integrity | `PRELUDE-INTEGRITY lines=109 files=2 OK` |
+| SHA-1 vectors | `PASS SHA1 vectors=9` |
+| Lua syntax | `LUA-SYNTAX parsed=11 of=11` |
+| Carried bytes | `LUA-SAME wasm=1 bodies=11` |
+| Strict environment | `NO-GLOBALS leaked=0 runs=18` |
+| Flag census | `FLAGS read-only=7 write=3 branch-write=1` |
+| Lua refusals | `PASS LUA-REFUSALS cases=3` |
+| Stage C mutant | `KILLED DROP-LOCAL by NO-GLOBALS` |
+| Stage C mutant | `KILLED STUB-GLOBAL by NO-GLOBALS` |
+| Stage C mutant | `KILLED BODY-BYTE by LUA-SAME` |
+| Stage C mutations | `PASS STAGE-C-MUTATIONS killed=3 restored=1` |
+| Stage C tests | `PASS STAGE-C-TESTS` |
+| Integrity mutant | `KILLED MISSING-LUA` |
+| Integrity mutant | `KILLED MISSING-TRANSPORT` |
+| Integrity mutant | `KILLED MISSING-REDIS` |
+| Integrity mutant | `KILLED PRELUDE-GROWTH` |
+| Integrity mutant | `KILLED UNCOUNTED-PRINTER` |
+| Stage C integrity | `PASS STAGE-C-INTEGRITY killed=5 restored=1` |
+| Stage C ladder | `PASS STAGE-C` |
+| Ladder exit | `EXIT 0` |
+| Stage A mutations | `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1` |
+
+Fix rounds: 1.

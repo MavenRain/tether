@@ -6,5 +6,7 @@ command -v panicscan > /dev/null 2>&1 || {
   printf '%s\n' 'HOUSE FAIL panicscan is not on PATH'
   exit 1
 }
-panicscan --deny present --min present --strict surface dev/surface_check.ml
+# The glob names every development OCaml source, so a new dev unit cannot
+# enter the tree without the house gate.
+panicscan --deny present --min present --strict surface print dev/*.ml
 printf '%s\n' 'PASS HOUSE'
