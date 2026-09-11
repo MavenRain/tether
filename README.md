@@ -4,9 +4,10 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
-M0 Stage C: checked Redis scripts compile to canonical Lua with a SHA-1
-identifier, derived write flags and a Wasm byte carrier. The Bash artifact,
-Client hosts and full driver follow in Stages D to F.
+M0 Stage D: checked straight-line Clients compile to Bash 3.2, with
+canonical Lua bodies shared by their Wasm byte carriers. The Bash artifact
+loads scripts, invokes by SHA-1 and retries NOSCRIPT with the same body.
+Client hosts and the full driver follow in Stages E and F.
 
 ```sh
 dune build dev/surface_check.exe
@@ -15,11 +16,15 @@ sh dev/stage-b.sh
 dune build dev/lua_emit.exe dev/sha1_probe.exe
 python3 -P dev/emit-lua.py --root examples M0Spine.tet -o .gatework/counter
 sh dev/stage-c.sh
+dune build dev/sh_emit.exe
+python3 -P dev/emit-sh.py --root examples M0Spine.tet -o .gatework/bash-counter
+sh dev/stage-d.sh
 ```
 
 See `dev/STAGE-B.md` for module syntax, schemas, erased constructors,
 validation scope and the additional `panicscan` gate dependency.
 See `dev/STAGE-C.md` for Lua emission, artifact inspection and validation.
+See `dev/STAGE-D.md` for Bash emission, reply formatting and current limits.
 
 ## Files
 
@@ -50,7 +55,8 @@ with a control failure.
 The submodule URL is the ruled local `/Users/oobi/Documents/kanon` path.
 After initialization, builds and gates use only `vendor/kanon`.
 The development emitter writes `script.lua`, `body.wasm` and `script.json`.
-The `tether` command and complete `prog.wasm`/`prog.sh` pair arrive later.
+The Bash emitter writes `prog.sh` plus one Lua/Wasm carrier pair per script.
+The `tether` command and executable Client `prog.wasm` arrive later.
 
 ## License
 

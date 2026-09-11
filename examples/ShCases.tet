@@ -1,0 +1,68 @@
+module ShCases
+import M0Spine
+
+def readOnly : Script Reply (tag b"counter") :=
+  get Reply Int64 (tag b"counter") (hits b"visits")
+    (fun (current : Reply) => pure Reply (tag b"counter") current)
+
+def twice : Client Reply :=
+  inv Reply (tag b"counter") counter (fun (first : Reply) =>
+    inv Reply (tag b"counter") counter (fun (second : Reply) => done Reply second))
+
+def capturedReply : Client Reply :=
+  inv Reply (tag b"counter") counter (fun (first : Reply) =>
+    inv Reply (tag b"counter") readOnly (fun (second : Reply) => done Reply first))
+
+def quoted : Script Reply (tag b"counter") :=
+  get Reply Int64 (tag b"counter") (hits b"q\"'$(printf injected);`printf injected`\\\n")
+    (fun (current : Reply) => pure Reply (tag b"counter") current)
+
+def quotedMain : Client Reply :=
+  inv Reply (tag b"counter") quoted (fun (reply : Reply) => done Reply reply)
+
+def nulKey : Script Reply (tag b"counter") :=
+  get Reply Int64 (tag b"counter") (hits b"bad\x00key")
+    (fun (current : Reply) => pure Reply (tag b"counter") current)
+
+def nulMain : Client Reply :=
+  inv Reply (tag b"counter") nulKey (fun (reply : Reply) => done Reply reply)
+
+def higherOrder : (Reply -> Client Reply) -> Client Reply :=
+  fun (finish : Reply -> Client Reply) => inv Reply (tag b"counter") counter finish
+
+def higherMain : Client Reply :=
+  higherOrder (fun (reply : Reply) => done Reply reply)
+
+def stopped : Client Reply := fail Reply Busy
+
+def wrongClient : Client Nat := done Nat 3
+
+def exactScript : Script Reply (tag b"counter") :=
+  pure Reply (tag b"counter") (int (int64 b"9007199254740993"))
+
+def exactMain : Client Reply :=
+  inv Reply (tag b"counter") exactScript (fun (reply : Reply) => done Reply reply)
+
+def constructed : Client Reply :=
+  done Reply (int (int64 b"7"))
+
+def pairFirst : Reply -> Reply -> Client Reply :=
+  fun (first : Reply) => fun (second : Reply) => done Reply first
+
+def partialMain : Client Reply :=
+  inv Reply (tag b"counter") counter (fun (first : Reply) =>
+    inv Reply (tag b"counter") counter (pairFirst first))
+
+def inlineMain : Client Reply :=
+  inv Reply (tag b"counter") (pure Reply (tag b"counter") (int (int64 b"7")))
+    (fun (reply : Reply) => done Reply reply)
+
+def branched : Client Reply :=
+  inv Reply (tag b"counter") counter (fun (reply : Reply) =>
+    case reply as r in Reply return Client Reply with
+    | nil => done Reply reply
+    | int n => done Reply reply
+    | bulk b => done Reply reply
+    | status b => done Reply reply
+    | err b => done Reply reply
+    | array rs => done Reply reply)

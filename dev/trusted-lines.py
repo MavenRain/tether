@@ -27,8 +27,8 @@ def measure(root):
         newline_only = name in ("kernel", "encoder")
         for relative in paths:
             path = root / relative
-            if not path.exists() and name not in ("kernel", "encoder", "lua"):
-                # The remaining implementations are due in Stages D and E.
+            if not path.exists() and name not in ("kernel", "encoder", "lua", "sh"):
+                # The remaining implementations are due in Stage E.
                 continue
             data = path.read_bytes()
             unterminated = bool(data) and not data.endswith(b"\n")

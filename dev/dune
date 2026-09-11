@@ -12,3 +12,8 @@
  (name sha1_probe)
  (modules sha1_probe)
  (libraries tether_print))
+
+(executable
+ (name sh_emit)
+ (modules sh_emit)
+ (libraries tether_surface tether_print kanon_kernel))

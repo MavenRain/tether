@@ -1,9 +1,10 @@
 # tether specification
 
-Stage C, 2026-09-10. The foundation, counter surface, Lua printer and Wasm
-byte carrier are implemented. See `dev/STAGE-B.md` and `dev/STAGE-C.md`
-for syntax and current limits. The complete artifact contract below
-includes the Bash printer and Client hosts due in subsequent M0 stages.
+Stage D, 2026-09-10. The foundation, counter surface, Lua and Bash printers
+and Wasm byte carrier are implemented. See `dev/STAGE-B.md`,
+`dev/STAGE-C.md` and `dev/STAGE-D.md` for syntax and current limits.
+The complete artifact contract below includes the executable Wasm Client
+and real hosts due in subsequent M0 stages.
 
 ## Foundation (inherited)
 
@@ -87,8 +88,8 @@ global metatable.
 
 Inherited trusted lines: kernel 3997/4000 and encoder 246/600. Stage C
 measures lua 263/320, including flags, SHA-1 and the Wasm transport adapter.
-The later implementations measure sh 0/240, store 0/200, host-node 0/300
-and host-rest 0/300. Both trusted preludes are pinned by
+Stage D measures sh 154/240. The later implementations measure store 0/200,
+host-node 0/300 and host-rest 0/300. Both trusted preludes are pinned by
 `dev/PRELUDES.sha256`; their 109 lines are reported separately without
 adding or changing a ruled bound.
 The store and printers live outside `lib`.

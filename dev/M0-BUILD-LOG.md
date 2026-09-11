@@ -647,3 +647,182 @@ Stage A killed=37, survived=0 and restored=1.
 | Stage A mutations | `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1` |
 
 Fix rounds: 1.
+
+### Stage D 2026-09-10: Bash printer and envelope dispatch
+
+Built from committed Stage C, `ea34cca`, in the isolated checkout
+`/Users/oobi/Documents/gpt18/tether-stage-d`. The main Tether checkout was
+clean at the start. Implementation and validation used local tools.
+No commit was made.
+
+The checked Client entry lowers to a straight-line sequence of named
+Script invocations. The Bash printer carries canonical Lua through
+quoted heredocs, loads each script on first use, invokes by SHA-1, and
+falls back to the same EVAL body only for a NOSCRIPT error. Captured
+replies survive later invocations. Envelopes are classified before
+payload extraction, unsafe JSON numbers are refused, and every case has
+an exit-4 default. Arrays print compact JSON to preserve nested replies.
+`dev/STAGE-D.md` records the supported subset and refusal boundaries.
+
+The new development emitter writes executable `prog.sh`, a manifest and
+one Lua/Wasm byte-carrier pair per script. It requires a fresh output
+directory. The complete Wasm Client, real hosts and store remain Stage E
+work; the complete driver remains Stage F work.
+
+The final ladder ran with the zxcaml-p1 toolchain and a PATH containing
+the installed ripgrep and panicscan. Its capture is
+`/Users/oobi/Documents/gpt18/tether-stage-d/.kanon-exec/run-ZTc9Wl`.
+An earlier attempt stopped at R0-AUDIT because a shortened PATH omitted
+ripgrep; the corrected run below completed with exit 0.
+
+| Validation | Result |
+| --- | --- |
+| Foundation | PIN 2c2e6e6; CARRY files=36 diff=0; R0-COUNT and R0-AUDIT passed. |
+| House rules | `PASS HOUSE`, zero panicscan findings. |
+| Stage B | `PASS STAGE-B-SURFACE cases=59`; mutations killed=5 restored=1. |
+| Stage C | Eleven Lua parses and byte extractions; artifact mutations killed=3; integrity mutations killed=5; all controls restored. |
+| Runtime versions | jq-1.6 and Bash 3.2.57. |
+| Bash syntax | `BASH-SYNTAX ok=1 artifacts=6` |
+| Shared bytes | `LUA-SAME wasm=1 sh=1 bodies=6` |
+| Stub request cache | `SH-LOAD-ONCE loads=1 invokes=2 steady_calls=1` |
+| Replies and failures | `PASS SH-REPLIES runs=40` |
+| Emission refusals | `PASS SH-REFUSALS cases=11` |
+| Stage D mutations | `PASS STAGE-D-MUTATIONS killed=5 restored=1` |
+| Complete ladder | `PASS STAGE-D`, exit 0. |
+
+TRUSTED-LINES reports kernel=3997/4000, encoder=246/600, lua=263/320,
+sh=155/240, store=0/200, host-node=0/300 and host-rest=0/300. The Bash
+header is included in its printer's count and that file is now required.
+No inherited source, prelude, denominator or bound changed. The separate
+Stage A mutation battery and real Redis integrations were not rerun in
+this slice. Stage D's request tests use an isolated curl stub with real jq;
+the real-host E2E-3WAY and LOAD-ONCE gates remain Stage E work.
+
+### Review round 2026-09-10 (Stage D)
+
+Four lenses returned 18 verified findings. Kept 7, refuted 0, merged or
+dropped 11. Three fix rounds closed every kept item and the new defects
+that the fixes introduced.
+
+| id | severity | file | fix or ruling |
+| --- | --- | --- | --- |
+| C-1 | high | dev/stage-d-tests.py:42 | curl_stub logs an unplanned request before it drops it, so a code=4 exercise cannot pass vacuously. |
+| B-1 | medium | print/sh.ml:96 | load() gains `[ "$kind" != error ] || fault` before the string check, so a SCRIPT LOAD error reaches stderr with exit 4. |
+| C-2 | medium | dev/stage-d-tests.py:99 | exercise asserts stderr content: the load-path cases require `ERR Error compiling script`, `NOAUTH Authentication required.` and `BUSY` with exit 4. |
+| C-3 | medium | dev/stage-d-tests.py:73 | lua_same compares the manifest length with the `loadedN=0` assignments in prog.sh, so an empty manifest is rejected and bodies=6 and killed=5 are pinned. |
+| D-1 | medium | dev/MUTATION-LOG.md:263 | The row records that the payload dispatch default arm is unreachable behind the emitted `envelope`, and that the DROP-CASE-1 control supplies the unknown variant by replacing `envelope`. |
+| A-1 | low | dev/stage-d-tests.py:177 | examples/ShCases.tet gains constructed, pairFirst, partialMain, inlineMain and branched, and the refusal list gains one SH-FIRST-ORDER row for each. |
+| A-2 | low | dev/stage-d-tests.py:181 | A second budget case runs dev/emit-sh.py on M0Spine.tet at fuel 2724 with diagnostic SH-BUDGET and requires no output directory, so print/sh.ml's SH-BUDGET branch is exercised. |
+| ND-1-1 | medium | dev/M0-BUILD-LOG.md:688 | The Stage D record `PASS SH-REPLIES runs=38` becomes `runs=40`, from the observed battery. |
+| ND-1-2 | medium | dev/M0-BUILD-LOG.md:689 | The Stage D record `PASS SH-REFUSALS cases=6` becomes `cases=10` in round 2 and `cases=11` after A-2. |
+| ND-1-3 | medium | dev/M0-BUILD-LOG.md:694 | The Stage D record `sh=154/240` becomes `sh=155/240`. The 240 bound is unmoved. |
+| ND-2-1 | medium | print/sh.ml:96 | The B-1 line was present in the working tree and absent from the index; this round stages it. |
+| ND-2-2 | medium | dev/MUTATION-LOG.md:263 | The D-1 wording in dev/MUTATION-LOG.md and dev/STAGE-D.md:69-73 was unstaged; this round stages it. |
+| ND-2-3 | medium | dev/M0-BUILD-LOG.md:694 | The record `sh=155/240` is true once the 155-line print/sh.ml is staged; the ROOT smoke run prints it. |
+
+Refuted: 0. No lens finding was refuted at verification, and the judge
+refuted none on re-read.
+
+Merged and dropped: 11, with these reasons.
+
+- D-2: Merged into A-1: same file and same defect (a documented
+  SH-FIRST-ORDER refusal category with no SH-REFUSALS case). A-1 states
+  the gap for all four uncovered categories, including the constructed
+  Reply, and carries the same fix.
+- C-5: Merged into C-3: same file and same defect class (a printed
+  Stage D census that no require pins). The literal killed=5 at
+  dev/stage-d-tests.py:226 is folded into C-3's fix, which also pins
+  bodies at :127.
+- D-5: Dropped under the 7-item cap: a narrower instance of the same
+  coverage-gap class as A-1 ([{}] and [1.5] missing from the reply
+  battery at :163). Behaviour verified correct today; the safe filter
+  refuses both.
+- B-2: Dropped under the cap. Real but low: a second SH row or a
+  duplicate ARTIFACT name in dev/emit-sh.py:30 requires a compiler
+  regression upstream, and prog.sh byte agreement is still gated by
+  LUA-SAME.
+- B-3: Dropped under the cap. Low operator-ergonomics defect: a write
+  failure after the mkdir at dev/emit-sh.py:43 leaves a partial
+  directory that reruns refuse with a clear File exists message; no
+  wrong artifact is produced.
+- B-4: Dropped under the cap. The token in the curl argv at
+  print/sh.ml:74 is real and confirmed, but dev/STAGE-D.md:54 claims
+  only that the artifact does not print its token, which stays true;
+  this is a doc-wording gap on a shared-host threat the slice does not
+  claim to cover.
+- B-5: Dropped under the cap. Confirmed but unreachable in practice: a
+  Redis integer reply cannot carry -0, so the print/sh.ml:122 tostring
+  path differs from a REST twin only for a hand-crafted or
+  proxy-injected envelope.
+- B-6: Dropped under the cap. The finder itself records it as correct
+  behaviour with a test gap; the non-object top-level guard at
+  print/sh.ml:79 is exercised indirectly by the malformed and two-field
+  fixtures.
+- C-4: Dropped under the cap. Low: the IndexError at
+  dev/stage-d-tests.py:67 only fires for a hypothetical future mutant
+  that removes a body marker; today every mutant changes a body byte
+  and the leg fails cleanly.
+- D-3: Dropped under the cap. README.md:20 omits the fresh-directory
+  sentence that dev/STAGE-D.md:15 records; a documentation polish item
+  with no gate or artifact consequence.
+- D-4: Dropped under the cap. The array printing change is an
+  improvement and its reason is recorded in dev/STAGE-D.md:46-47 and
+  dev/M0-BUILD-LOG.md; only the naming of the departure from the
+  M0-PLAN sketch is missing.
+
+Gates after round 3, `/Users/oobi/Documents/tether-stage-d-review/gates-3.log`,
+verdict GATES-OK. One-minute load 29.24 at the start (0:18, 27 users,
+load averages: 29.24 35.49 32.14) and 21.11 at the end (0:21, 27 users,
+load averages: 21.11 27.49 29.30).
+
+| leg | line |
+| --- | --- |
+| PIN | `PIN 2c2e6e6 unlisted=0` |
+| CARRY | `CARRY files=36 diff=0 vendor=32 copies=4` |
+| R0-COUNT | `R0-COUNT formers=2 schema=4 shapes=5 admitted=3` |
+| R0-AUDIT | `R0-AUDIT ok` |
+| TRUSTED-LINES | `TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=263/320 sh=155/240 store=0/200 host-node=0/300 host-rest=0/300 OK` |
+| STAGE-A | `PASS STAGE-A` |
+| HOUSE | `PASS HOUSE` |
+| STAGE-B-SURFACE | `PASS STAGE-B-SURFACE cases=59` |
+| STAGE-B-MUTATIONS | `PASS STAGE-B-MUTATIONS killed=5 restored=1` |
+| SHA1 | `PASS SHA1 vectors=9` |
+| LUA-SYNTAX | `LUA-SYNTAX parsed=11 of=11` |
+| LUA-SAME (Stage C) | `LUA-SAME wasm=1 bodies=11` |
+| NO-GLOBALS | `NO-GLOBALS leaked=0 runs=18` |
+| FLAGS | `FLAGS read-only=7 write=3 branch-write=1` |
+| STAGE-C-MUTATIONS | `PASS STAGE-C-MUTATIONS killed=3 restored=1` |
+| STAGE-C-INTEGRITY | `PASS STAGE-C-INTEGRITY killed=5 restored=1` |
+| PRELUDE-INTEGRITY | `PRELUDE-INTEGRITY lines=109 files=2 OK` |
+| STAGE-C | `PASS STAGE-C` |
+| Runtime versions | `JQ-VERSION jq-1.6 BASH-VERSION 3.2.57` |
+| BASH-SYNTAX | `BASH-SYNTAX ok=1 artifacts=6` |
+| LUA-SAME (Stage D) | `LUA-SAME wasm=1 sh=1 bodies=6` |
+| SH-LOAD-ONCE | `SH-LOAD-ONCE loads=1 invokes=2 steady_calls=1` |
+| SH-REPLIES | `PASS SH-REPLIES runs=40` |
+| SH-REFUSALS | `PASS SH-REFUSALS cases=11` |
+| DROP-CASE-0 | `KILLED DROP-CASE-0 by reply comparison` |
+| DROP-CASE-1 | `KILLED DROP-CASE-1 by reply comparison` |
+| SH-BODY-BYTE | `KILLED SH-BODY-BYTE by LUA-SAME` |
+| MISSING-SH | `KILLED MISSING-SH by TRUSTED-LINES` |
+| SH-BOUND | `KILLED SH-BOUND by TRUSTED-LINES` |
+| STAGE-D-MUTATIONS | `PASS STAGE-D-MUTATIONS killed=5 restored=1` |
+| STAGE-D-TESTS | `PASS STAGE-D-TESTS` |
+| STAGE-D | `PASS STAGE-D` |
+| Ladder exit | `EXIT 0` |
+| STAGE-A-MUTATIONS | `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1` |
+| Mutation exit | `EXIT-MUT 0` |
+
+Carry and count numbers: files=36 diff=0 vendor=32 copies=4
+kernel=3997/4000 encoder=246/600 cases=59 lua=263/320 sh=155/240
+store=0/200 host-node=0/300 host-rest=0/300 prelude_lines=109 vectors=9
+parsed=11 bodies=11 leaked=0 runs=18 artifacts=6 sh_bodies=6 loads=1
+invokes=2 steady_calls=1 sh_runs=40 sh_cases=11 killed_c=3
+killed_integrity=5 killed_b=5 restored_b=1 killed_d=5 restored_d=1
+killed=37 survived=0 restored=1.
+
+Mutation summary: Stage A killed=37, survived=0, restored=1; Stage B
+killed=5, restored=1; Stage C killed=3, restored=1; Stage C integrity
+killed=5, restored=1; Stage D killed=5, restored=1.
+
+Fix rounds: 3.

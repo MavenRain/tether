@@ -247,3 +247,42 @@ restores the exact original bytes. The expectation is computed from the
 count before the mutation, so a failure in another group cannot satisfy
 it. The Stage B table above records the earlier pre-implementation
 mutation.
+
+### Stage D 2026-09-10: Bash dispatch and body transport
+
+`dev/stage-d-tests.py` runs five mutations in disposable artifacts or
+source copies. Each has a passing control before mutation and after
+restoration. The default-arm probes exercise the emitted functions with
+an unknown reply kind; their stdout must stay empty and their exit must
+be 4. The payload dispatch's default arm is unreachable behind the
+emitted `envelope`, which already restricts the kind to
+number, string, array, null or error, so the DROP-CASE-1 probe replaces
+`envelope` with one that sets an unknown kind. The DROP-CASE-0 arm is
+reachable on a real envelope. The mutated versions print `accepted`, exposing the missing arm
+even though Bash syntax remains valid.
+
+| Mutant | Change | Failing leg |
+| --- | --- | --- |
+| DROP-CASE-0 | Delete the envelope dispatch's default arm. | Reply comparison accepts an invalid boolean envelope. |
+| DROP-CASE-1 | Delete the payload dispatch's default arm. | Reply comparison accepts an unknown variant that the control supplies by replacing `envelope`. |
+| SH-BODY-BYTE | Change one byte inside the Bash heredoc. | LUA-SAME differs from the unchanged Lua file and Wasm extraction. |
+| MISSING-SH | Delete `print/sh.ml` in the copied source tree. | TRUSTED-LINES refuses a missing implemented printer. |
+| SH-BOUND | Append 241 newlines to the copied Bash printer. | TRUSTED-LINES exceeds the existing 240-line bound. |
+
+LUA-SAME also requires the manifest length to equal the body assignments
+in `prog.sh`, so a manifest swap cannot empty the byte comparison. The
+failure-only artifact carries no body and no assignment. The runner prints its killed census from the
+counter that records each kill, not from a literal.
+
+SH-REFUSALS now covers the printer's own budget guard. The front end and
+erasure of `M0Spine.tet` spend 2718 polls and the static walk spends 12,
+so the case at fuel 2724 refuses with the printer's `SYNTAX SH-BUDGET`,
+while the case at fuel 0 refuses with the checker's `CHECK budget`. A
+control that deletes the `Kanon_kernel.Budget.exhausted` guard from
+`print/sh.ml` fails that case, and the unchanged copy passes it.
+
+Result: `PASS STAGE-D-MUTATIONS killed=5 restored=1`. The complete Stage D
+ladder also reran Stage B's five mutations, Stage C's three artifact
+mutations and Stage C's five integrity mutations, all with restored
+controls. The separate Stage A mutation battery was not rerun in this
+slice; the Stage A foundation ladder passed.
