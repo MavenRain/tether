@@ -55,7 +55,7 @@ let merge left right =
     (fun (name, _entry) -> not (List.mem_assoc name left.rows)) right.rows in
   Ok { globals = { G.entries; families }; rows; schemas; owners }
 
-let check_unit ~budget base imported (unit : Parser.t) =
+let check_unit ~observe ~budget base imported (unit : Parser.t) =
   let* env = List.fold_left (fun acc name ->
     let* env = acc in
     let* dependency = List.assoc_opt name imported
@@ -64,22 +64,27 @@ let check_unit ~budget base imported (unit : Parser.t) =
   let* owners = reserve unit.name (List.map (fun (s : Schema.t) -> s.name) unit.schemas) env.owners in
   let schemas = env.schemas @ unit.schemas in
   let* decls = Parser.declarations schemas unit.body in
+  List.iter (fun d -> observe "reserve" (names_of d)) decls;
   let* owners = reserve unit.name (List.concat_map names_of decls) owners in
   (* Only prelude names and generated wrappers can be captured by an expansion.
      Imported user exports stay available as local binder names. *)
   let protected = List.map fst (Names.bindings base.owners) in
+  List.iter (fun d -> observe "rewrite" (names_of d)) decls;
   let* decls = Rewrite.declarations protected (Constructors.aliases env.globals) decls in
+  List.iter (fun d -> observe "elaborate" (names_of d)) decls;
   let* globals, rows = Kanon_surface.Elab.elab_program_in ~budget env.globals decls
     |> Result.map_error (fun e -> Diagnostic.Kernel e) in
   Ok { globals; rows = env.rows @ rows; schemas; owners }
 
-let check ~budget ~read ~path ~reactor ~redis =
+let check_observed ~observe ~budget ~read ~path ~reactor ~redis =
   let* units = Resolver.load ~read ~path in
   let* base = initial ~budget ~reactor ~redis in
   let* checked = List.fold_left (fun acc (unit : Parser.t) ->
     let* checked = acc in
-    let* output = check_unit ~budget base checked unit in
+    let* output = check_unit ~observe ~budget base checked unit in
     Ok ((unit.name, output) :: checked)) (Ok []) units in
   match checked with
   | (_name, output) :: _rest -> Ok output
   | [] -> Error (Diagnostic.Module_path "no entry module")
+
+let check = check_observed ~observe:(fun _stage _names -> ())

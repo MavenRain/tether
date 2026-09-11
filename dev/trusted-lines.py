@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Seven M0 bounds, measured from source files including blank lines."""
+"""Eight M0 bounds, measured from source files including blank lines."""
 from pathlib import Path
 import sys
 
@@ -9,10 +9,11 @@ GROUPS = {
     "kernel": (4000, [f"vendor/kanon/lib/{name}.ml" for name in KERNEL]),
     "encoder": (600, ["vendor/kanon/wasm/gc_encode.ml"]),
     "lua": (320, ["print/lua.ml", "print/sha1.ml", "print/flags.ml", "print/transport.ml"]),
-    "sh": (240, ["print/sh.ml"]),
+    "sh": (240, ["print/sh.ml", "print/client.ml"]),
     "store": (200, ["store/store.ml", "store/interp.ml"]),
     "host-node": (300, ["runtime/redis-host.mjs"]),
     "host-rest": (300, ["runtime/rest-twin.mjs", "runtime/rest-decode.mjs"]),
+    "bin": (450, ["bin/tether.ml", "bin/driver.py", "bin/local.py"]),
 }
 
 
@@ -41,7 +42,8 @@ if __name__ == "__main__":
         # Every implementation extension of each directory, so a host source
         # added as .js, .cjs or .mli cannot escape the census and its bound.
         census = {"print": ("*.ml", "*.mli"), "store": ("*.ml", "*.mli"),
-                  "runtime": ("*.mjs", "*.js", "*.cjs")}
+                  "runtime": ("*.mjs", "*.js", "*.cjs"),
+                  "bin": ("*.ml", "*.mli", "*.py", "*.mjs")}
         candidates = [path for folder, patterns in census.items()
                       for pattern in patterns for path in (ROOT / folder).glob(pattern)]
         unexpected = sorted(str(path.relative_to(ROOT)) for path in candidates

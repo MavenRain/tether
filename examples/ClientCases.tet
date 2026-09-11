@@ -1,0 +1,9 @@
+module ClientCases
+import M0Spine
+
+def earlierOutput : Client Reply :=
+  inv Reply (tag b"counter") counter (fun (first : Reply) =>
+    inv Reply (tag b"counter") counter (fun (second : Reply) => done Reply first))
+
+def afterFault : Client Reply :=
+  inv Reply (tag b"counter") counter (fun (first : Reply) => fail Reply Busy)

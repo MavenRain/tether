@@ -1,0 +1,4 @@
+(executable
+ (name tether)
+ (modules tether)
+ (libraries tether_surface tether_print tether_store kanon_kernel))

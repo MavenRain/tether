@@ -1,6 +1,7 @@
 import net from 'node:net';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
 
 const MAX = 8 * 1024 * 1024;
 const utf8 = bytes => new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes);
@@ -77,6 +78,9 @@ export function request(port, args, timeout = 5000) {
     });
   });
 }
+// One canonical array text for every host. jq escapes the DEL byte and
+// JSON.stringify does not, so the Node text escapes it too.
+export const arrayText = value => JSON.stringify(value).split('\u007f').join('\\u007f');
 export function replyText(reply) {
   const safe = (value, depth = 0) => {
     if (depth > 64) throw new Error('Reply depth');
@@ -87,7 +91,7 @@ export function replyText(reply) {
     throw new Error('Invalid Reply');
   };
   safe(reply);
-  return (reply === null ? '' : Array.isArray(reply) ? JSON.stringify(reply) : String(reply)) + '\n';
+  return (reply === null ? '' : Array.isArray(reply) ? arrayText(reply) : String(reply)) + '\n';
 }
 export class RedisClient {
   constructor(port, send = args => request(port, args)) { this.send = send; this.loaded = new Set(); }
@@ -144,7 +148,16 @@ export async function runReactor(path, port, output = process.stdout) {
       }
       const body = read(a.requestBody(state));
       let status = 0, answer = Buffer.alloc(0);
-      if (code === 6) await new Promise((ok, fail) => output.write(body, e => e ? fail(e) : ok()));
+      if (code === 6 || code === 11) {
+        let text = body;
+        if (code === 11) {
+          const envelope = JSON.parse(utf8(body));
+          if (!envelope || Array.isArray(envelope) || Object.keys(envelope).length !== 1 ||
+              !Object.hasOwn(envelope, 'result')) throw new Error('Invalid result envelope');
+          text = Buffer.from(replyText(envelope.result));
+        }
+        await new Promise((ok, fail) => output.write(text, e => e ? fail(e) : ok()));
+      }
       else if (code === 10) {
         const args = []; let words = a.requestArgs(state);
         while (!a.wordsEmpty(words)) {
@@ -162,3 +175,12 @@ export async function runReactor(path, port, output = process.stdout) {
   } finally { output.removeListener('error', ignoreOutputError); }
 }
 function ignoreOutputError() {}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  try {
+    const [path, text] = process.argv.slice(2), port = Number(text);
+    if (!path || !Number.isInteger(port) || port < 1 || port > 65535 || process.argv.length !== 4)
+      throw new Error('Usage: redis-host.mjs prog.wasm PORT');
+    process.exitCode = await runReactor(path, port);
+  } catch (error) { console.error(`TETHER ${error.message}`); process.exitCode = 4; }
+}

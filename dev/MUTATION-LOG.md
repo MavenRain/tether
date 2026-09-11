@@ -320,3 +320,47 @@ and five integrity mutations, and Stage D's five mutations. The separate
 Stage A mutation battery was not rerun in this slice; its foundation
 ladder passed. Evidence:
 `/Users/oobi/Documents/gpt18/tether-stage-e/.kanon-exec/run-PUCGwL`.
+
+### Stage F 2026-09-11: executable body parity and compile work
+
+`dev/stage-f-tests.py` verifies actual Wasm request bodies and Bash
+assignment bytes before applying the two required mutations. It restores
+the Bash artifact and reruns its positive control. Compile-work mutation
+sources and outputs are confined to a temporary directory.
+
+| Mutation | Catching check | Observed result |
+| --- | --- | --- |
+| Change `bytes(s)` to `bytes(t)` in one Bash-carried Lua body | `dev/lua-same.mjs`, comparing the actual shell value, Lua bytes and Wasm requests | `KILLED ARTIFACT-BYTE by LUA-SAME`; restoration passes |
+| Flip one octal digit of an invocation key literal outside the carried body block | `dev/lua-same.mjs`, comparing the shell value, Lua bytes and Wasm requests | `KILLED ARTIFACT-KEY by LUA-SAME`; restoration passes |
+| Add checked Nat definitions to a copy of the counter spine, doubling from 2,000 until the real timer crosses the ruled 150 ms bound | The real five-sample parse-through-both-artifacts timer | Crossed at 4,000 definitions on the review machine: `MUTANT-BENCH m0-time median_ms=233.358 min_ms=212.929 max_ms=246.141 runs=5`, `MUTANT-M0-TIME exceeded median_ms=233.358 bound_ms=150` and `KILLED SPINE-WORK by M0-TIME definitions_added=4000` |
+
+The compile-work mutant is calibrated, not fixed at one count. The bound
+stays at 150 ms. A machine on which 2,000 definitions compile under the
+bound doubles the added work to 4,000, then to 8,000 and to 16,000, and the
+runner fails when no count up to 16,000 crosses.
+
+Result: `PASS STAGE-F-MUTATIONS killed=3 survived=0 restored=2`.
+A separate boundary control accepts 149 ms and rejects exactly 150 ms,
+printing `PASS M0-TIME-BOUNDARY below=149 at=150`. Its synthetic samples
+are kept out of production BENCH/PASS output. The compile-work mutant's own
+samples are captured the same way and re-emitted with the `MUTANT-BENCH` and
+`MUTANT-M0-TIME` prefixes, so a green ladder log holds exactly one `BENCH`
+row and one `PASS M0-TIME` row, both from the unmodified spine. The
+unmodified spine's independent final measurement passed at 78.261 ms median
+on the review machine.
+
+The suite also exercises first-host-fault termination at every invocation,
+explicit faults after effects, exact earlier-reply selection, ordinary
+versus direct byte lowering, five named emission refusals and the driver's
+disagreement exit 3 in two cases, an altered host that exits 0 and an
+altered host that exits 9, because a host that disagrees by crashing is
+still a disagreement. The trusted-line census counts `bin` under its own
+ruled bound of 450 lines, so the Stage C, D and E integrity trees copy
+`bin` as well and an uncounted file there prints `TRUSTED-LINES FAIL
+uncounted implementation files`. The inherited A through E regression ladder passed,
+including B through E mutation batteries; Stage A's separate mutation
+battery was not rerun in this slice.
+
+Evidence: `/Users/oobi/Documents/gpt18/tether-stage-f/.kanon-exec/run-fsFrYo`
+(functional and mutation suite), `run-2ipnEn` (unmodified benchmark), and
+`run-K8oq9l` (inherited ladder), each with exit 0.

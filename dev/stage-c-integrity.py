@@ -20,7 +20,8 @@ def gate(root, script, ok=True, diagnostic=" OK"):
 
 with tempfile.TemporaryDirectory(prefix="tether-c-integrity-") as directory:
     root = Path(directory)
-    for name in ("print", "store", "runtime", "dev", "vendor/kanon/lib", "vendor/kanon/wasm"):
+    # bin carries its own trusted-lines bound, so the disposable tree needs it.
+    for name in ("bin", "print", "store", "runtime", "dev", "vendor/kanon/lib", "vendor/kanon/wasm"):
         shutil.copytree(ROOT / name, root / name,
                         ignore=shutil.ignore_patterns("_build", ".kanon-exec", ".kanon-wait", "__pycache__"))
     gate(root, "trusted-lines.py")

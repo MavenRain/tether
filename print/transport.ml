@@ -30,3 +30,23 @@ let wasm ~budget ~reactor (artifact : Lua.artifact) =
   let* rows = Erase.program ~budget globals rows in
   Kanon_wasm.Emit.reactor rows
     ~exports:["requestBody"; "scriptSha1"; "bytesEmpty"; "bytesHead"; "bytesTail"]
+
+(* Lower byte payloads directly to the carried Bytes representation. The
+   generated reactor is checked with typed empty slots first; this total
+   substitution avoids elaborating thousands of nested constructor calls. *)
+let byte_constants constants rows =
+  let module E = Eterm in
+  let tid = E.Tid "mu<Bytes>" in
+  Lua.all (List.map (fun (name, entry) -> List.assoc_opt name constants
+    |> Option.fold ~none:(Ok (name, entry)) ~some:(fun text ->
+        let bytes = List.fold_right (fun c rest -> E.KTag (tid, 1,
+          [E.KLit (Literal.LInt (Bignum.of_int (Char.code c))); rest]))
+          (List.of_seq (String.to_seq text)) (E.KTag (tid, 0, [])) in
+        let* decls = match entry with
+          | Erase.Code decls -> Lua.all (List.map (function
+              | E.KRec group -> Ok (E.KRec group)
+              | E.KFun (E.Fid n, [], E.RUnion t, _empty) when n = name && t = tid ->
+                  Ok (E.KFun (E.Fid n, [], E.RUnion t, bytes))
+              | E.KFun _ -> Error (Error.Mismatch "CLIENT-BYTES slot type")) decls)
+          | Erase.Dropped | Erase.Postulate _ -> Error (Error.Mismatch "CLIENT-BYTES slot") in
+        Ok (name, Erase.Code decls))) rows)

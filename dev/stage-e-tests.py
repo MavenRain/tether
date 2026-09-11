@@ -119,7 +119,8 @@ def reactor_fixture(directory, output, invalid=False):
 def source_mutations(directory):
     require(split.check(ROOT), 'DECODERS-SPLIT control')
     root = directory / 'integrity'
-    for name in ('dev', 'print', 'store', 'runtime', 'vendor/kanon/lib', 'vendor/kanon/wasm'):
+    # bin carries its own trusted-lines bound, so the copy needs it too.
+    for name in ('bin', 'dev', 'print', 'store', 'runtime', 'vendor/kanon/lib', 'vendor/kanon/wasm'):
         shutil.copytree(ROOT / name, root / name, ignore=shutil.ignore_patterns('__pycache__'))
     gate = [sys.executable, '-P', str(root / 'dev/trusted-lines.py')]
     run(gate)

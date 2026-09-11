@@ -8,5 +8,5 @@ command -v panicscan > /dev/null 2>&1 || {
 }
 # The glob names every development OCaml source, so a new dev unit cannot
 # enter the tree without the house gate.
-panicscan --deny present --min present --strict surface print store dev/*.ml
+panicscan --deny present --min present --strict surface print store bin dev/*.ml
 printf '%s\n' 'PASS HOUSE'

@@ -245,7 +245,8 @@ def main():
         killed_by("SH-BODY-BYTE", "LUA-SAME")
         # Require the newly implemented printer and enforce its existing bound.
         root = directory / "integrity"
-        for name in ("dev", "print", "store", "runtime", "vendor/kanon/lib", "vendor/kanon/wasm"):
+        # bin carries its own trusted-lines bound, so the copy needs it too.
+        for name in ("bin", "dev", "print", "store", "runtime", "vendor/kanon/lib", "vendor/kanon/wasm"):
             shutil.copytree(ROOT / name, root / name, ignore=shutil.ignore_patterns("__pycache__"))
         gate = [sys.executable, "-P", str(root / "dev/trusted-lines.py")]
         run(gate)

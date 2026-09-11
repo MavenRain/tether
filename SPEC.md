@@ -1,11 +1,10 @@
 # tether specification
 
-Stage E, 2026-09-11. The foundation, counter surface, Lua and Bash printers,
-Wasm byte carriers, store and local hosts are implemented. See
-`dev/STAGE-B.md` through `dev/STAGE-E.md` for syntax and current limits.
-The complete artifact contract below includes the executable Wasm Client
-due in Stage F. Stage E's Node integration runner uses the checked Client
-schedule and extracts bodies from the per-script Wasm carriers.
+Stage F implementation, 2026-09-11. The driver emits the executable Wasm
+Client and Bash pair. The foundation, counter surface, printers, store and
+local hosts are implemented. See `dev/STAGE-B.md` through `dev/STAGE-F.md`
+for syntax and limits. The latest build-log entry records whether the
+independent M0 timing gate has passed; this text does not stamp M0-EXIT.
 
 ## Foundation (inherited)
 
@@ -72,7 +71,9 @@ in the types. No numeric conversion may silently replace this string.
 
 `tether emit FILE -o DIR` writes `prog.wasm` and `prog.sh`. Both carry
 identical canonical Lua bodies without a trailing newline. The WasmGC
-module is import-free and uses the carried reactor with invoke code 10.
+module is import-free and uses the carried reactor with invoke code 10
+and result-formatting code 11. Its compiled state retains the selected
+reply across subsequent calls and terminates on the first host fault.
 `runtime/reactor.kan` is byte identical to the pin. The Node host runs
 RESP2 against Redis. The REST twin has its own decoder in a separate file.
 
@@ -87,10 +88,11 @@ global metatable.
 
 ## Bounds and milestone limits
 
-Inherited trusted lines: kernel 3997/4000 and encoder 246/600. Stage C
-measures lua 263/320, including flags, SHA-1 and the Wasm transport adapter.
-Stage E measures sh 155/240, store 118/200,
-host-node 164/300 and host-rest 154/300. Both trusted preludes are pinned by
+Inherited trusted lines: kernel 3997/4000 and encoder 246/600. Stage F
+measures lua 283/320, including flags, SHA-1 and byte lowering; sh 227/240,
+including the shared Client plan and reactor printer; store 118/200;
+host-node 186/300; host-rest 156/300; and bin 393/450, covering the command
+host, the driver and the local process owner. Both trusted preludes are pinned by
 `dev/PRELUDES.sha256`; their 109 lines are reported separately without
 adding or changing a ruled bound.
 The store and printers live outside `lib`.
@@ -98,12 +100,14 @@ OCaml uses explicit Result/Option errors, exhaustive sum matches and total
 combinators, with no exceptions, partial indexing or imperative loops.
 
 M0 measures parse through both artifacts on disk, excluding wasm-opt,
-SCRIPT LOAD and hosts. M0-TIME is under 150 ms; the TinyCC ratios and
-PASSES are informational. Stage 0's frozen denominators and their hashes
-are retained without remeasurement. Stage E checks end-to-end Redis
-behavior, exact large-integer replies, the steady-state REST request
-count and independent Node and REST decoders. The full M0 timing gates
-remain Stage F work.
+SCRIPT LOAD and hosts. The M0-TIME bound is strictly under 150 ms;
+the TinyCC ratios and PASSES are informational. Stage 0's denominators
+and hashes remain frozen; a fresh TinyCC spine sample prints separately.
+Stage F compares exact stdout from the executable Wasm Client, Bash and
+LuaJIT, including large integers and captured replies. `--passes` counts
+the three observed surface declaration passes and does not instrument
+internal kernel traversals. `dev/stage-f.sh` returns failure if the
+compile-time median exceeds its bound, even when all functional gates pass.
 
 M1 adds the larger command surface, do-notation, EVALSHA_RO and a counted
 Lean 4 exporter. M2 adds migrations, batch, PUBLISH and parity gates.

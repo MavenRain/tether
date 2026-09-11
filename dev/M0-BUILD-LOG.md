@@ -1018,3 +1018,124 @@ integrity `killed=5 restored=1`, Stage B `killed=5 restored=1`.
 | Run exit | `EXIT-ALL 0` |
 
 Fix rounds: 2.
+
+### Stage F 2026-09-11: driver, executable Client and M0 measurements
+
+Base: the user's committed Stage E, `5707ae8`. Implementation and validation
+used `/Users/oobi/Documents/gpt18/tether-stage-f`. The resulting change is
+staged for the user; this entry does not commit Stage F or ratify M0-EXIT.
+
+`bin/tether.ml` and the Python IO host implement check, emit, run, exec,
+axioms, spec-count and bench. Emit writes the complete import-free
+`prog.wasm` Client alongside Bash and canonical Lua bodies. The Client
+reactor shares the existing first-order plan, preserves earlier replies
+and terminates on the first invocation fault. Exec owns temporary local
+hosts and compares their output with the empty-store interpreter.
+
+The generated reactor is checked with typed byte slots. The transport
+adapter lowers Lua bytes to the carried erased Bytes representation in
+bounded chunks. The reference test compares this lowering with ordinary
+checked byte literals for every byte value, empty input and repeated
+binary input. This removes the expensive repeated elaboration and deeply
+nested emission of the 2,599-byte counter body. The kernel, encoder,
+preludes, vendor pin, frozen denominators and all bounds remain unchanged.
+
+Validation ran the constituent Stage F ladder commands. The complete
+`sh dev/stage-e.sh` ladder passed, followed by the final driver build,
+`python3 -P dev/stage-f-tests.py` and `sh dev/ratio.sh`. Stage A was rerun
+after updating SPEC and passed. The separate Stage A mutation battery was
+not rerun in this slice. Live-host and final benchmark commands ran
+outside the filesystem sandbox so the tests could bind loopback sockets.
+An earlier sandboxed benchmark returned 662.460 ms and failed the bound;
+it is not the final gate measurement and no timing bound was relaxed.
+
+| Check | Observed result |
+| --- | --- |
+| A through E regression ladder | `PASS STAGE-E`, exit 0 |
+| Final driver and byte probe build | exit 0 |
+| Byte lowering | `PASS BYTE-LOWERING reference=1 lowered=1 all_bytes=256 empty=1 repeated=1` |
+| Compiled Client control | `PASS CLIENT-REACTOR captured=1 first-fault=1 stopped=1` |
+| Executable artifact equality | Eleven `E2E-3WAY` rows, each with `artifact=prog.wasm`, and exact stdout equality with LuaJIT and Bash |
+| Lua bytes | Nine Client artifacts pass LUA-SAME, including two explicit failure paths |
+| Warm invocation count | `LOAD-ONCE rest_calls=1 invoke_lines=1 warmup_calls=2 total_calls=3` |
+| Driver | Check, emit, run, three exec hosts, axioms, pass counts, five first-order refusals and two disagreement exit 3 cases pass, one altered host exiting 0 and one exiting 9 |
+| Stage F mutations | `PASS STAGE-F-MUTATIONS killed=3 survived=0 restored=2`, the third being `KILLED ARTIFACT-KEY by LUA-SAME` |
+| Compile work | Calibrated, not fixed: the added definitions double from 2,000 until the real timer crosses the ruled 150 ms bound. On the review machine `KILLED SPINE-WORK by M0-TIME definitions_added=4000` with `MUTANT-BENCH m0-time median_ms=233.358`. The mutant samples carry the `MUTANT-BENCH` and `MUTANT-M0-TIME` prefixes, so the `BENCH` and `PASS M0-TIME` rows below are the only ones of their shape in a green log |
+| Stage F functional suite | `PASS STAGE-F-TESTS`, exit 0 |
+| Post-documentation foundation | `PASS STAGE-A`, exit 0 |
+| Trusted lines | `kernel=3997/4000 encoder=246/600 lua=283/320 sh=227/240 store=118/200 host-node=186/300 host-rest=156/300 bin=393/450 OK`, the `bin` group carrying the driver and the CLI under a ruled bound of 450 |
+| PASSES | `def=main walks=3 class=surface-declaration bound=informational`, also three each for counter and beyond53 |
+
+MEASURE, five samples after one warm-up, fresh compiler processes and
+fresh artifact directories, parse through both artifacts on disk:
+
+| Measurement | Observed result |
+| --- | --- |
+| Host | `LOAD 11:29 up 25 days, 14:04, 27 users, load averages: 70.22 48.84 36.96` |
+| M0-TIME | `BENCH m0-time median_ms=74.939 min_ms=63.615 max_ms=77.672 runs=5` |
+| Bound | `PASS M0-TIME median_ms=74.939 bound_ms=150` |
+| Frozen ratios | `M0-TCC-RATIO raw=11.520 corrected=18.289 end_to_end=2.682 programs=1 source=frozen informational=1` |
+| Fresh TinyCC spine | `TCC-LIVE median_ms=27.189 empty_ms=17.354 raw_ratio=59.365 span_s=0.799 programs=1 runs=5` |
+| Fixed cost | `FIXED-MS fixed_ms=93.864 per_def_ms=-0.746 added_definitions=100 informational=1` |
+
+The negative incremental estimate is measurement noise and remains
+unclamped. Ratios cover one spine with source-line normalization; they
+do not claim four-program corpus parity. PASSES counts the three observed
+surface declaration passes, not internal kernel traversals. The measured
+timer lives in `dev/m0-bench.sh`; the inherited `dev/bench.sh` remains
+byte identical for CARRY and Stage 0's hashed denominator protocol.
+
+Evidence, all under `tether-stage-f/.kanon-exec/`: `run-K8oq9l` (A through
+E), `run-1XX9d3` (final build), `run-fsFrYo` (final functional and mutation
+suite), `run-2ipnEn` (MEASURE), and `run-wJWWtf` (foundation after SPEC).
+
+Remaining milestone condition: the user commits Stage F, reruns the full
+ladder on that committed tree and supplies the M0-EXIT ratification.
+
+### Review round 2026-09-11 (Stage F)
+
+Judge pass over four lenses in 18 agents and three fix rounds. Seven finder
+findings and five check-round findings are fixed, twelve in total.
+
+| id | severity | finding | fix |
+| --- | --- | --- | --- |
+| C-1 | high | SPINE-WORK mutant used a fixed 2,000 added definitions and compiled at median 129.933 ms on a calm machine, under the 150 ms bound, so the kill depended on load (finding zero) | dev/stage-f-tests.py doubles the added definitions from 2,000 until M0-TIME crosses the bound (round 3: definitions_added=8000 at median 1053.759 ms); dev/MUTATION-LOG.md records the policy |
+| C-2 | high | LUA-SAME compared script bodies only, so a mutant that changed artifact keys, the sha1, the order or the selected reply survived | dev/lua-same.mjs parses the load and invoke lines and asserts sha1, octal keys, order and reply; new control ARTIFACT-KEY killed; dev/STAGE-F.md |
+| B-1 | high | runtime/redis-host.mjs arrayText did not escape 0x7F, so the Node and Bash producers disagreed on array replies | runtime/redis-host.mjs escapes 0x7F; new row PASS REPLY-ARRAY-PARITY cases=6 del_byte=1 producers=3 in dev/stage-f-tests.py |
+| A-1 | medium | bin/driver.py exec compared the return code before stdout, so a stdout mismatch with a nonzero exit reported exit 4 instead of exit 3 | bin/driver.py compares stdout first (exit 3); report_bytes falls back to stderr |
+| C-4 | medium | bin/ had no trusted-line census bound (merges D-3) | dev/trusted-lines.py bin group bound 450 (393/450); SPEC.md line 94 |
+| C-5 | medium | the LOAD-ONCE row was a literal, not computed from the recorded calls | dev/stage-f-tests.py computes rest_calls, invoke_lines, warmup_calls, total_calls |
+| C-3 | medium | the mutant's BENCH and PASS M0-TIME rows entered the ladder stream before the production rows (merges D-2) | MUTANT-BENCH and MUTANT-M0-TIME prefixes in dev/stage-f-tests.py; one production BENCH and one PASS M0-TIME row per green log |
+| ND-1-2 | check round 1 | STAGE-C-INTEGRITY Errno 2: bin/ was missing from the disposable-tree copies made by the Stage C, D and E test scripts (the GATE-1 cause) | dev/stage-c-integrity.py, dev/stage-d-tests.py, dev/stage-e-tests.py copy bin/ |
+| ND-1-1 | check round 1 | bin/driver.py wrote host bytes through sys.stderr.buffer, so the driver raised AttributeError under a redirected stderr | report_bytes writes through sys.stderr.buffer when that attribute exists and writes decoded text otherwise; the leg prints PASS DRIVER check=1 emit=1 run=1 exec=3 axioms=1 passes=1 refusals=5 disagreements=2 |
+| ND-1-3 | check round 1 | the record halves of C-1 and C-3 were stale: dev/MUTATION-LOG.md held the fixed 2,000-definition row and dev/M0-BUILD-LOG.md held the old driver, mutation and census numbers | dev/MUTATION-LOG.md line 324 on carries the ARTIFACT-KEY row, the calibrated SPINE-WORK row and the MUTANT prefixes; the Stage F block refresh carries two disagreement cases, killed=3 survived=0 restored=2 and the bin census |
+| ND-2-1 | check round 2 | SPEC.md line 94 named a stale bin census of 385/450 | SPEC.md line 94 reads bin 393/450, the value the census prints |
+| ND-2-2 | check round 2 | the Stage F block LOAD-ONCE row lacked total_calls, so it did not match the runner | dev/M0-BUILD-LOG.md line 1060 reads LOAD-ONCE rest_calls=1 invoke_lines=1 warmup_calls=2 total_calls=3 |
+
+Fix rounds: 3. Round 1 fixed the runner halves of the seven finder findings
+C-1, C-2, B-1, A-1, C-4, C-5 and C-3. Round 2 fixed ND-1-3 (the C-1 and C-3
+record halves), ND-1-1 with A-1 in bin/driver.py, and ND-1-2 with C-4 in the
+three test scripts. Round 3 fixed ND-2-1 in SPEC.md and ND-2-2 in this file.
+
+The round-3 ladder log is green. Its rows:
+
+| check | row |
+| --- | --- |
+| Driver build | `PASS DRIVER-BUILD` |
+| Array reply parity | `PASS REPLY-ARRAY-PARITY cases=6 del_byte=1 producers=3` |
+| Steady-state requests | `LOAD-ONCE rest_calls=1 invoke_lines=1 warmup_calls=2 total_calls=3` |
+| Driver | `PASS DRIVER check=1 emit=1 run=1 exec=3 axioms=1 passes=1 refusals=5 disagreements=2` |
+| Compile-work mutant | `KILLED SPINE-WORK by M0-TIME definitions_added=8000` |
+| Bound boundary | `PASS M0-TIME-BOUNDARY below=149 at=150` |
+| Stage F mutations | `PASS STAGE-F-MUTATIONS killed=3 survived=0 restored=2` |
+| Census | `TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=283/320 sh=227/240 store=118/200 host-node=186/300 host-rest=156/300 bin=393/450 OK` |
+| Census leg | `PASS TRUSTED-LINES` |
+| Stage A mutations | `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1` |
+| Measurement | `PASS M0-TIME median_ms=44.642 bound_ms=150` |
+| Full ladder | `PASS STAGE-F` |
+| Ladder exit | `EXIT 0` |
+| Mutation exit | `EXIT-MUT 0` |
+| Run exit | `EXIT-ALL 0` |
+
+The closing ladder that runs after this record must print `PASS STAGE-F` and
+`EXIT-ALL 0`.

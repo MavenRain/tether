@@ -4,11 +4,26 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
-M0 Stage E: the counter runs through the Node Redis host, generated Bash
-against a local REST twin, LuaJIT and an independent in-memory interpreter.
-The hosts load scripts, invoke by SHA-1 and retry NOSCRIPT with the same
-canonical Lua bytes. The complete Client Wasm artifact and driver follow
-in Stage F.
+The Stage F driver emits an executable Client `prog.wasm` and `prog.sh`
+with the same canonical Lua bodies. Both run against local Redis hosts
+and agree with LuaJIT and the independent store interpreter. The final
+M0 timing gate is measured separately from functional correctness; see
+`dev/STAGE-F.md` and the latest entry in `dev/M0-BUILD-LOG.md`.
+
+```sh
+dune build bin/tether.exe
+./tether check examples/M0Spine.tet --passes
+./tether emit examples/M0Spine.tet -o .gatework/counter-client
+./tether run examples/M0Spine.tet
+./tether exec examples/M0Spine.tet --host node
+./tether exec examples/M0Spine.tet --host bash
+./tether exec examples/M0Spine.tet --host luajit
+sh dev/stage-f.sh
+```
+
+`exec` starts and stops its own temporary loopback Redis server and REST
+twin, then compares the chosen host's stdout with the empty-store
+interpreter. Each example prints `1`. Emit requires a fresh output directory.
 
 ```sh
 dune build dev/surface_check.exe
@@ -28,6 +43,7 @@ validation scope and the additional `panicscan` gate dependency.
 See `dev/STAGE-C.md` for Lua emission, artifact inspection and validation.
 See `dev/STAGE-D.md` for Bash emission, reply formatting and current limits.
 See `dev/STAGE-E.md` for local hosts, the store and integration validation.
+See `dev/STAGE-F.md` for the driver, compiled Client and measurement scope.
 
 ## Files
 
@@ -61,7 +77,8 @@ The development emitter writes `script.lua`, `body.wasm` and `script.json`.
 The Bash emitter writes `prog.sh`, the Client schedule, keys and one
 Lua/Wasm carrier pair per script. The Node integration runner executes
 that schedule using the Wasm carriers and a loopback Redis server.
-The `tether` command and executable Client `prog.wasm` arrive later.
+The `tether` command emits the full Client Wasm and Bash pair. The earlier
+development emitters remain available for inspecting per-script carriers.
 
 ## License
 
