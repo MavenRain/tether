@@ -17,3 +17,13 @@
  (name sh_emit)
  (modules sh_emit)
  (libraries tether_surface tether_print kanon_kernel))
+
+(executable
+ (name store_run)
+ (modules store_run)
+ (libraries tether_surface tether_store kanon_kernel))
+
+(executable
+ (name store_tests)
+ (modules store_tests)
+ (libraries tether_store kanon_kernel))

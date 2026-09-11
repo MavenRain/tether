@@ -27,9 +27,6 @@ def measure(root):
         newline_only = name in ("kernel", "encoder")
         for relative in paths:
             path = root / relative
-            if not path.exists() and name not in ("kernel", "encoder", "lua", "sh"):
-                # The remaining implementations are due in Stage E.
-                continue
             data = path.read_bytes()
             unterminated = bool(data) and not data.endswith(b"\n")
             count += data.count(b"\n") + int(unterminated and not newline_only)
@@ -41,10 +38,16 @@ def measure(root):
 if __name__ == "__main__":
     try:
         known = {path for _bound, paths in GROUPS.values() for path in paths}
-        unexpected = sorted(str(path.relative_to(ROOT)) for path in (ROOT / "print").glob("*.ml")
+        # Every implementation extension of each directory, so a host source
+        # added as .js, .cjs or .mli cannot escape the census and its bound.
+        census = {"print": ("*.ml", "*.mli"), "store": ("*.ml", "*.mli"),
+                  "runtime": ("*.mjs", "*.js", "*.cjs")}
+        candidates = [path for folder, patterns in census.items()
+                      for pattern in patterns for path in (ROOT / folder).glob(pattern)]
+        unexpected = sorted(str(path.relative_to(ROOT)) for path in candidates
                             if str(path.relative_to(ROOT)) not in known)
         if unexpected:
-            print("TRUSTED-LINES FAIL uncounted printer files: " + ", ".join(unexpected))
+            print("TRUSTED-LINES FAIL uncounted implementation files: " + ", ".join(unexpected))
             sys.exit(1)
         line, passed = measure(ROOT)
         print(line)

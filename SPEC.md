@@ -1,10 +1,11 @@
 # tether specification
 
-Stage D, 2026-09-10. The foundation, counter surface, Lua and Bash printers
-and Wasm byte carrier are implemented. See `dev/STAGE-B.md`,
-`dev/STAGE-C.md` and `dev/STAGE-D.md` for syntax and current limits.
+Stage E, 2026-09-11. The foundation, counter surface, Lua and Bash printers,
+Wasm byte carriers, store and local hosts are implemented. See
+`dev/STAGE-B.md` through `dev/STAGE-E.md` for syntax and current limits.
 The complete artifact contract below includes the executable Wasm Client
-and real hosts due in subsequent M0 stages.
+due in Stage F. Stage E's Node integration runner uses the checked Client
+schedule and extracts bodies from the per-script Wasm carriers.
 
 ## Foundation (inherited)
 
@@ -88,8 +89,8 @@ global metatable.
 
 Inherited trusted lines: kernel 3997/4000 and encoder 246/600. Stage C
 measures lua 263/320, including flags, SHA-1 and the Wasm transport adapter.
-Stage D measures sh 154/240. The later implementations measure store 0/200,
-host-node 0/300 and host-rest 0/300. Both trusted preludes are pinned by
+Stage E measures sh 155/240, store 118/200,
+host-node 164/300 and host-rest 154/300. Both trusted preludes are pinned by
 `dev/PRELUDES.sha256`; their 109 lines are reported separately without
 adding or changing a ruled bound.
 The store and printers live outside `lib`.
@@ -99,8 +100,10 @@ combinators, with no exceptions, partial indexing or imperative loops.
 M0 measures parse through both artifacts on disk, excluding wasm-opt,
 SCRIPT LOAD and hosts. M0-TIME is under 150 ms; the TinyCC ratios and
 PASSES are informational. Stage 0's frozen denominators and their hashes
-are retained without remeasurement. End-to-end Redis behavior is a Stage E
-gate and is not claimed by Stage A.
+are retained without remeasurement. Stage E checks end-to-end Redis
+behavior, exact large-integer replies, the steady-state REST request
+count and independent Node and REST decoders. The full M0 timing gates
+remain Stage F work.
 
 M1 adds the larger command surface, do-notation, EVALSHA_RO and a counted
 Lean 4 exporter. M2 adds migrations, batch, PUBLISH and parity gates.

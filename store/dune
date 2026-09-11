@@ -1,0 +1,3 @@
+(library
+ (name tether_store)
+ (libraries kanon_kernel))

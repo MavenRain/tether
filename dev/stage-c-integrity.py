@@ -20,7 +20,7 @@ def gate(root, script, ok=True, diagnostic=" OK"):
 
 with tempfile.TemporaryDirectory(prefix="tether-c-integrity-") as directory:
     root = Path(directory)
-    for name in ("print", "runtime", "dev", "vendor/kanon/lib", "vendor/kanon/wasm"):
+    for name in ("print", "store", "runtime", "dev", "vendor/kanon/lib", "vendor/kanon/wasm"):
         shutil.copytree(ROOT / name, root / name,
                         ignore=shutil.ignore_patterns("_build", ".kanon-exec", ".kanon-wait", "__pycache__"))
     gate(root, "trusted-lines.py")
@@ -48,7 +48,7 @@ with tempfile.TemporaryDirectory(prefix="tether-c-integrity-") as directory:
     count += 1
     extra = root / "print/uncounted.ml"
     extra.write_text("let value = 0\n")
-    gate(root, "trusted-lines.py", False, "uncounted printer files")
+    gate(root, "trusted-lines.py", False, "uncounted implementation files")
     extra.unlink()
     gate(root, "trusted-lines.py")
     print("KILLED UNCOUNTED-PRINTER", flush=True)

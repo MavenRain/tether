@@ -31,7 +31,11 @@ let run path entry fuel =
     Ok (name, (artifact, wasm))) (List.sort_uniq String.compare plan.invokes)) in
   let* shell = printer (P.Sh.emit plan (List.map (fun (n, (a, _w)) -> n, a) artifacts)) in
   print_endline ("SH " ^ P.Transport.hex shell);
+  let finish = match plan.P.Sh.finish with P.Sh.Answer i -> i | P.Sh.Failure -> -1 in
+  Printf.printf "CLIENT %d%s\n" finish (String.concat "" (List.map (fun n -> " " ^ n) plan.invokes));
   List.iter (fun (name, (a, wasm)) ->
+    Printf.printf "KEYS %s%s\n" name (String.concat "" (List.map (fun key ->
+      " " ^ String.concat "" (List.map (Printf.sprintf "%02x") key)) a.P.Lua.keys));
     Printf.printf "ARTIFACT %s %s %s %s\n" name a.P.Lua.sha1
       (P.Transport.hex a.body) (P.Transport.hex wasm)) artifacts;
   Ok ()

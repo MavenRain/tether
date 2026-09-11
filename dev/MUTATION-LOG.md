@@ -286,3 +286,37 @@ ladder also reran Stage B's five mutations, Stage C's three artifact
 mutations and Stage C's five integrity mutations, all with restored
 controls. The separate Stage A mutation battery was not rerun in this
 slice; the Stage A foundation ladder passed.
+
+### Stage E 2026-09-11: live hosts, decoder ownership and source bounds
+
+`dev/stage-e-tests.py` scores fifteen mutations in temporary artifacts and
+copied source trees. The positive control runs before and after each
+mutation. The live semantic control uses an owned loopback Redis server
+and REST twin and compares stdout bytes against the exact expected value.
+
+| Mutation | Catching check |
+| --- | --- |
+| INCR becomes DECR in the Bash Lua body, with the expected SHA-1 updated | E2E-3WAY: the LuaJIT, Node and interpreter legs return `9007199254740993` while the mutated Bash leg returns `9007199254740991`, so the four-leg equality fails |
+| REST decoder re-exports the Node decoder | DECODERS-SPLIT rejects the merged implementation |
+| REST decoder holds a copy of the Node decode body, with no import and its own fault class | DECODERS-SPLIT rejects the copied implementation on token-window overlap |
+| Delete store/store.ml | TRUSTED-LINES rejects the missing required source |
+| Delete store/interp.ml | TRUSTED-LINES rejects the missing required source |
+| Delete runtime/redis-host.mjs | TRUSTED-LINES rejects the missing required source |
+| Delete runtime/rest-twin.mjs | TRUSTED-LINES rejects the missing required source |
+| Delete runtime/rest-decode.mjs | TRUSTED-LINES rejects the missing required source |
+| Exceed the store bound | TRUSTED-LINES fails at the unchanged 200-line limit |
+| Exceed the Node host bound | TRUSTED-LINES fails at the unchanged 300-line limit |
+| Exceed the REST host bound | TRUSTED-LINES fails at the unchanged 300-line limit |
+| Add an uncounted store OCaml source | TRUSTED-LINES rejects the inventory addition |
+| Add an uncounted store OCaml interface | TRUSTED-LINES rejects the inventory addition |
+| Add an uncounted runtime ECMAScript module | TRUSTED-LINES rejects the inventory addition |
+| Add an uncounted runtime `.js` source | TRUSTED-LINES rejects the inventory addition |
+
+Observed in the complete Stage E ladder:
+`PASS STAGE-E-INTEGRITY killed=14 restored=1` and
+`PASS STAGE-E-MUTATIONS killed=15 restored=1`.
+The run also repeated Stage B's five mutations, Stage C's three artifact
+and five integrity mutations, and Stage D's five mutations. The separate
+Stage A mutation battery was not rerun in this slice; its foundation
+ladder passed. Evidence:
+`/Users/oobi/Documents/gpt18/tether-stage-e/.kanon-exec/run-PUCGwL`.

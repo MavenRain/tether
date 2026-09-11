@@ -826,3 +826,195 @@ killed=5, restored=1; Stage C killed=3, restored=1; Stage C integrity
 killed=5, restored=1; Stage D killed=5, restored=1.
 
 Fix rounds: 3.
+
+### Stage E 2026-09-11: store and local Redis hosts
+
+Built from committed Stage D `1542005` in the isolated checkout
+`/Users/oobi/Documents/gpt18/tether-stage-e`. The main Tether checkout was
+clean before the slice was prepared. This stage adds the independent
+erased-term store interpreter, a RESP2 Node host with reactor request code
+10, the local REST twin and its separate reply decoder. Both hosts load
+scripts on first use and retry exact NOSCRIPT failures with the same body.
+
+The Bash emitter now also exports the checked straight-line schedule and
+script keys. The development Node runner extracts each Lua body from its
+Wasm carrier and uses that schedule for integration. A separate compiled
+reactor probe exercises code 10, result and error envelopes, two successive
+invocations and output failure. The complete generated Client `prog.wasm`
+and the user-facing driver remain Stage F work after the user commits E.
+
+Validation: `sh dev/stage-e.sh` exited 0. Full captured output is
+`/Users/oobi/Documents/gpt18/tether-stage-e/.kanon-exec/run-PUCGwL`.
+The build used OCaml switch `zxcaml-p1`, clearing OPAM_SWITCH_PREFIX,
+CAML_LD_LIBRARY_PATH, OCAMLPATH and OCAMLFIND_CONF, with rg and panicscan
+on PATH. The run enabled localhost sockets for the temporary test servers.
+Earlier environment-only attempts omitted rg or panicscan from PATH;
+the complete ladder below ran with both tools available.
+
+| Gate | Observed result |
+| --- | --- |
+| Foundation | `PIN 2c2e6e6 unlisted=0`, `CARRY files=36 diff=0 vendor=32 copies=4`, `PASS STAGE-A` |
+| R0 | `R0-COUNT formers=2 schema=4 shapes=5 admitted=3`, audit passed |
+| House | panicscan passed including store sources |
+| Inherited ladders | `PASS STAGE-B`, `PASS STAGE-C`, `PASS STAGE-D` |
+| Lua and Bash bytes | `LUA-SAME wasm=1 sh=1 bodies=6` |
+| Store unit checks | `PASS STORE-UNIT cases=25` |
+| Host tests | 11 passed, 0 failed, 0 skipped |
+| Independent decoders | `DECODERS-SPLIT files=2` |
+| End-to-end agreement | Ten cases agree across LuaJIT, Node, Bash and the OCaml interpreter |
+| Large-integer spine | `E2E-3WAY luajit=1 node=1 sh=1 store=1 entry=main reply="9007199254740993" constructor=bulk` |
+| Steady-state requests | `LOAD-ONCE rest_calls=1 invoke_lines=1 warmup_calls=2 total_calls=3` |
+| Real Node fallback | `PASS NODE-NOSCRIPT loads=1 evalsha=3 eval=1 steady_calls=1` |
+| Real Bash fallback | `PASS BASH-NOSCRIPT loads=1 evalsha=1 eval=1 same_body=1` |
+| Compiled reactor | `PASS REDIS-REACTOR code10=2 error_status=1 output_fault=1` |
+| Real server faults | `PASS HOST-FAULTS cases=6` |
+| Cleanup | `HOSTS-STOPPED owned=2`; in-process test servers also closed |
+| Stage E mutations | `PASS STAGE-E-MUTATIONS killed=15 restored=1` |
+| Full ladder | `PASS STAGE-E` |
+
+Final trusted lines: kernel 3997/4000, encoder 246/600, lua 263/320,
+sh 155/240, store 118/200, host-node 164/300 and host-rest 156/300.
+No bound changed. Both trusted preludes retain their existing hashes.
+Store and runtime implementations are now required by the line census;
+the earlier mutation fixtures copy these sources into their temporary
+trees. There are no edits under vendor/kanon.
+
+The integration covers missing keys, repeated invocations, captured
+replies, exact integer literals, both Int64 boundaries and trailing
+newlines. The Node and REST decoders reject invalid UTF-8, unsafe numeric
+replies and nested error arrays at the text boundary. Synchronous Wasm
+resource exhaustion remains residual. M0 timing and ratios were not
+remeasured in this stage.
+
+### Review round 2026-09-11 (Stage E)
+
+Judge pass over four lenses: 16 verified items, 1 merged, 8 cut on the cap
+of 7. Eight items reached the fix rounds and all eight are fixed.
+
+| id | severity | file:line | fix or ruling |
+| --- | --- | --- | --- |
+| A-1 | high | dev/store_run.ml:15 | Reply constructors are erased before every comparison, so a permuted-constructor store mutant survives the whole store leg. Round 1: `encode` prints the constructor with the payload (`null`, `int:`, `bulk:`, `status:`, `error:`, `array:[...]`), and the fourth column of dev/stage-e-tests.py pins the Reply constructor the interpreter must return, so a permuted constructor is a mismatch and not a tie. |
+| C-1 | high | dev/decoders-split.py:12 | DECODERS-SPLIT accepts a merged decoder: it only rejects a re-export or a byte-identical copy. Round 1: the gate measures token-window overlap between runtime/redis-host.mjs and runtime/rest-decode.mjs (windows of 8 tokens, line comments removed, threshold 0.5), so a copied body is rejected on overlap and not on names and imports alone. |
+| A-2 | medium | dev/stage-e-tests.py:224 | The fault path of the OCaml interpreter is never run, so Store.message is compared against nothing. Round 1: `store_fault` runs the interpreter on the failing case with stderr captured, and the fault leg requires exit 4 and the same diagnostic text from the Node host, the Bash host and the interpreter, printing `PASS HOST-FAULTS cases=6`. |
+| B-1 | medium | runtime/rest-twin.mjs:71 | REST twin request log records attacker-chosen text (a Lua body or a key name) of unbounded size for rejected commands. Round 1: the log holds allowlisted names only, so a refused request records `{ command: 'other' }` and never puts attacker text, a script body or a key name in the record. |
+| C-2 | medium | dev/stage-e-tests.py:37 | The documented ladder aborts with a raw TimeoutExpired traceback: every subprocess carries a fixed 60 s timeout. Round 1: `run` takes a per-call deadline with a longer build timeout for the kanon builds, and a TimeoutExpired is caught and printed as `FAIL STAGE-E-TESTS timeout {deadline}s {args}` with exit 1 instead of a traceback. |
+| C-3 | medium | dev/trusted-lines.py:41 | The uncounted-source census only globs *.ml and *.mjs, so host code added as .js, .cjs or .mli escapes every bound and two records overstate it. Round 1: the census covers every implementation extension of each directory (print and store *.ml and *.mli, runtime *.mjs, *.js and *.cjs), and the Stage E mutation table gains the matching uncounted-source mutants. |
+| C-4 | medium | dev/stage-e-tests.py:246 | The DECR kill is recorded as an E2E-3WAY kill, but only the Bash leg reruns and the second assertion is vacuous. Round 1: the mutation reruns the LuaJIT, Node and interpreter reference legs and compares them with the mutated Bash leg, so `KILLED DECR-SPINE by E2E-3WAY reply comparison` rests on a four-leg comparison. |
+| GATE-1 | high | (gate) | The Stage E ladder or the Stage A mutation runner did not pass. Round 2: no repository file caused this item and no repository file changed. The daemon writes its heartbeat file ladder-queue/alive only in its idle loop, so the heartbeat froze at the start time of the run and any ladder longer than the two minute threshold made the gate runner declare the daemon dead. The review runner now writes the heartbeat from a background writer every twenty seconds, and the round 2 ladder is green. |
+
+Refuted: 0 findings.
+
+Merged and dropped: 9 items. D-1: Merged into C-3: same file
+(dev/trusted-lines.py:41-42), same defect (census globs only *.mjs), same
+records. C-3 keeps the wider statement (.js, .cjs and .mli) and D-1's
+MUTATION-LOG.md:310 and STAGE-E.md:81 citations were folded in verbatim.
+A-3: Kept as verified but cut on the cap of 7 after the verifier's
+downgrade to low: dev/store_run.ml:32 does map every store fault to
+D.Syntax, but D.Wrongtype is constructed nowhere in the tree and D.Int64 is
+used only for compile-time schema checks (surface/schema.ml:65,77), and
+dev/stage-e-tests.py:230 keys on substrings, not on the prefix, so no gate
+is misled today. Subsumed in practice by the A-2 fix. B-2: Low, cut on the
+cap. Real (runtime/redis-host.mjs:46 Buffer.from maps a lone surrogate to
+U+FFFD while rest-twin.mjs:69 rejects it), but the drift is one
+isWellFormed() call on a dev-driven host path with no demonstrated gate or
+production impact. B-3: Low, cut on the cap. dev/emit-sh.py:32-42 raises
+ValueError before the 'EMIT invalid compiler response' branch at :44-46,
+yet the __main__ guard at :76 still yields exit 2, so only the operator
+message quality suffers. C-5: Low, cut on the cap. dev/stage-e-tests.py:122
+accepts any b' FAIL' substring so a bound mutant could be scored on an
+uncounted-files or OSError diagnostic, but no live misattribution exists:
+the bound mutants only append newlines. C-6: Low, cut on the cap.
+dev/stage-e-tests.py:151-163 does bind port 0, close, then Popen
+redis-server, a real TOCTOU window, but the failure mode is a misleading
+diagnostic on a collision, not a wrong verdict. C-7: Low, cut on the cap.
+dev/decoders-split.py:25 prints files=2 while check() inspects three files;
+cosmetic, and the substantive weakness of the same gate is carried by C-1.
+D-2: Low record-completeness gap, cut on the cap. dev/M0-BUILD-LOG.md Stage
+E table omits PASS STAGE-E-INTEGRITY killed=11 and PASS STAGE-E-TESTS
+cases=10; both numbers are printed by the ladder and the integrity one is
+recorded at dev/MUTATION-LOG.md:313. D-3: Low wording gap, cut on the cap.
+dev/STAGE-E.md:42 says the real Node test flushes the script cache 'between
+requests' while dev/host-live.mjs:13 flushes once between two of three
+invocations.
+
+#### Gate block, last gates log /Users/oobi/Documents/tether-stage-e-review/gates-2.log
+
+Verdict GATES-OK. One-minute load 24.81 (load averages 24.81 35.05 51.39 at
+queue time 10:24; end-of-run uptime at 10:29 load averages 26.58 30.35
+44.55).
+
+Carry and counts: `files=36 diff=0 vendor=32 copies=4 kernel=3997
+encoder=246 lua=263 sh=155 store=118 host-node=164 host-rest=156
+sh_runs=40 sh_cases=11 store_cases=25 host_pass=11 host_fail=0 decoders=2
+e2e_reply=10 load_once_total=3 node_noscript_eval=1 bash_noscript_eval=1
+reactor_code10=2 host_faults=6 hosts_stopped=2 killed_e_integrity=14
+killed_e=15 restored_e=1 killed_d=5 killed_c=3 killed_integrity=5
+killed_b=5 killed=37 survived=0 restored=1`.
+
+Mutation summary: Stage A `killed=37 survived=0 restored=1`, Stage E
+mutations `killed=15 restored=1`, Stage E integrity `killed=14 restored=1`,
+Stage D `killed=5 restored=1`, Stage C `killed=3 restored=1`, Stage C
+integrity `killed=5 restored=1`, Stage B `killed=5 restored=1`.
+
+| leg | line |
+| --- | --- |
+| Pin | `PIN 2c2e6e6 unlisted=0` |
+| Carry | `CARRY files=36 diff=0 vendor=32 copies=4` |
+| R0 count | `R0-COUNT formers=2 schema=4 shapes=5 admitted=3` |
+| R0 audit | `R0-AUDIT ok` |
+| Trusted lines | `TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=263/320 sh=155/240 store=118/200 host-node=164/300 host-rest=156/300 OK` |
+| Stage A | `PASS STAGE-A` |
+| House | `PASS HOUSE` |
+| Stage B surface | `PASS STAGE-B-SURFACE cases=59` |
+| Stage B mutations | `PASS STAGE-B-MUTATIONS killed=5 restored=1` |
+| SHA-1 | `PASS SHA1 vectors=9` |
+| Lua syntax | `LUA-SYNTAX parsed=11 of=11` |
+| Lua bytes | `LUA-SAME wasm=1 bodies=11` |
+| Globals | `NO-GLOBALS leaked=0 runs=18` |
+| Flags | `FLAGS read-only=7 write=3 branch-write=1` |
+| Stage C mutations | `PASS STAGE-C-MUTATIONS killed=3 restored=1` |
+| Stage C integrity | `PASS STAGE-C-INTEGRITY killed=5 restored=1` |
+| Prelude integrity | `PRELUDE-INTEGRITY lines=109 files=2 OK` |
+| Stage C | `PASS STAGE-C` |
+| Artifact pins | `JQ-VERSION jq-1.6 BASH-VERSION 3.2.57` |
+| Bash syntax | `BASH-SYNTAX ok=1 artifacts=6` |
+| Lua and Bash bytes | `LUA-SAME wasm=1 sh=1 bodies=6` |
+| Shell load once | `SH-LOAD-ONCE loads=1 invokes=2 steady_calls=1` |
+| Shell replies | `PASS SH-REPLIES runs=40` |
+| Shell refusals | `PASS SH-REFUSALS cases=11` |
+| Stage D mutations | `PASS STAGE-D-MUTATIONS killed=5 restored=1` |
+| Stage D tests | `PASS STAGE-D-TESTS` |
+| Stage D | `PASS STAGE-D` |
+| Store unit checks | `PASS STORE-UNIT cases=25` |
+| Host tests | `ℹ pass 11` |
+| Host tests | `ℹ fail 0` |
+| Independent decoders | `DECODERS-SPLIT files=2` |
+| End to end | `E2E-3WAY luajit=1 node=1 sh=1 store=1 entry=main reply="9007199254740993" constructor=bulk` |
+| End to end | `E2E-3WAY luajit=1 node=1 sh=1 store=1 entry=main reply="1" constructor=bulk` |
+| End to end | `E2E-3WAY luajit=1 node=1 sh=1 store=1 entry=main reply="-9" constructor=bulk` |
+| End to end | `E2E-3WAY luajit=1 node=1 sh=1 store=1 entry=twice reply="9007199254740994" constructor=bulk` |
+| End to end | `E2E-3WAY luajit=1 node=1 sh=1 store=1 entry=capturedReply reply="1" constructor=bulk` |
+| End to end | `E2E-3WAY luajit=1 node=1 sh=1 store=1 entry=exactMain reply="9007199254740993" constructor=int` |
+| End to end | `E2E-3WAY luajit=1 node=1 sh=1 store=1 entry=incrementMain reply="9223372036854775807" constructor=int` |
+| End to end | `E2E-3WAY luajit=1 node=1 sh=1 store=1 entry=incrementMain reply="-9223372036854775807" constructor=int` |
+| End to end | `E2E-3WAY luajit=1 node=1 sh=1 store=1 entry=readMain reply="" constructor=null` |
+| End to end | `E2E-3WAY luajit=1 node=1 sh=1 store=1 entry=readMain reply="a\nlast\n" constructor=bulk` |
+| Steady-state requests | `LOAD-ONCE rest_calls=1 invoke_lines=1 warmup_calls=2 total_calls=3` |
+| Real Node fallback | `PASS NODE-NOSCRIPT loads=1 evalsha=3 eval=1 steady_calls=1` |
+| Real Bash fallback | `PASS BASH-NOSCRIPT loads=1 evalsha=1 eval=1 same_body=1` |
+| Compiled reactor | `PASS REDIS-REACTOR code10=2 error_status=1 output_fault=1` |
+| Real server faults | `PASS HOST-FAULTS cases=6` |
+| Cleanup | `HOSTS-STOPPED owned=2` |
+| Spine mutant | `KILLED DECR-SPINE by E2E-3WAY reply comparison` |
+| Merged decoder mutant | `KILLED MERGED-DECODER by DECODERS-SPLIT` |
+| Copied decoder mutant | `KILLED COPIED-DECODER by DECODERS-SPLIT` |
+| Stage E tests | `PASS STAGE-E-TESTS cases=10` |
+| Stage E integrity | `PASS STAGE-E-INTEGRITY killed=14 restored=1` |
+| Stage E mutations | `PASS STAGE-E-MUTATIONS killed=15 restored=1` |
+| Full ladder | `PASS STAGE-E` |
+| Ladder exit | `EXIT 0` |
+| Stage A mutations | `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1` |
+| Mutation exit | `EXIT-MUT 0` |
+| Run exit | `EXIT-ALL 0` |
+
+Fix rounds: 2.

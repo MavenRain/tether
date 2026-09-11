@@ -24,10 +24,18 @@ def emit(source_root, path, entry, output, fuel=1000000):
         return code
     shell = None
     artifacts = []
+    client = None
+    keys = {}
     for row in rows:
         fields = row.rstrip(b"\n").split(b" ")
         if fields[0] == b"SH" and len(fields) == 2:
             shell = bytes.fromhex(fields[1].decode("ascii"))
+        elif fields[0] == b"CLIENT" and len(fields) >= 2 and client is None:
+            client = {"version": 1, "answer": int(fields[1]),
+                      "invokes": [name.decode("ascii") for name in fields[2:]]}
+        elif fields[0] == b"KEYS" and len(fields) >= 2:
+            keys[fields[1].decode("ascii")] = [bytes.fromhex(k.decode("ascii")).decode("ascii")
+                                              for k in fields[2:]]
         elif fields[0] == b"ARTIFACT" and len(fields) == 5:
             _, name, sha1, body, wasm = fields
             artifacts.append((name.decode("ascii"), sha1.decode("ascii"),
@@ -36,7 +44,7 @@ def emit(source_root, path, entry, output, fuel=1000000):
         else:
             print("EMIT invalid compiler response", file=sys.stderr)
             return 2
-    if shell is None:
+    if shell is None or client is None or set(keys) != {a[0] for a in artifacts}:
         print("EMIT missing compiler artifacts", file=sys.stderr)
         return 2
     # Require a fresh destination so stale bodies or symlinks cannot join the output.
@@ -48,8 +56,9 @@ def emit(source_root, path, entry, output, fuel=1000000):
         stem = f"body-{index}"
         (output / (stem + ".lua")).write_bytes(body)
         (output / (stem + ".wasm")).write_bytes(wasm)
-        manifest.append({"entry": name, "sha1": sha1, "stem": stem})
+        manifest.append({"entry": name, "sha1": sha1, "stem": stem, "keys": keys[name]})
     (output / "scripts.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    (output / "client.json").write_text(json.dumps(client, indent=2) + "\n")
     print(f"PASS SH-EMIT entry={entry} bodies={len(artifacts)}")
     return 0
 

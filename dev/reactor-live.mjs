@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import { Writable } from 'node:stream';
+import { request, runReactor } from '../runtime/redis-host.mjs';
+const [module, invalid, portText] = process.argv.slice(2), port = Number(portText);
+const chunks = [], output = new Writable({ write(chunk, _encoding, next) { chunks.push(chunk); next(); } });
+await request(port, ['SET', '{counter}:hits:visits', '9007199254740992']);
+assert.equal(await runReactor(module, port, output), 0);
+assert.equal(Buffer.concat(chunks).toString(), '{"result":"9007199254740994"}\n');
+chunks.length = 0;
+assert.equal(await runReactor(invalid, port, output), 4);
+assert.equal(Buffer.concat(chunks).toString(), '{"error":"LUA-SAME body hash"}\n');
+const broken = new Writable({ write(_chunk, _encoding, next) { next(new Error('sink failed')); } });
+await assert.rejects(runReactor(module, port, broken), /sink failed/);
+await new Promise(resolve => setImmediate(resolve));
+console.log('PASS REDIS-REACTOR code10=2 error_status=1 output_fault=1');

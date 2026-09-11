@@ -1,0 +1,39 @@
+-- The gate supplies probeBody, probeSha and probeKey before this fixture.
+mu ProbeState : Type 0 with
+| querying : Nat -> ProbeState
+| writing : Nat -> Bytes -> ProbeState
+| finished : Nat -> ProbeState
+
+def init : Words -> ProbeState := fun (args : Words) => querying 1
+def resume : ProbeState -> Nat -> Bytes -> ProbeState :=
+  fun (state : ProbeState) (status : Nat) (answer : Bytes) =>
+    case state as current in ProbeState return ProbeState with
+    | querying remaining =>
+        (case (natEq status 0) with
+        | 0 (no : prod ()) => writing 4 (bytesAppend answer b"\n")
+        | 1 (yes : prod ()) =>
+            (case (natEq remaining 0) with
+            | 0 (more : prod ()) => querying 0
+            | 1 (last : prod ()) => writing 0 (bytesAppend answer b"\n")))
+    | writing result body => finished result
+    | finished result => finished result
+def requestCode : ProbeState -> Nat := fun (state : ProbeState) =>
+  case state as current in ProbeState return Nat with
+  | querying remaining => 10
+  | writing result body => 6
+  | finished result => 0
+def requestArgs : ProbeState -> Words := fun (state : ProbeState) =>
+  case state as current in ProbeState return Words with
+  | querying remaining => wordsCons probeSha (wordsCons probeKey wordsNil)
+  | writing result body => wordsNil
+  | finished result => wordsNil
+def requestBody : ProbeState -> Bytes := fun (state : ProbeState) =>
+  case state as current in ProbeState return Bytes with
+  | querying remaining => probeBody
+  | writing result body => body
+  | finished result => bytesNil
+def exitCode : ProbeState -> Nat := fun (state : ProbeState) =>
+  case state as current in ProbeState return Nat with
+  | querying remaining => 4
+  | writing result body => result
+  | finished result => result

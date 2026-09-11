@@ -1,0 +1,16 @@
+module HostCases
+import M0Spine
+
+def increment : Script Reply (tag b"counter") :=
+  incr Reply (tag b"counter") (hits b"visits")
+    (fun (r : Reply) => pure Reply (tag b"counter") r)
+
+def readOnly : Script Reply (tag b"counter") :=
+  get Reply Int64 (tag b"counter") (hits b"visits")
+    (fun (r : Reply) => pure Reply (tag b"counter") r)
+
+def incrementMain : Client Reply :=
+  inv Reply (tag b"counter") increment (fun (r : Reply) => done Reply r)
+
+def readMain : Client Reply :=
+  inv Reply (tag b"counter") readOnly (fun (r : Reply) => done Reply r)
