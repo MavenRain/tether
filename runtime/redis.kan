@@ -55,6 +55,12 @@ mu Script (0 A : Type 0) : (0 g : Tag) -> Type 0 :=
 | decr : (0 g : Tag) -> Key (Str Int64) g -> (Reply -> Script A g) -> Script A g
 | del : (0 t : RedisType) -> (0 g : Tag) -> Key t g -> (Reply -> Script A g) -> Script A g
 | exists : (0 t : RedisType) -> (0 g : Tag) -> Key t g -> (Reply -> Script A g) -> Script A g
+| hset : (0 g : Tag) -> Key Hash g -> Bytes -> Bytes -> (Reply -> Script A g) -> Script A g
+| hget : (0 g : Tag) -> Key Hash g -> Bytes -> (Reply -> Script A g) -> Script A g
+| hdel : (0 g : Tag) -> Key Hash g -> Bytes -> (Reply -> Script A g) -> Script A g
+| hexists : (0 g : Tag) -> Key Hash g -> Bytes -> (Reply -> Script A g) -> Script A g
+| hlen : (0 g : Tag) -> Key Hash g -> (Reply -> Script A g) -> Script A g
+| hincrby : (0 g : Tag) -> Key Hash g -> Bytes -> Signed64 -> (Reply -> Script A g) -> Script A g
 
 mu Client (0 A : Type 0) : Type 0 :=
 | done : A -> Client A

@@ -441,3 +441,34 @@ the first one, and it counts the two restored control runs, so `survived`
 and `restored` report observed quantities.
 Evidence: `/Users/oobi/Documents/gpt18/tether-m1-strings/.kanon-exec/run-mCLFw9`,
 exit 0. The working checkout was unchanged by this run.
+
+### M1 Hash commands 2026-09-12
+
+`python3 -P dev/hashes-mutations.py` compiles one production-source mutant
+at a time in a disposable copy. The unit and offline suites pass before
+mutation and after the original sources are restored and rebuilt. Each
+mutant must compile successfully and fail its named assertion.
+
+| Mutation | Change | Required failed assertion |
+| --- | --- | --- |
+| HGET-WRITE | Remove HGET from the read-only allowlist. | `HASHES write classification` |
+| HSET-COUNT | Report a new field when replacing an existing field. | `FAIL HASHES-UNIT overwrite count` |
+| HDEL-EMPTY-KEY | Retain an existing key after deleting its last field, preserving missing-key behavior. | `FAIL HASHES-UNIT delete last field` |
+| HINCRBY-ROUND | Convert the post-increment HGET through a Lua number. | `HASHES LuaJIT reply` |
+| INTERP-ERR-TAG | Answer a store fault with the `bulk` constructor instead of `err`. | `FAIL HASHES-UNIT hset wrong type stops client` |
+| HASH-FAULT-MESSAGE | Report the String fault text for an invalid stored hash decimal. | `HASHES store reply` |
+
+Result: `PASS HASHES-MUTATIONS killed=6 survived=0 restored=2`.
+INTERP-ERR-TAG covers `store/interp.ml`, which had no mutant before this
+review round. The unit suite now drives every command fault through
+`I.run` and requires the `err` reply that stops the Client, so the
+constructor swap fails a named assertion. HASH-FAULT-MESSAGE covers
+`store/store.ml` message text: the offline oracle compares the reply
+bytes of the invalid-decimal rows, so the String text fails there.
+The earlier HDEL-EMPTY-KEY version also created a key on a missing-key
+HDEL. It failed the earlier `missing delete` assertion and was therefore
+not counted as a kill of the named assertion. The narrowed mutant above
+is killed specifically by the last-field deletion check.
+
+Evidence: `/Users/oobi/Documents/gpt18/tether-m1-hashes/.kanon-exec/run-3GbMit`,
+exit 0. The working checkout was unchanged by the mutation runner.

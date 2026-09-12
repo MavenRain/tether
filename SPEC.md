@@ -1,6 +1,6 @@
 # tether specification
 
-M1 String and key command slice, 2026-09-12. The driver emits the executable Wasm
+M1 Hash command slice, 2026-09-12. The driver emits the executable Wasm
 Client and Bash pair. The foundation, counter surface, printers, store and
 local hosts are implemented. See `dev/STAGE-B.md` through `dev/STAGE-F.md`
 for syntax and limits. The latest build-log entry records whether the
@@ -13,6 +13,8 @@ Read-only dispatch selects Redis commands from the existing
 String and key operations now include typed SET, INCRBY, DECR, DEL and
 EXISTS. See `dev/STRINGS.md` for signatures, exact integer handling and
 the remaining command limits.
+Hash operations now include typed HSET, HGET, HDEL, HEXISTS, HLEN and
+HINCRBY. See `dev/HASHES.md` for field semantics and host reply limits.
 
 ## Foundation (inherited)
 
@@ -99,11 +101,11 @@ global metatable.
 ## Bounds and milestone limits
 
 Inherited trusted lines: kernel 3997/4000 and encoder 246/600. The current
-implementation measures lua 294/320, including flags, SHA-1 and byte lowering; sh 227/240,
-including the shared Client plan and reactor printer; store 136/200;
+implementation measures lua 305/320, including flags, SHA-1 and byte lowering; sh 227/240,
+including the shared Client plan and reactor printer; store 165/200;
 host-node 196/300; host-rest 156/300; and bin 393/450, covering the command
 host, the driver and the local process owner. Both trusted preludes are pinned by
-`dev/PRELUDES.sha256`; their 115 lines are reported separately without
+`dev/PRELUDES.sha256`; their 121 lines are reported separately without
 adding or changing a ruled bound.
 The store and printers live outside `lib`.
 OCaml uses explicit Result/Option errors, exhaustive sum matches and total
@@ -119,8 +121,9 @@ the three observed surface declaration passes and does not instrument
 internal kernel traversals. `dev/stage-f.sh` returns failure if the
 compile-time median exceeds its bound, even when all functional gates pass.
 
-M1 do-notation, EVALSHA_RO dispatch and basic String/key commands are
-implemented. TTL, Hash, List, Set and ZSet commands, the rate limiter,
+M1 do-notation, EVALSHA_RO dispatch, basic String/key commands and
+single-field Hash commands are implemented. TTL, bulk Hash operations,
+List, Set and ZSet commands, the rate limiter,
 leaderboard, job queue and session-store
 examples, the counted Lean 4 exporter, and the M1 ratio and traversal gates remain
 M1 work. M2 adds migrations, batch,

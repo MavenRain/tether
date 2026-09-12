@@ -56,28 +56,38 @@ end
 local function run(s)
   while s.tag ~= 0 do
     local k, r, next = key(s[1]), false, s[2]
-    if s.tag == 1 or s.tag == 5 or s.tag == 6 then
+    if s.tag == 1 or s.tag == 5 or s.tag == 6 or s.tag == 14 then
       local changed
-      if s.tag == 5 then changed = redis.pcall('INCRBY',k,text(s[2][1])); next = s[3]
+      if s.tag == 14 then changed = redis.pcall('HINCRBY',k,text(s[2]),text(s[3][1])); next = s[4]
+      elseif s.tag == 5 then changed = redis.pcall('INCRBY',k,text(s[2][1])); next = s[3]
       else changed = redis.pcall(s.tag == 1 and 'INCR' or 'DECR',k) end
       if type(changed) == 'table' and changed.err then r = {tag=4,bytes(changed.err)}
       else
-        local read = redis.pcall('GET',k)
+        local read
+        if s.tag == 14 then read = redis.pcall('HGET',k,text(s[2])) else read = redis.pcall('GET',k) end
         if type(read) == 'table' and read.err then r = {tag=4,bytes(read.err)}
         elseif read == false then r = {tag=0}
         else r = {tag=1,{tag=0,bytes(read)}} end
       end
-    elseif s.tag == 2 or s.tag == 3 or s.tag == 4 then
+    elseif s.tag == 2 or s.tag == 3 or s.tag == 4 or s.tag == 10 then
       local got
-      if s.tag == 2 then got = redis.pcall('GET',k)
+      if s.tag == 10 then got = redis.pcall('HGET',k,text(s[2])); next = s[3]
+      elseif s.tag == 2 then got = redis.pcall('GET',k)
       else got = redis.pcall('SET',k,text(s.tag == 3 and s[2] or s[2][1])); next = s[3] end
       if type(got) == 'table' and got.err then r = {tag=4,bytes(got.err)}
       elseif type(got) == 'table' and got.ok then r = {tag=3,bytes(got.ok)}
       elseif got == false then r = {tag=0} else r = {tag=2,bytes(got)} end
-    elseif s.tag == 7 or s.tag == 8 then
-      local got = redis.pcall(s.tag == 7 and 'DEL' or 'EXISTS',k)
+    elseif s.tag == 7 or s.tag == 8 or s.tag == 9 or s.tag == 11 or s.tag == 12 or s.tag == 13 then
+      local got
+      if s.tag == 9 then got = redis.pcall('HSET',k,text(s[2]),text(s[3])); next = s[4]
+      elseif s.tag == 11 or s.tag == 12 then
+        got = redis.pcall(s.tag == 11 and 'HDEL' or 'HEXISTS',k,text(s[2])); next = s[3]
+      elseif s.tag == 13 then got = redis.pcall('HLEN',k)
+      else got = redis.pcall(s.tag == 7 and 'DEL' or 'EXISTS',k) end
       if type(got) == 'table' and got.err then r = {tag=4,bytes(got.err)}
-      elseif type(got) ~= 'number' then r = {tag=4,bytes('ERR key count reply is not an integer')}
+      elseif type(got) ~= 'number' then
+        local what = (s.tag == 7 or s.tag == 8) and 'key' or 'field'
+        r = {tag=4,bytes('ERR ' .. what .. ' count reply is not an integer')}
       else r = {tag=1,{tag=0,bytes(string.format('%d',got))}} end
     else error('LUA-SCRIPT unsupported tag') end
     s = app(next,{r})

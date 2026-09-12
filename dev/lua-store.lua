@@ -32,7 +32,43 @@ local function add(left, right)
   if not canonical(result) then return nil, 'ERR increment or decrement would overflow' end
   return result
 end
-local function call(command, key, amount)
+local function hash_call(command, key, field, value)
+  if command == 'HINCRBY' and not canonical(value) then
+    return {err='ERR value is not an integer or out of range'}
+  end
+  if values[key] ~= nil and type(values[key]) ~= 'table' then
+    return {err='WRONGTYPE Operation against a key holding the wrong kind of value'}
+  end
+  local fields = values[key] or {}
+  if command == 'HGET' then return fields[field] or false end
+  if command == 'HEXISTS' then return fields[field] ~= nil and 1 or 0 end
+  if command == 'HLEN' then
+    local count = 0
+    for _ in pairs(fields) do count = count + 1 end
+    return count
+  end
+  if command == 'HDEL' then
+    local count = fields[field] ~= nil and 1 or 0
+    fields[field] = nil
+    if next(fields) == nil then values[key] = nil end
+    return count
+  end
+  if command == 'HSET' then
+    local count = fields[field] ~= nil and 0 or 1
+    fields[field], values[key] = value, fields
+    return count
+  end
+  if command ~= 'HINCRBY' then error('TWIN unsupported hash command') end
+  local old = fields[field] or '0'
+  if not canonical(old) then return {err='ERR hash value is not an integer'} end
+  local updated, reason = add(old, value)
+  if not updated then return {err=reason} end
+  fields[field], values[key] = updated, fields
+  -- Redis answers the exact new value; the printed body reads it back with HGET.
+  return updated
+end
+local function call(command, key, amount, value)
+  if command:sub(1,1) == 'H' then return hash_call(command, key, amount, value) end
   if command == 'EXISTS' then return values[key] ~= nil and 1 or 0 end
   if command == 'DEL' then
     local count = values[key] ~= nil and 1 or 0
@@ -80,6 +116,14 @@ for _, check in ipairs(config.checks or {}) do
   if actual == nil then actual = false end
   if check.kind == 'hash' then
     if type(actual) ~= 'table' then error('TWIN expected hash: ' .. check.key) end
+    if check.fields then
+      for field, value in pairs(check.fields) do
+        if actual[field] ~= value then error('TWIN hash field mismatch') end
+      end
+      for field in pairs(actual) do
+        if check.fields[field] == nil then error('TWIN unexpected hash field') end
+      end
+    end
   elseif actual ~= check.value then error('TWIN stored value mismatch: ' .. check.key) end
 end
 if config.answer < 0 then error('Client fault') end

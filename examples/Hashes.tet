@@ -1,0 +1,38 @@
+module Hashes
+schema profiles : String -> Key Hash tag b"account"
+
+def update : Script Reply (tag b"account") := do {
+  _ <- hset Reply (tag b"account") (profiles b"alice") b"name" b"Alice";
+  _ <- hset Reply (tag b"account") (profiles b"alice") b"visits" b"9007199254740992";
+  reply <- hincrby Reply (tag b"account") (profiles b"alice") b"visits" (int64 b"1");
+  pure Reply (tag b"account") reply
+}
+
+def main : Client Reply := do {
+  reply <- inv Reply (tag b"account") update;
+  done Reply reply
+}
+
+def read : Script Reply (tag b"account") := do {
+  reply <- hget Reply (tag b"account") (profiles b"alice") b"name";
+  pure Reply (tag b"account") reply
+}
+
+def name : Client Reply := do {
+  _ <- inv Reply (tag b"account") update;
+  reply <- inv Reply (tag b"account") read;
+  done Reply reply
+}
+
+def remove : Script Reply (tag b"account") := do {
+  _ <- hdel Reply (tag b"account") (profiles b"alice") b"visits";
+  _ <- hdel Reply (tag b"account") (profiles b"alice") b"name";
+  reply <- exists Reply Hash (tag b"account") (profiles b"alice");
+  pure Reply (tag b"account") reply
+}
+
+def deleted : Client Reply := do {
+  _ <- inv Reply (tag b"account") update;
+  reply <- inv Reply (tag b"account") remove;
+  done Reply reply
+}

@@ -59,9 +59,10 @@ multi-key command forms remain outside this slice.
 
 The Redis prelude appends six constructors, preserving the existing
 constructor tags, and its checksum is updated in `dev/PRELUDES.sha256`.
-The two preludes total 115 lines. The vendored kernel and reactor remain
-at their existing pin. Current trusted counts are Lua 294/320 and store
-136/200; the other measured groups and all bounds are unchanged.
+At the end of this slice the two preludes totaled 115 lines, and trusted
+counts were Lua 294/320 and store 136/200. Later slices record their
+counts in `SPEC.md`. The vendored kernel, reactor and all bounds remain
+at their existing pin and limits.
 
 Run `sh dev/m1-strings.sh` with the toolchain in `dev/TOOLCHAIN.md`.
 It runs the complete read-only ladder, 46 store checks, nine artifact

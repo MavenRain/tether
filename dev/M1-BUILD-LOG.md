@@ -678,3 +678,271 @@ sources at 96.171 ms under load 16.66 and 58.511 ms under load 16.48.
 Verdict: GREEN-FULL. The second closing run has zero FAIL rows and
 EXIT-ALL 0 at a calm load, so the red M0-TIME row of the first run is a
 machine load artifact.
+
+### Hash field commands 2026-09-12
+
+Baseline: `1b620224ba073788000666179935ed468df5afc4`, the committed String
+and key command slice with review fixes. Work was performed in
+`/Users/oobi/Documents/gpt18/tether-m1-hashes`, cloned from the clean main
+checkout with Kanon at its pinned commit. The nested Tot submodule remains
+uninitialized, as required by the foundation gates.
+
+This slice adds HSET, HGET, HDEL, HEXISTS, HLEN and HINCRBY on `Key Hash g`.
+The prelude appends six constructors and updates its checksum, preserving
+all existing constructor tags. HGET, HEXISTS and HLEN join the read-only
+allowlist. `examples/Hashes.tet` demonstrates field updates, exact visit
+counts, a separate read-only invocation and deletion of the last field.
+`dev/HASHES.md` records signatures and limits.
+
+The Lua runtime retrieves the exact decimal after HINCRBY with HGET.
+The independent OCaml store shares checked Int64 addition with String
+commands and reports the Hash-specific invalid-decimal error. Hash writes
+preserve other fields, errors preserve the store, and deleting the last
+field removes the key. The independent LuaJIT twin continues to use
+decimal-digit arithmetic and now checks every stored Hash field.
+
+The two preludes total 121 lines. Trusted counts are kernel 3997/4000,
+encoder 246/600, Lua 305/320, Bash 227/240, store 165/200, Node host
+196/300, REST host 156/300 and driver 393/450. The kernel, reactor, host
+ABI, frozen denominator files and all bounds remain unchanged.
+
+Focused evidence under the work directory's `.kanon-exec`:
+
+| Artifact | Result |
+| --- | --- |
+| `run-ezeHZT` | Driver, shell emitter and Hash/String store programs built, exit 0. |
+| `run-p4LKhY` | 12 artifact pairs, 16 typed refusals, 40 OCaml and 40 LuaJIT cases passed without listeners. Two valid UTF-8 fixtures were added afterward. |
+| `run-dGo4yv` | 42 OCaml and 42 LuaJIT cases, 84 live Wasm/Bash executions, 30 under read-only ACLs, and four expected UTF-8 refusals passed. |
+
+The 69 unit checks include both Int64 boundaries, invalid decimals, every
+other Redis type, missing fields and keys, empty and binary fields,
+immutable updates and execution of actual erased command nodes. The
+integration suite distinguishes `nil` from empty `bulk` in the store,
+checks Lua bytes in both artifacts and verifies all live stored fields.
+Wrong-tag and wrong-type programs must publish no output directory.
+
+The first offline attempt, `run-AKFP3P`, expected the kernel's mismatch
+message for GET on a Hash key. The earlier surface check correctly
+returned `WRONGTYPE GET requires a Str key`; the fixture now requires
+that diagnostic. The first live attempt, `run-TTAUkY`, expected a
+non-UTF-8 reply to succeed. The existing text hosts correctly rejected
+it. Tests now require exit 4 and no stdout for those four executions,
+while still checking stored bytes. NUL, BOM and trailing newlines in
+valid UTF-8 replies round-trip. No host behavior changed.
+
+The larger prelude consumes 7522 polls before the Bash static walk,
+measured by a temporary diagnostic in `dev/sh_emit.ml` (`run-NNYidr`).
+That diagnostic was removed and the emitter rebuilt. Stage D now uses
+7528 polls, retaining six for the printer's own `SH-BUDGET` refusal and
+requiring no published directory. The zero-fuel checker case, production
+fuel limits and all milestone bounds are unchanged. `dev/STAGE-D.md`
+records the same measured window.
+
+The first complete ladder, `run-ZjQRk5`, passed Stages A through F,
+do-notation, read-only dispatch, Strings and every Hash functional gate.
+M0-TIME measured 76.453 ms. It exited 1 because HDEL-EMPTY-KEY failed the
+earlier `missing delete` assertion instead of its named `delete last
+field` assertion. The mutant is now restricted to retaining an existing
+key after its last field is removed, preserving missing-key behavior.
+The production implementation and both assertions are unchanged.
+
+TTL, bulk Hash operations, List, Set and ZSet commands, the four M1
+application examples, the counted Lean exporter, and M1 ratio and
+traversal gates remain work. This slice does not declare M1 complete or
+provide M0-EXIT ratification.
+
+The final complete `sh dev/m1-hashes.sh` ladder passed, exit 0, in
+`/Users/oobi/Documents/gpt18/tether-m1-hashes/.kanon-exec/run-3GbMit`.
+It ends `PASS M1-HASHES`, with 12 artifact pairs, 16 typed refusals,
+42 OCaml and 42 LuaJIT cases and 84 live host executions. The review
+round below raises the unit suite to 77 checks and the mutation set to
+`PASS HASHES-MUTATIONS killed=6 survived=0 restored=2`; the author's run
+measured 69 checks and four mutants. The mutation assertions are
+recorded in `dev/MUTATION-LOG.md`. All included
+lower stage and M1 gates, house audits and trusted-line gates passed.
+M0-TIME measured 57.982 ms against the unchanged 150 ms bound. The
+standalone Stage A 37-case mutation battery was not rerun.
+
+### Review round 2026-09-12 (M1 Hash field commands)
+
+Seven findings were ruled fix. One finding, C-3, was refuted. The round
+changed no bound, no pinned copy and no frozen record.
+
+C-1. No gate could see the `err` reply constructor of `store/interp.ml`
+and no unit sample drove a fault through `I.run`. A copy that answered
+every fault with `bulk` instead of `err` passed the whole suite set.
+`dev/hashes_tests.ml` now holds eight fault samples, one per command
+plus an invalid decimal and an overflow, each requiring
+`execute tag args before = Error (S.message fault)`, which pins both the
+tag 4 node and the Client stop. The unit suite reports 77 checks.
+Control on a copy: with `data "Reply" 4` changed to `data "Reply" 2`,
+`_build/default/dev/hashes_tests.exe` printed
+`FAIL HASHES-UNIT hset wrong type stops client` and exited 1; the
+restored copy printed `PASS HASHES-UNIT cases=77`.
+
+B-1. The LuaJIT twin answered HINCRBY with the constant 0 instead of the
+new value. `dev/lua-store.lua` returns `updated` and carries the note
+that the printed body reads the value back with HGET. Control on a copy:
+a chunk returning `redis.pcall('HINCRBY',KEYS[1],'f','5')` on an empty
+hash printed `5`; before the fix the same chunk raised
+`TWIN reply outside spine`, because 0 is a number.
+
+C-2. The mutation set had no `store/interp.ml` mutant. `dev/hashes-mutations.py`
+adds INTERP-ERR-TAG on `store/interp.ml` and HASH-FAULT-MESSAGE on the
+hash fault text of `store/store.ml`, so the runner reports killed=6.
+Control on a copy: HASH-FAULT-MESSAGE applied by hand made
+`python3 -P dev/hashes-tests.py --offline` print
+`FAIL HASHES-TESTS HASHES store reply 30`. Both rows are recorded in
+`dev/MUTATION-LOG.md` under `### M1 Hash commands 2026-09-12`.
+
+D-2. `dev/HASHES.md` claimed exact reply variants in the OCaml
+interpreter, which was false for every error variant. With the C-1 fix
+the claim is true, and the sentence now states it, naming the `err`
+reply and the Client stop.
+
+D-1. The five documented `./tether exec` forms of `examples/Hashes.tet`
+were run by no leg. The live block of `dev/hashes-tests.py` runs all
+five, each with its own local store, and prints
+`PASS HASHES-EXAMPLE exec=5`. The forms need listeners, so the proof is
+the ladder leg, not an agent shell.
+
+B-2. The emitted runtime named a field count a key count. `print/lua.ml`
+selects `key` for tags 7 and 8 and `field` for tags 9, 11, 12 and 13.
+The Lua trusted group moves from 303/320 to 305/320, under the unchanged
+bound. Control on a copy: the emitted `body-0.lua` of
+`examples/Hashes.tet` holds `'ERR ' .. what .. ' count reply is not an integer'`.
+The String slice sentence about `ERR key count reply is not an integer`
+after DEL stays true, because tags 7 and 8 keep that text.
+
+C-5. The refusal schema was chosen by comparing the row index with
+`len(invalid) - 6`. Each row of `refusals()` now carries its schema and
+its full expected diagnostic, so the String-key rows require the
+`(ACtor Str)` against `(ACtor Hash)` text. The refusal count stays 16.
+Control on a copy: with the String-key rows switched back to the Hash
+schema, `python3 -P dev/hashes-tests.py --static` printed
+`FAIL HASHES-TESTS HASHES refusal 10: 0`, because the command is then
+well typed.
+
+C-3 was refuted. `dev/hashes-tests.py` runs the write-classification
+check in the artifact loop, which executes under every flag, so the
+restored control run of the mutation runner does catch an unrestored
+`print/flags.ml`.
+
+Round 2 of the review raised one item, GATE-1, which claimed that the
+Stage F ladder or the Stage A mutation runner did not pass. The claim is
+false against the run it cites. The root-mode ladder of tag `gates-1`,
+started 12:12:23 on the fixed tree at one-minute load 15.51, holds no row
+that starts with FAIL. It holds `PASS STAGE-F`, `PASS M1-DO`,
+`PASS M1-READONLY`, `PASS M1-STRINGS`, `PASS M1-HASHES`, `EXIT 0`,
+`PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`, `EXIT-MUT 0`
+and `EXIT-ALL 0`, with 21 porcelain rows before and after. Round 2
+therefore changed no code and no gate. The measured rows of that run are
+`PASS M0-TIME median_ms=90.099 bound_ms=150`,
+`PASS HASHES-UNIT cases=77`, `PASS HASHES-ARTIFACTS pairs=12`,
+`PASS HASHES-REFUSALS cases=16 atomic_output=16`,
+`PASS HASHES-ORACLES store=42 luajit=42`,
+`PASS HASHES-E2E cases=42 hosts=84 readonly=30 utf8_refusals=4`,
+`PASS HASHES-EXAMPLE exec=5`,
+`PASS HASHES-MUTATIONS killed=6 survived=0 restored=2` and
+`TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=305/320 sh=227/240
+store=165/200 host-node=196/300 host-rest=156/300 bin=393/450 OK`.
+
+Round 3 of the review raised two items, GATE-1 and GATE-2, both of which
+say that the Stage F ladder or the Stage A mutation runner did not pass.
+GATE-1 cites the root-mode run of tag `gates-1`, which holds no row that
+starts with FAIL, so the claim is false against its own evidence. GATE-2
+cites the root-mode run of tag `gates-2`, started 12:59:26. That run is
+red, and every red row of it lies in the timing set: `FAIL STAGE-E`,
+raised by a `subprocess.TimeoutExpired` of `dev/emit-lua.py` on the entry
+`branchWrite` after the 120 s deadline of `dev/stage-c-tests.py`, then
+`FAIL M0-TIME median_ms=184.032 bound_ms=150`, then the cascade rows
+`FAIL MEASURE`, `FAIL STAGE-F`, `FAIL M1-DO`, `FAIL M1-READONLY`,
+`FAIL M1-STRINGS`, `FAIL M1-HASHES`, `EXIT 1` and `EXIT-ALL 1`. No unit,
+artifact, oracle, refusal, mutation or trusted-line row of that run is
+red. The tree under `gates-2` is byte identical, outside this file, to
+the tree under the green `gates-1`, so no code, gate or bound changed
+between the two runs.
+
+Round 3 therefore changed no code and no gate, and rebuilt the evidence
+instead. The root-mode ladder of tag `fix-3`, started 13:24, ran on the
+same staged tree at a one-minute load of 31.52, above the 29.12 of the
+red run, and is green in every row: `PASS STAGE-A`, `PASS STAGE-C`,
+`PASS STAGE-D`, `PASS STAGE-E`, `PASS M0-TIME median_ms=100.244
+bound_ms=150`, `PASS STAGE-F`, `PASS M1-DO`, `PASS M1-READONLY`,
+`PASS M1-STRINGS`, `PASS M1-HASHES`, `EXIT 0`,
+`PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`, `EXIT-MUT 0`
+and `EXIT-ALL 0`, with zero rows that start with FAIL. The measured M1
+rows of that run are `PASS HASHES-BUILD`, `PASS HASHES-UNIT cases=77`,
+`PASS HASHES-ARTIFACTS pairs=12`,
+`PASS HASHES-REFUSALS cases=16 atomic_output=16`,
+`PASS HASHES-ORACLES store=42 luajit=42`,
+`PASS HASHES-E2E cases=42 hosts=84 readonly=30 utf8_refusals=4`,
+`PASS HASHES-EXAMPLE exec=5`, `PASS HASHES-TESTS`, the six killed
+mutants `HGET-WRITE`, `HSET-COUNT`, `HDEL-EMPTY-KEY`, `HINCRBY-ROUND`,
+`INTERP-ERR-TAG` and `HASH-FAULT-MESSAGE`,
+`PASS HASHES-MUTATIONS killed=6 survived=0 restored=2`,
+`PASS STRINGS-UNIT cases=46`, `PASS STRINGS-ARTIFACTS pairs=9`,
+`PASS STRINGS-REFUSALS cases=8 atomic_output=8`,
+`PASS STRINGS-ORACLES store=21 luajit=27`,
+`PASS STRINGS-E2E cases=27 hosts=54`,
+`PASS STRINGS-MUTATIONS killed=4 survived=0 restored=2`,
+`PASS RO-E2E acl_readonly=12 mixed=2 store=6 luajit=6`,
+`PASS RO-MUTATIONS killed=4 survived=0 restored=2`, `PASS HOUSE` and
+`TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=305/320 sh=227/240
+store=165/200 host-node=196/300 host-rest=156/300 bin=393/450 OK`.
+The 150 ms bound, the 120 s Stage C deadline and the eight trusted-line
+bounds did not move.
+
+| id | severity | file | fix or ruling |
+| --- | --- | --- | --- |
+| C-1 | high | dev/hashes-tests.py:105 and dev/hashes_tests.ml:64 | `dev/hashes_tests.ml` now holds eight fault samples driven through `I.run`, each requiring `execute tag args before = Error (S.message fault)`, which pins the `err` reply constructor and the Client stop; clean `PASS HASHES-UNIT cases=77`, and with `data "Reply" 4` changed to `data "Reply" 2` the copy printed `FAIL HASHES-UNIT hset wrong type stops client`. |
+| B-1 | medium | dev/lua-store.lua:67 | the LuaJIT twin now stores `updated` and returns it, with the comment "Redis answers the exact new value; the printed body reads it back with HGET."; `PASS HASHES-ORACLES store=42 luajit=42` unchanged. |
+| C-2 | medium | dev/hashes-mutations.py:14 | the mutant set now holds six rows, including INTERP-ERR-TAG on `store/interp.ml` and HASH-FAULT-MESSAGE on `store/store.ml`, both killed, with `PASS HASHES-MUTATIONS killed=6 survived=0 restored=2` and two rows added to `dev/MUTATION-LOG.md` after line 445. |
+| D-2 | medium | dev/HASHES.md:78 | the sentence now reads that the tests check exact reply variants, success and fault alike, which the eight fault samples make true. |
+| D-1 | medium | dev/HASHES.md:9 | `dev/hashes-tests.py` now defines `EXAMPLE_EXECS` with the five documented `./tether exec` forms and their bytes, and runs them live, which adds the new row `PASS HASHES-EXAMPLE exec=5`. |
+| B-2 | low | print/lua.ml:88 | the emitted runtime now selects `key` for tags 7 and 8 and `field` for the Hash tags in the count fault text; `TRUSTED-LINES lua=305/320`. |
+| C-5 | low | dev/hashes-tests.py:172 | every invalid row now carries its own (command, schema, diagnostic) triple, and the `len(invalid) - 6` boundary is gone; `PASS HASHES-REFUSALS cases=16 atomic_output=16` unchanged. |
+| GATE-1 | high | (gate) | ruled an evidence artifact: the cited run `gates-1` (12:12, load 15.51) is green on disk, no row starts with FAIL and `EXIT-ALL 0` holds, and the gate runner had returned only 257 of its 367 rows without the EXIT-ALL row, so the workflow raised the item on an empty leg list; no code changed. |
+| GATE-2 | high | (gate) | ruled a load artifact: run `gates-2` (12:59, one-minute load 29.12 to 32.46) went red only on the timing set, with `FAIL STAGE-E` from the 120 s subprocess deadline of `dev/emit-lua.py` on `examples/LuaCases.tet`, `FAIL M0-TIME median_ms=184.032 bound_ms=150`, and the cascade `FAIL MEASURE`, `STAGE-F`, `M1-DO`, `M1-READONLY`, `M1-STRINGS` and `M1-HASHES`; the same tree is green in `fix-3` and `gates-3`; no code changed. |
+| GATE-3 | high | (gate) | ruled an evidence artifact: run `gates-3` (13:46, load 21.08 to 22.98) is green on disk with `PASS M0-TIME median_ms=66.153 bound_ms=150` and `EXIT-ALL 0`, and the runner again returned a truncated row list; no code changed. |
+
+Refuted: 1. C-3, because `dev/hashes-tests.py` runs the
+write-classification check in the artifact loop, which executes under
+every flag.
+Merged and dropped: 7. A-1, merged into C-1 as the same defect, the
+unobserved `err` constructor. A-2, cut at the cap, confirmed but
+latent. A-3, cut at the cap, confirmed but both callers are pure reads.
+A-4, cut at the cap, confirmed but unobservable through the six
+commands of this slice. C-4, cut at the cap, confirmed but the LuaJIT
+twin checks the fields in the same run. C-6, cut at the cap, confirmed
+but no wrong number exists today. D-3, cut at the cap, confirmed but a
+staleness risk only.
+
+The closing full ladder of record on the fixed tree is the root-mode
+run of tag `gates-3`, started 13:46:28 at a one-minute load of 21.08,
+log `gates-gates-3.log` of the review kit. It is green in every row:
+`PASS STAGE-F`, `PASS M1-DO`, `PASS M1-READONLY`, `PASS M1-STRINGS`,
+`PASS M1-HASHES`, `EXIT 0`,
+`PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`, `EXIT-MUT 0`,
+`EXIT-ALL 0`, `PASS M0-TIME median_ms=66.153 bound_ms=150`,
+`PASS HASHES-UNIT cases=77`, `PASS HASHES-ARTIFACTS pairs=12`,
+`PASS HASHES-REFUSALS cases=16 atomic_output=16`,
+`PASS HASHES-ORACLES store=42 luajit=42`,
+`PASS HASHES-E2E cases=42 hosts=84 readonly=30 utf8_refusals=4`,
+`PASS HASHES-EXAMPLE exec=5`,
+`PASS HASHES-MUTATIONS killed=6 survived=0 restored=2`, and
+`TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=305/320 sh=227/240
+store=165/200 host-node=196/300 host-rest=156/300 bin=393/450 OK`.
+Porcelain held 21 rows before and after, the unstaged diff is empty,
+and the kanon gitlink stays 2c2e6e6. Compared with the baseline run on
+the untouched slice, HASHES-UNIT rose from 69 to 77 cases and
+HASHES-MUTATIONS from 4 to 6 killed. Every other count is identical.
+The review fixed 7 findings and moved no bound. The closing ladder of
+tag `close` ran on the same staged code tree, started 14:17:41 at a
+one-minute load of 29.19, log `gates-close.log` of the review kit,
+367 rows, done 14:33:16. It is green in every row with `EXIT-ALL 0`,
+`PASS M0-TIME median_ms=104.949 bound_ms=150` at a one-minute load of
+40.04, `PASS HASHES-UNIT cases=77`, `PASS HASHES-EXAMPLE exec=5`,
+`PASS HASHES-MUTATIONS killed=6 survived=0 restored=2`,
+`PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`, the same
+trusted-line row, and porcelain 21 rows before and after.

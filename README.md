@@ -4,6 +4,11 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports typed HSET, HGET, HDEL, HEXISTS, HLEN and HINCRBY on
+Hash keys. `./tether exec examples/Hashes.tet --host node` demonstrates
+field updates and exact arithmetic beyond 2^53. See `dev/HASHES.md` for
+command types, binary reply limits and validation.
+
 M1 now supports typed SET, INCRBY, DECR, DEL and EXISTS alongside INCR
 and GET. `./tether exec examples/Strings.tet --host node` demonstrates
 exact arithmetic beyond 2^53. See `dev/STRINGS.md` for command types,
