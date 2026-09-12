@@ -1,6 +1,6 @@
 # tether specification
 
-M1 do-notation slice, 2026-09-11. The driver emits the executable Wasm
+M1 read-only dispatch slice, 2026-09-11. The driver emits the executable Wasm
 Client and Bash pair. The foundation, counter surface, printers, store and
 local hosts are implemented. See `dev/STAGE-B.md` through `dev/STAGE-F.md`
 for syntax and limits. The latest build-log entry records whether the
@@ -8,6 +8,8 @@ independent M0 timing gate has passed; this text does not stamp M0-EXIT.
 The first M1 slice adds do-notation, described in `dev/DO-NOTATION.md`.
 It expands reply binds into the existing Script and Client continuations
 before checking, without changing the foundation or artifact contract.
+The next slice selects read-only Redis commands from the existing
+`no-writes` classification. See `dev/READONLY.md`.
 
 ## Foundation (inherited)
 
@@ -80,8 +82,10 @@ reply across subsequent calls and terminates on the first host fault.
 `runtime/reactor.kan` is byte identical to the pin. The Node host runs
 RESP2 against Redis. The REST twin has its own decoder in a separate file.
 
-Both artifacts SCRIPT LOAD on first use, EVALSHA thereafter, and EVAL on
-NOSCRIPT. Steady state makes one REST request per invoke line. Bash 3.2
+Both artifacts SCRIPT LOAD on first use. Read-only scripts use EVALSHA_RO
+and EVAL_RO on NOSCRIPT; scripts that may write use EVALSHA and EVAL.
+Each fallback is attempted once, with identical Lua bytes and keys.
+Steady state makes one REST request per invoke line. Bash 3.2
 uses `set -eu`, quoted expansions, quoted heredocs and `jq -n --args`
 for request bodies. Reply variants are inspected before payload extraction;
 every emitted `case` has a `*) exit 4` arm. Equality compares stdout text.
@@ -91,10 +95,10 @@ global metatable.
 
 ## Bounds and milestone limits
 
-Inherited trusted lines: kernel 3997/4000 and encoder 246/600. Stage F
-measures lua 283/320, including flags, SHA-1 and byte lowering; sh 227/240,
+Inherited trusted lines: kernel 3997/4000 and encoder 246/600. The current
+implementation measures lua 283/320, including flags, SHA-1 and byte lowering; sh 227/240,
 including the shared Client plan and reactor printer; store 118/200;
-host-node 186/300; host-rest 156/300; and bin 393/450, covering the command
+host-node 188/300; host-rest 156/300; and bin 393/450, covering the command
 host, the driver and the local process owner. Both trusted preludes are pinned by
 `dev/PRELUDES.sha256`; their 109 lines are reported separately without
 adding or changing a ruled bound.
@@ -112,9 +116,9 @@ the three observed surface declaration passes and does not instrument
 internal kernel traversals. `dev/stage-f.sh` returns failure if the
 compile-time median exceeds its bound, even when all functional gates pass.
 
-M1 do-notation is implemented. The larger command surface, the rate
-limiter, leaderboard, job queue and session-store examples, EVALSHA_RO,
-the counted Lean 4 exporter, and the M1 ratio and traversal gates remain
+M1 do-notation and EVALSHA_RO dispatch are implemented. The larger command
+surface, the rate limiter, leaderboard, job queue and session-store
+examples, the counted Lean 4 exporter, and the M1 ratio and traversal gates remain
 M1 work. M2 adds migrations, batch,
 PUBLISH and parity gates.
 M3 adds universes, quotients, coinduction, a wasmtime host, RESP3, Streams

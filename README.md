@@ -4,9 +4,12 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
-The first M1 slice adds `do { reply <- command; finalTerm }` syntax for
-Script and Client continuations. Try `./tether run examples/DoCounter.tet`
-after building the driver. See `dev/DO-NOTATION.md` for syntax and checks.
+M1 adds `do { reply <- command; finalTerm }` syntax for Script and Client
+continuations, plus read-only Redis dispatch. Scripts classified as
+`no-writes` use `EVALSHA_RO` and fall back to `EVAL_RO` on NOSCRIPT.
+Try `./tether exec examples/ReadOnly.tet --host node` after building the
+driver, or select `--entry mixed` to combine reads and writes. See
+`dev/DO-NOTATION.md` and `dev/READONLY.md` for syntax and checks.
 
 The Stage F driver emits an executable Client `prog.wasm` and `prog.sh`
 with the same canonical Lua bodies. Both run against local Redis hosts
@@ -27,7 +30,7 @@ sh dev/stage-f.sh
 
 `exec` starts and stops its own temporary loopback Redis server and REST
 twin, then compares the chosen host's stdout with the empty-store
-interpreter. Each example prints `1`. Emit requires a fresh output directory.
+interpreter. The counter commands above print `1`. Emit requires a fresh output directory.
 
 ```sh
 dune build dev/surface_check.exe

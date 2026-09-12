@@ -237,3 +237,188 @@ PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1,
 TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=283/320 sh=227/240 store=118/200 host-node=186/300 host-rest=156/300 bin=393/450 OK,
 EXIT 0, EXIT-MUT 0, EXIT-ALL 0. FAIL rows: 0. Porcelain rows: 13 before
 and 13 after. The slice is GREEN on the final tree.
+
+### Read-only dispatch 2026-09-11
+
+Baseline: `142ef37212261a5c2987b842ae8de57becf5cf1c`, the committed
+do-notation slice and review fixes. Work was performed in
+`/Users/oobi/Documents/gpt18/tether-m1-readonly` with the clean vendored
+Kanon pin. The main Tether checkout was clean before this slice.
+
+The existing no-writes classification now selects EVALSHA_RO and the
+single EVAL_RO retry after NOSCRIPT. Bash uses the artifact field; Node
+uses the canonical first line after verifying the Lua body hash. The
+local REST allowlist admits both commands. Mixed Clients select mode per
+script and preserve captured replies. No kernel, prelude, ABI, frozen
+denominator, or trusted-line bound changed.
+
+Focused evidence, under the work directory's `.kanon-exec`:
+
+| Artifact | Result |
+| --- | --- |
+| `run-CwFowf` | Driver, shell emitter, Lua emitter and store runner built successfully. |
+| `run-8NCCzl` | All four read-only host tests passed through kanoncho. |
+| `run-g5cBAu` | RO-SH, RO-LIVE, RO-E2E and RO-TESTS passed. |
+| `run-cLciPj` | Four dispatch mutants killed; both restored suites passed. |
+
+RO-E2E covered twelve actual Wasm/Bash executions against a temporary
+Redis whose ACL refused ordinary EVAL and EVALSHA. It compared missing
+keys and exact signed decimal strings against six independent store
+runs and six LuaJIT runs. Two mixed executions returned the earlier reply
+and verified the final stored value. RO-LIVE flushed the script cache for
+both hosts, compared fallback bodies and keys, and confirmed that Redis
+refused a write from a no-writes script without changing the key.
+
+Two test-harness corrections preceded the green focused runs. The initial
+artifact check expected Stage D's separate Wasm carriers; it now uses the
+existing full Client Wasm byte comparison. The first mutation run caught
+the mutant but could not match the default Node reporter; the runner now
+pins TAP and requires its named failed-test line. These corrections did
+not change production behavior or weaken a gate.
+
+The build used OCaml switch `zxcaml-p1`, clearing OPAM_SWITCH_PREFIX,
+CAML_LD_LIBRARY_PATH, OCAMLPATH and OCAMLFIND_CONF. Local integration used
+Redis 8.10.1. Syntax, diff whitespace and the OCaml house audit passed.
+Trusted lines: kernel 3997/4000, encoder 246/600, lua 283/320, sh 227/240,
+store 118/200, host-node 196/300, host-rest 156/300, bin 393/450.
+
+Remaining M1 work includes the wider command surface, rate limiter,
+leaderboard, job queue, session store, counted Lean exporter, and the M1
+performance and traversal gates. This slice does not declare M1 complete.
+
+The first full `sh dev/m1-readonly.sh` run, `.kanon-exec/run-DfkO2z`,
+exited 1. Two root failures propagated through the ladder: Stage C's
+LuaCases.binary emitter exceeded its unchanged 120-second deadline, and
+M0-TIME measured 198.098 ms against the unchanged 150 ms bound. Observed
+one-minute load was 121.31 after the timeout and 86.84 at the timing row.
+Stage A, Stage B and its mutations, the Stage F driver/integration and
+mutation tests, every DO leg, and every RO leg passed. The Stage C timeout
+prevented Stage D and E's remaining tests from running in that attempt.
+No production source, deadline, or measurement bound changed for the rerun.
+
+The complete unchanged ladder then passed in `.kanon-exec/run-MGSS6s`,
+exit 0, ending `PASS M1-READONLY`. Stages A through F, the do-notation
+ladder, all read-only tests and all included mutation suites passed.
+M0-TIME measured 43.540 ms against the 150 ms bound. The RO rows were
+`PASS RO-SH fallback=2 mixed=1 faults=4`,
+`PASS RO-LIVE node_flush=1 bash_flush=1 write_refused=1 exact_bytes=1`,
+`PASS RO-E2E acl_readonly=12 mixed=2 store=6 luajit=6`, and
+`PASS RO-MUTATIONS killed=4 survived=0 restored=2`.
+Trusted-line counts remained those reported above. The standalone Stage A
+37-case mutation battery was not rerun; its production inputs were unchanged.
+
+### Review round 2026-09-11 (M1 read-only dispatch)
+
+The review of this slice kept seven findings. All seven are fixed here.
+No bound moved, no frozen record changed and no measurement was invented.
+
+| id | Site | Change |
+| --- | --- | --- |
+| A-1 | `dev/readonly-tests.py` | A second ACL control requires NOPERM for `EVALSHA`, so the read-only ACL now polices the suffix both hosts actually send. |
+| B-1 | `dev/readonly-tests.py` | The RO-SH row reports counted transcripts instead of three literals. |
+| B-2 | `dev/readonly-tests.py` | The RO-E2E row reports counted store runs, counted LuaJIT runs and counted mixed executions beside the counted ACL executions. |
+| B-3 | `dev/readonly-tests.py` | The RO-LIVE row is the child verdict line, re-emitted verbatim, instead of a literal copy. |
+| B-4 | `dev/readonly-tests.py` | Each Node execution compares Redis `INFO commandstats` before and after, and requires one `SCRIPT LOAD`, the expected number of `EVALSHA_RO` calls and no `EVAL`, `EVALSHA` or `EVAL_RO`. |
+| C-1 | `dev/MUTATION-LOG.md` | The restored-suite sentence now names the shell-only transcript suite and records that the runner never reruns RO-LIVE or RO-E2E. |
+| A-3 | `runtime/redis-host.mjs` | The Node host parses the shebang flag list instead of comparing 22 fixed bytes, and a new host case derives both header branches from `print/lua.ml` and requires the Node classifier to agree. |
+
+The counted values equal the documented ones, so `PASS RO-SH
+fallback=2 mixed=1 faults=4`, `PASS RO-E2E acl_readonly=12 mixed=2
+store=6 luajit=6` and `PASS RO-LIVE node_flush=1 bash_flush=1
+write_refused=1 exact_bytes=1` are unchanged rows with earned numbers.
+
+Two recorded quantities moved. Trusted lines for the Node host rose from
+188/300 to 196/300 with the flag parser, and the paragraph above carries
+the new count. The host suite holds five cases instead of four; the
+evidence row for `run-8NCCzl` keeps its own count because it records what
+that earlier run executed.
+
+Each fix was proved on a copy through the copy-mode ladder queue with the
+`ro-tests` leg. `gates-fix-1-c2.log` is the clean copy. `gates-fix-1-m1b.log`
+weakens the ACL setup to `-eval` alone and the new control fails.
+`gates-fix-1-m2b.log` deletes one fault transcript, one initial store value
+and zeroes the child RO-LIVE counts, and the three rows follow the deletions
+instead of printing the old literals. `gates-fix-1-m3b.log` makes the Node
+host send `EVAL_RO` on every invocation and the new command-counter check
+fails, where the old leg passed. The first copies (`gates-fix-1-c1.log`,
+`-m1`, `-m2` and `-m3`) are void because they lacked the built store runner;
+the reruns above used rebuilt copies. The root ladder of the round is
+`gates-fix-1.log`.
+
+Refuted: 0. No verifier refuted a finding this round.
+
+Merged and dropped: 9. B-5 merged into A-1 (same file, same line
+`dev/readonly-tests.py:72`, same defect: the ACL control probes EVAL
+only). C-4 merged into D-1 (same defect: `dev/READONLY.md:36-39` does
+not record that the M1-DO leg reruns the lower ladder, so verdict rows
+repeat in a green log). Seven low items fell to the seven cap: D-1 (the
+duplicate TRUSTED-LINES leg at `dev/m1-readonly.sh:16` asserts the same
+unchanged tree as `dev/gates.sh:17`), A-2 (the mixed entry runs after
+the ACL restore at `:98`, so only the live proof of per-script dispatch
+is missing; it overlaps B-4), A-4 (no socket-free test pins the REST log
+record for the new names), B-6 (NODE-MODE and NODE-FALLBACK share one
+kill marker, and both mutants still die, so `killed=4` is true), B-7 (no
+SH-FALLBACK mutant covers `EVAL$suffix` at `print/sh.ml:107`; adding one
+moves the killed count and the MUTATION-LOG table), C-2 (`README.md:10-12`
+does not say the default `examples/ReadOnly.tet` entry prints an empty
+line, which `dev/READONLY.md:32` already records) and C-3
+(`README.md:33` says the counter commands above print 1, which is false
+for the check, emit and stage-f rows of the block at `:20-29`).
+
+Gate of record: `gates-gates-1.log`, tag `gates-1`, root mode on
+`/Users/oobi/Documents/tether`, 22:58:09 to 23:16:28, zero FAIL rows,
+17 porcelain rows before and after. One-minute load 33.12 at the start,
+35.54 at the MEASURE leg, 39.29 at the end of the ladder and 31.84 at
+the close. Carry and counts: `PIN 2c2e6e6 unlisted=0`, `CARRY files=36
+diff=0 vendor=32 copies=4`, `R0-COUNT formers=2 schema=4 shapes=5
+admitted=3`, `TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=283/320
+sh=227/240 store=118/200 host-node=196/300 host-rest=156/300 bin=393/450
+OK`, `DO-SYNTAX legacy=20 expansion=8 refusals=20 locations=1`,
+`DO-ARTIFACTS pairs=7`, `DO-CHECK refusals=8`, `DO-HOSTS cases=7`,
+`STORE-UNIT cases=25`, `STAGE-E-TESTS cases=10`, `LOAD-ONCE
+rest_calls=1 invoke_lines=1 warmup_calls=2`, `M0-TIME median_ms=119.178
+bound_ms=150`.
+
+| Leg | Verbatim row |
+| --- | --- |
+| STAGE-A | `PASS STAGE-A` |
+| HOUSE | `PASS HOUSE` |
+| STAGE-B | `PASS STAGE-B` |
+| STAGE-C | `PASS STAGE-C` |
+| STAGE-D | `PASS STAGE-D` |
+| STAGE-E | `PASS STAGE-E` |
+| MEASURE | `PASS M0-TIME median_ms=119.178 bound_ms=150` and `PASS MEASURE` |
+| STAGE-F | `PASS STAGE-F` |
+| M1-DO | `PASS M1-DO` |
+| RO-HOSTS | `PASS RO-HOSTS` (node tests 5, pass 5, fail 0) |
+| RO-TESTS | `PASS RO-SH fallback=2 mixed=1 faults=4`, `PASS RO-LIVE node_flush=1 bash_flush=1 write_refused=1 exact_bytes=1`, `PASS RO-E2E acl_readonly=12 mixed=2 store=6 luajit=6`, `PASS RO-TESTS` |
+| RO-MUTATIONS | `PASS RO-MUTATIONS killed=4 survived=0 restored=2` |
+| TRUSTED-LINES | `TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=283/320 sh=227/240 store=118/200 host-node=196/300 host-rest=156/300 bin=393/450 OK` and `PASS TRUSTED-LINES` |
+| ladder | `PASS M1-READONLY`, `EXIT 0` |
+| Stage A battery | `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`, `EXIT-MUT 0` |
+| run | `EXIT-ALL 0` |
+
+Mutation summary of that log: RO-MUTATIONS killed=4 survived=0
+restored=2, DO-MUTATIONS killed=4 survived=0 restored=1,
+STAGE-F-MUTATIONS killed=3 survived=0 restored=2, STAGE-E-MUTATIONS
+killed=15 restored=1, STAGE-E-INTEGRITY killed=14 restored=1,
+STAGE-D-MUTATIONS killed=5 restored=1, STAGE-C-MUTATIONS killed=3
+restored=1, STAGE-C-INTEGRITY killed=5 restored=1, STAGE-B-MUTATIONS
+killed=5 restored=1 and STAGE-A-MUTATIONS killed=37 survived=0
+restored=1.
+
+Fix rounds: 1.
+
+Closing ladder: `gates-close.log`, tag `close`, root mode, 23:31:11 to
+23:38:25 at one-minute load 13.77 to 15.74, zero FAIL rows, porcelain 17
+and 17 rows before and after. Rows: `PASS M1-READONLY`, `PASS M1-DO`,
+`PASS STAGE-F`, `PASS M0-TIME median_ms=73.713 bound_ms=150`, `PASS
+RO-HOSTS`, `PASS RO-SH fallback=2 mixed=1 faults=4`, `PASS RO-LIVE
+node_flush=1 bash_flush=1 write_refused=1 exact_bytes=1`, `PASS RO-E2E
+acl_readonly=12 mixed=2 store=6 luajit=6`, `PASS RO-TESTS`, `PASS
+RO-MUTATIONS killed=4 survived=0 restored=2`, `PASS STAGE-A-MUTATIONS
+killed=37 survived=0 restored=1`, `TRUSTED-LINES kernel=3997/4000
+encoder=246/600 lua=283/320 sh=227/240 store=118/200 host-node=196/300
+host-rest=156/300 bin=393/450 OK`, `EXIT 0`, `EXIT-MUT 0`, `EXIT-ALL 0`.
+The counted rows and the trusted-line counts equal those of the gate of
+record above.

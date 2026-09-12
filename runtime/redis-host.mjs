@@ -93,6 +93,15 @@ export function replyText(reply) {
   safe(reply);
   return (reply === null ? '' : Array.isArray(reply) ? arrayText(reply) : String(reply)) + '\n';
 }
+// The read-only mode reads the emitted shebang flag list instead of a fixed
+// byte prefix, so a later flag beside no-writes keeps the read-only dispatch
+// that the Bash artifact selects from the same compiler flag.
+export const shebangFlags = body => {
+  const end = body.indexOf(10);
+  const line = end < 0 ? '' : body.subarray(0, end).toString('utf8');
+  return line.startsWith('#!lua flags=') ? line.slice('#!lua flags='.length).split(',') : [];
+};
+export const readOnlyBody = body => shebangFlags(body).includes('no-writes');
 export class RedisClient {
   constructor(port, send = args => request(port, args)) { this.send = send; this.loaded = new Set(); }
   async invoke(body, sha, keys) {
@@ -106,9 +115,10 @@ export class RedisClient {
       if (loaded !== sha) throw new Error('SCRIPT LOAD hash mismatch');
       this.loaded.add(sha);
     }
-    let reply = await this.send(['EVALSHA', sha, String(keys.length), ...keys]);
+    const suffix = readOnlyBody(body) ? '_RO' : '';
+    let reply = await this.send(['EVALSHA' + suffix, sha, String(keys.length), ...keys]);
     if (reply instanceof RedisFault && /^NOSCRIPT(?: |$)/.test(reply.message))
-      reply = await this.send(['EVAL', body, String(keys.length), ...keys]);
+      reply = await this.send(['EVAL' + suffix, body, String(keys.length), ...keys]);
     replyText(reply);
     return reply;
   }

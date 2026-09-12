@@ -98,13 +98,13 @@ load() {
   printf '%s' "$env_json" | jq -e --arg sha "$1" '.result == $sha' > /dev/null || exit 4
 }
 invoke() {
-  sha="$1"; lua="$2"; shift 2
-  body=$(jq -n --args '$ARGS.positional' EVALSHA "$sha" "$#" "$@") || exit 4
+  sha="$1"; lua="$2"; suffix="$3"; shift 3
+  body=$(jq -n --args '$ARGS.positional' "EVALSHA$suffix" "$sha" "$#" "$@") || exit 4
   post
   envelope
   if [ "$kind" = error ]; then
     if printf '%s' "$env_json" | jq -e '.error == "NOSCRIPT" or (.error | startswith("NOSCRIPT "))' > /dev/null; then
-      body=$(jq -n --args '$ARGS.positional' EVAL "$lua" "$#" "$@") || exit 4
+      body=$(jq -n --args '$ARGS.positional' "EVAL$suffix" "$lua" "$#" "$@") || exit 4
       post
       envelope
     fi
@@ -147,7 +147,7 @@ let emit plan artifacts =
     let* keys = Lua.all (List.map key a.Lua.keys) in
     Ok ("if [ \"$loaded" ^ i ^ "\" = 0 ]; then\n  load '" ^ a.sha1 ^ "' \"$lua" ^ i ^
       "\"\n  loaded" ^ i ^ "=1\nfi\ninvoke '" ^ a.sha1 ^ "' \"$lua" ^ i ^ "\" " ^
-      String.concat " " keys ^ "\nreply" ^ string_of_int call ^ "=\"$env_json\"\n")) plan.invokes) in
+      (if a.no_writes then "'_RO' " else "'' ") ^ String.concat " " keys ^ "\nreply" ^ string_of_int call ^ "=\"$env_json\"\n")) plan.invokes) in
   let finish = match plan.finish with
     | Answer i -> "reply \"$reply" ^ string_of_int i ^ "\"\n"
     | Failure -> "printf '%s\\n' 'TETHER Client fault' >&2\nexit 4\n" in

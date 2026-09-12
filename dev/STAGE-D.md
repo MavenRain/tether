@@ -31,9 +31,10 @@ files and the bytes extracted from each Wasm module. It also compares a
 captured SCRIPT LOAD request with the corresponding Wasm body.
 
 The generated program loads each distinct script entry on first use and
-checks the returned SHA-1. Later invocations use EVALSHA. Only an error
-envelope with the exact NOSCRIPT code triggers EVAL, once, with the same
-body and keys. Repeated invocations keep their load state in the current
+checks the returned SHA-1. Later invocations use EVALSHA, or EVALSHA_RO
+for no-writes bodies since the M1 read-only slice. Only an error envelope
+with the exact NOSCRIPT code triggers EVAL or EVAL_RO respectively, once,
+with the same body and keys. Repeated invocations keep their load state in the current
 Bash process. Every request is a JSON array constructed by `jq -n --args`.
 Keys use quoted octal byte literals. Curl ignores its user configuration,
 uses a 30-second timeout, and maps HTTP and network failure to exit 4.

@@ -1,0 +1,31 @@
+module ReadOnly
+schema hits : String -> Key (Str Int64) tag b"counter"
+
+def read : Script Reply (tag b"counter") := do {
+  reply <- get Reply Int64 (tag b"counter") (hits b"visits");
+  pure Reply (tag b"counter") reply
+}
+
+def bump : Script Reply (tag b"counter") := do {
+  _ <- incr Reply (tag b"counter") (hits b"visits");
+  reply <- get Reply Int64 (tag b"counter") (hits b"visits");
+  pure Reply (tag b"counter") reply
+}
+
+def main : Client Reply := do {
+  reply <- inv Reply (tag b"counter") read;
+  done Reply reply
+}
+
+def twice : Client Reply := do {
+  _ <- inv Reply (tag b"counter") read;
+  reply <- inv Reply (tag b"counter") read;
+  done Reply reply
+}
+
+def mixed : Client Reply := do {
+  _ <- inv Reply (tag b"counter") bump;
+  before <- inv Reply (tag b"counter") read;
+  _ <- inv Reply (tag b"counter") bump;
+  done Reply before
+}

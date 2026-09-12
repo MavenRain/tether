@@ -87,7 +87,8 @@ copies. Every mutant must compile and then fail the syntax tests with the
 marker recorded for it in `dev/MUTATION-LOG.md`; the restored expander
 must pass.
 
-This slice does not complete M1. Remaining work includes the broader
-command surface and application examples, EVALSHA_RO, the counted Lean
-exporter, and the M1 performance and traversal gates. The pinned kernel,
+This slice does not complete M1. The subsequent `dev/READONLY.md` slice
+implements EVALSHA_RO dispatch. Remaining work includes the broader
+command surface and application examples, the counted Lean exporter,
+and the M1 performance and traversal gates. The pinned kernel,
 preludes, trusted-line bounds and frozen M0 measurements are unchanged.

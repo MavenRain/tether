@@ -38,7 +38,9 @@ the development schedule.
 
 Each Node Client and generated Bash process loads a script on first use,
 verifies the returned SHA-1, invokes through EVALSHA and retries only an
-exact NOSCRIPT error with EVAL. The same body and keys reach the fallback.
+exact NOSCRIPT error with EVAL. Since the M1 read-only slice, no-writes
+bodies use EVALSHA_RO and EVAL_RO instead, as described in `dev/READONLY.md`.
+The same body and keys reach the fallback.
 A second error terminates the invocation. The real Node test flushes the
 Redis script cache between requests. LOAD-ONCE checks the REST twin's
 request log: two warm-up requests (LOAD and the first EVALSHA), then one
@@ -46,7 +48,7 @@ request for the second invocation in `ShCases.twice`.
 
 The REST twin binds only to `127.0.0.1`. It requires a bearer token and
 accepts POST `/` with a JSON array of strings containing SCRIPT LOAD,
-EVALSHA or EVAL. It forwards to a loopback Redis port. Start it with
+EVALSHA, EVAL, EVALSHA_RO or EVAL_RO. It forwards to a loopback Redis port. Start it with
 `TETHER_REDIS_PORT` and `TETHER_TOKEN`; `TETHER_REST_PORT` defaults to an
 automatically assigned port. It prints `REST-UP port=...`. Optional
 `TETHER_REST_LOG` records one JSON line per completed HTTP request, with

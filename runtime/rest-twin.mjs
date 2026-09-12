@@ -71,7 +71,7 @@ export function createTwin({ redisPort, token, log, send = args => command(redis
       // The log holds allowlisted names only: a refused request never puts
       // attacker text, a script body or a key name in the record.
       const name = args[0].toUpperCase(), sub = name === 'SCRIPT' ? args[1]?.toUpperCase() : undefined;
-      const allowed = ['EVAL', 'EVALSHA', 'SCRIPT'];
+      const allowed = ['EVAL', 'EVALSHA', 'EVAL_RO', 'EVALSHA_RO', 'SCRIPT'];
       if (!allowed.includes(name) || (name === 'SCRIPT' && sub !== 'LOAD')) {
         action = { command: 'other' };
         reply(400, { error: 'HTTP unsupported command' }); return;

@@ -386,3 +386,31 @@ mutated. Result: `PASS DO-MUTATIONS killed=4 survived=0 restored=1`.
 Evidence: `tether-m1-do/.kanon-exec/run-WozCfU`, exit 0, for the first
 three rows; the FINAL-SEMI row was added in the review round of
 2026-09-11 and is recorded in `dev/M1-BUILD-LOG.md`.
+
+### M1 read-only dispatch 2026-09-11
+
+`python3 -P dev/readonly-mutations.py` checks the unmodified host and shell
+suites, then changes one production source at a time in a disposable
+copy. Each mutant must compile and fail the named assertion below. Node
+uses an explicit TAP reporter so the failed-test marker is deterministic.
+
+| Mutation | Change | Required failed assertion |
+| --- | --- | --- |
+| NODE-MODE | Select ordinary evaluation for a canonical no-writes body. | `RO-NODE load once` |
+| NODE-FALLBACK | Use EVAL instead of EVAL_RO after NOSCRIPT. | `RO-NODE load once` |
+| SH-MODE | Emit the ordinary suffix for a read-only Bash invocation. | `RO-SH fallback order` |
+| REST-ALLOWLIST | Refuse both read-only commands at the local REST endpoint. | `RO-REST admits` |
+
+All four were killed. The original sources were restored and rebuilt,
+and the two suites the runner drives passed again. Those two are the
+complete host suite and the shell-only transcript suite
+(`dev/readonly-tests.py --shell-only`), which skips the live legs
+RO-LIVE and RO-E2E, so the runner never reruns them. Result:
+`PASS RO-MUTATIONS killed=4 survived=0 restored=2`.
+Evidence: `/Users/oobi/Documents/gpt18/tether-m1-readonly/.kanon-exec/run-cLciPj`,
+exit 0. The live checkout was not mutated.
+
+The review round of 2026-09-11 added the host case
+`RO-NODE header classification follows the compiler source` and made the
+RO-SH, RO-LIVE and RO-E2E rows report counted quantities. The four
+mutants and their required assertions did not change.
