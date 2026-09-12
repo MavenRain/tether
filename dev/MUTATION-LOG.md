@@ -414,3 +414,30 @@ The review round of 2026-09-11 added the host case
 `RO-NODE header classification follows the compiler source` and made the
 RO-SH, RO-LIVE and RO-E2E rows report counted quantities. The four
 mutants and their required assertions did not change.
+
+### M1 String and key commands 2026-09-12
+
+`python3 -P dev/strings-mutations.py` changes one production source at a
+time in a disposable copy. Every mutant builds successfully and must fail
+its specific assertion. The unit and offline integration suites pass
+before mutation and again after restoring and rebuilding the sources.
+
+| Mutation | Change | Required failed assertion |
+| --- | --- | --- |
+| EXISTS-WRITE | Remove EXISTS from the read-only allowlist. | `STRINGS write classification` |
+| DECIMAL-ROUND | Convert the post-arithmetic GET through a Lua number. | `STRINGS LuaJIT reply` |
+| NEGATIVE-OVERFLOW | Disable the negative overflow check in the store. | `FAIL STRINGS-UNIT overflow` |
+| DEL-KEEPS-KEY | Return the deletion count without removing the stored key. | `FAIL STRINGS-UNIT delete` |
+
+Result: `PASS STRINGS-MUTATIONS killed=4 survived=0 restored=2`.
+
+The review round of 2026-09-12 split the generic key assertion of
+`dev/strings_tests.ml` into `STRINGS-UNIT wrong type`, `STRINGS-UNIT set
+replaces` and `STRINGS-UNIT delete`, so DEL-KEEPS-KEY now requires the
+delete assertion alone. A store mutant that only changes the SET status
+byte fails `STRINGS-UNIT set replaces` and no longer prints the
+DEL-KEEPS-KEY reason. The runner counts survivors instead of raising on
+the first one, and it counts the two restored control runs, so `survived`
+and `restored` report observed quantities.
+Evidence: `/Users/oobi/Documents/gpt18/tether-m1-strings/.kanon-exec/run-mCLFw9`,
+exit 0. The working checkout was unchanged by this run.

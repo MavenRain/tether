@@ -1,0 +1,38 @@
+module Strings
+schema hits : String -> Key (Str Int64) tag b"counter"
+schema payload : String -> Key (Str Binary) tag b"counter"
+
+def adjust : Script Reply (tag b"counter") := do {
+  _ <- setInt64 Reply (tag b"counter") (hits b"visits") (int64 b"9007199254740992");
+  _ <- incrby Reply (tag b"counter") (hits b"visits") (int64 b"2");
+  reply <- decr Reply (tag b"counter") (hits b"visits");
+  pure Reply (tag b"counter") reply
+}
+
+def main : Client Reply := do {
+  reply <- inv Reply (tag b"counter") adjust;
+  done Reply reply
+}
+
+def replace : Script Reply (tag b"counter") := do {
+  _ <- set Reply (tag b"counter") (payload b"message") b"hello";
+  reply <- get Reply Binary (tag b"counter") (payload b"message");
+  pure Reply (tag b"counter") reply
+}
+
+def binary : Client Reply := do {
+  reply <- inv Reply (tag b"counter") replace;
+  done Reply reply
+}
+
+def remove : Script Reply (tag b"counter") := do {
+  _ <- del Reply (Str Int64) (tag b"counter") (hits b"visits");
+  reply <- exists Reply (Str Int64) (tag b"counter") (hits b"visits");
+  pure Reply (tag b"counter") reply
+}
+
+def deleted : Client Reply := do {
+  _ <- inv Reply (tag b"counter") adjust;
+  reply <- inv Reply (tag b"counter") remove;
+  done Reply reply
+}

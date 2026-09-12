@@ -55,21 +55,32 @@ local function reply(r)
 end
 local function run(s)
   while s.tag ~= 0 do
-    local k, r = key(s[1]), false
-    if s.tag == 1 then
-      local changed = redis.pcall('INCR',k)
+    local k, r, next = key(s[1]), false, s[2]
+    if s.tag == 1 or s.tag == 5 or s.tag == 6 then
+      local changed
+      if s.tag == 5 then changed = redis.pcall('INCRBY',k,text(s[2][1])); next = s[3]
+      else changed = redis.pcall(s.tag == 1 and 'INCR' or 'DECR',k) end
       if type(changed) == 'table' and changed.err then r = {tag=4,bytes(changed.err)}
       else
         local read = redis.pcall('GET',k)
         if type(read) == 'table' and read.err then r = {tag=4,bytes(read.err)}
+        elseif read == false then r = {tag=0}
         else r = {tag=1,{tag=0,bytes(read)}} end
       end
-    elseif s.tag == 2 then
-      local got = redis.pcall('GET',k)
+    elseif s.tag == 2 or s.tag == 3 or s.tag == 4 then
+      local got
+      if s.tag == 2 then got = redis.pcall('GET',k)
+      else got = redis.pcall('SET',k,text(s.tag == 3 and s[2] or s[2][1])); next = s[3] end
       if type(got) == 'table' and got.err then r = {tag=4,bytes(got.err)}
+      elseif type(got) == 'table' and got.ok then r = {tag=3,bytes(got.ok)}
       elseif got == false then r = {tag=0} else r = {tag=2,bytes(got)} end
+    elseif s.tag == 7 or s.tag == 8 then
+      local got = redis.pcall(s.tag == 7 and 'DEL' or 'EXISTS',k)
+      if type(got) == 'table' and got.err then r = {tag=4,bytes(got.err)}
+      elseif type(got) ~= 'number' then r = {tag=4,bytes('ERR key count reply is not an integer')}
+      else r = {tag=1,{tag=0,bytes(string.format('%d',got))}} end
     else error('LUA-SCRIPT unsupported tag') end
-    s = app(s[2],{r})
+    s = app(next,{r})
   end
   return reply(s[1])
 end|}

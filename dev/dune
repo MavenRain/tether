@@ -37,3 +37,8 @@
  (name do_tests)
  (modules do_tests)
  (libraries tether_surface kanon_kernel kanon_surface))
+
+(executable
+ (name strings_tests)
+ (modules strings_tests)
+ (libraries tether_store kanon_kernel))

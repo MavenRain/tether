@@ -14,9 +14,16 @@ let get key store = Keys.find_opt key store |> Option.fold ~none:(Ok None) ~some
   | Hash _ | List _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
 let integer text = Result.bind (Int64.of_string_opt text |> Option.to_result ~none:Not_integer)
   (fun value -> if Int64.to_string value = text then Ok value else Error Not_integer)
-let incr key store =
+let set key value store = "OK", put key (Str value) store
+let exists key store = if Keys.mem key store then "1" else "0"
+let del key store = exists key store, Keys.remove key store
+let incrby key amount store =
+  Result.bind (integer amount) (fun amount ->
   Result.bind (get key store) (fun value ->
   Result.bind (integer (Option.value ~default:"0" value)) (fun value ->
-    if value = Int64.max_int then Error Overflow else
-    let text = Int64.to_string (Int64.succ value) in
-    Ok (text, put key (Str text) store)))
+    if (amount > 0L && value > Int64.sub Int64.max_int amount)
+      || (amount < 0L && value < Int64.sub Int64.min_int amount) then Error Overflow else
+    let text = Int64.to_string (Int64.add value amount) in
+    Ok (text, put key (Str text) store))))
+let incr key store = incrby key "1" store
+let decr key store = incrby key "-1" store

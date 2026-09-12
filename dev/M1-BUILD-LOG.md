@@ -422,3 +422,259 @@ encoder=246/600 lua=283/320 sh=227/240 store=118/200 host-node=196/300
 host-rest=156/300 bin=393/450 OK`, `EXIT 0`, `EXIT-MUT 0`, `EXIT-ALL 0`.
 The counted rows and the trusted-line counts equal those of the gate of
 record above.
+
+### String and key commands 2026-09-12
+
+Baseline: `b53b11f1e696d6913769aa5edebfdd764c25a9f8`, the committed
+read-only dispatch slice and review fixes. Work was performed in
+`/Users/oobi/Documents/gpt18/tether-m1-strings`, copied from the clean main
+checkout with the clean Kanon submodule at its pinned commit.
+
+This slice adds SET for byte strings and checked signed integers,
+INCRBY, DECR, single-key DEL and single-key EXISTS. The Redis prelude
+appends six constructors and updates its own checksum. The existing
+constructor tags, kernel, reactor, host ABI and trusted-line bounds are
+preserved. The two preludes now total 115 lines.
+
+Lua arithmetic retrieves the exact post-command decimal with GET.
+The independent OCaml store checks signed overflow before adding and
+preserves the previous store on errors. SET replaces existing values,
+including values of other Redis types. EXISTS joins the read-only
+allowlist. `examples/Strings.tet` and `dev/STRINGS.md` document the new
+surface and the remaining command limits.
+
+Focused evidence under the work directory's `.kanon-exec`:
+
+| Artifact | Result |
+| --- | --- |
+| `run-rz7QOR` | Driver, shell emitter, Lua emitter and store programs built, exit 0. |
+| `run-slUzin` | The new store test program built, exit 0. The review round of 2026-09-12 raised it to 46 cases. |
+| `run-IK1bjz` | Nine artifact pairs, eight typed refusals, 21 interpreter cases and 27 LuaJIT cases passed without listeners. |
+| `run-Ju2ahW` | The same checks plus 54 actual Wasm/Bash executions against temporary localhost Redis passed. |
+| `run-mCLFw9` | Four production-source mutants compiled and failed their named assertions; both restored suites passed. |
+| `run-xdbNWH` | OCaml house audit passed with zero findings across 28 files. |
+
+The 46 store checks include exact arithmetic around both signed bounds,
+invalid decimals, each wrong Redis type, immutable updates, and erased
+command execution with checks on the returned store. Live cases verify
+stored bytes after every execution, including NUL and non-UTF-8 octets,
+overwrite and deletion of hashes, error preservation, missing keys, and
+retaining an earlier reply after a subsequent write. EXISTS runs with an
+ACL that refuses ordinary EVAL and EVALSHA. The six externally seeded
+Hash cases run through LuaJIT and both real hosts; the store's wrong-type
+and generic-key cases are covered directly by the OCaml unit suite.
+
+The LuaJIT twin uses signed decimal-digit arithmetic, independent of
+the store's Int64 operations. All four mutation rows and their named
+failure markers are recorded in `dev/MUTATION-LOG.md`.
+
+The first complete ladder invocation, `run-UtKqF0`, exited 1 because its
+explicit PATH omitted Codex's bundled ripgrep and the Cargo-installed
+panicscan. Foundation failure skipped the earlier stage ladder and
+propagated to the final result. The independently run Stage F, do-notation,
+read-only and String functional checks passed in that attempt, and
+M0-TIME measured 68.289 ms against the 150 ms bound. No gate, source or
+bound changed when correcting PATH for the rerun.
+
+The second full attempt, `run-UtWTYI`, exited 1 because Stage D's fixed
+2724-fuel refusal fixture exhausted the checker before reaching the Bash
+plan. A temporary diagnostic at the plan boundary measured 4621 consumed
+polls with the new prelude (`run-nSiwBW`); that diagnostic was removed.
+The fixture now supplies 4627 polls, retaining six for the plan, and still
+requires `SH-BUDGET` and no published directory. The checker-zero-fuel
+case, production fuel limits and milestone bounds are unchanged.
+
+Current trusted counts: kernel 3997/4000, encoder 246/600, Lua 292/320,
+Bash 227/240, store 136/200, Node host 196/300, REST host 156/300 and
+driver 393/450. TTL, Hash, List, Set and ZSet command families, the four
+application examples, the counted Lean exporter and the M1 ratio and
+traversal gates remain M1 work. This slice does not declare M1 complete
+or provide M0-EXIT ratification.
+
+The final complete `sh dev/m1-strings.sh` ladder passed, exit 0, in
+`/Users/oobi/Documents/gpt18/tether-m1-strings/.kanon-exec/run-4VPpHJ`.
+Stages A through F, do-notation, read-only dispatch, all String suites,
+every included mutation suite, house audit and trusted-line gates passed.
+The final row is `PASS M1-STRINGS`. M0-TIME measured 70.858 ms against
+the unchanged 150 ms bound. The new suite reported 36 store unit cases
+(46 since the review round of 2026-09-12 split the suite),
+nine artifact pairs, eight typed refusals with no published output,
+21 interpreter runs, 27 LuaJIT runs, 54 live host executions and four
+source mutations killed with both restored controls passing. The
+standalone Stage A 37-case mutation battery was not rerun.
+
+### Review round 2026-09-12 (M1 String and key commands)
+
+A seven finding review of the staged slice. Every kept finding was fixed
+in this round. No frozen bound moved, no pinned file changed and no new
+timing measurement was needed.
+
+A-1. `dev/strings_tests.ml` carried seven independent conjuncts under the
+single message `STRINGS-UNIT generic keys`, and `dev/strings-mutations.py`
+used that message as the DEL-KEEPS-KEY kill reason, so a mutant with no
+relation to deletion printed the deletion reason. The fold is now three
+folds with the messages `STRINGS-UNIT wrong type`, `STRINGS-UNIT set
+replaces` and `STRINGS-UNIT delete`, and the DEL-KEEPS-KEY marker names
+the delete message. The unit suite therefore reports
+`PASS STRINGS-UNIT cases=46` in place of `cases=36`, since the five
+generic key values now run three separate assertions each.
+Control on a copy: the store mutant `"OK"` to `"QK"` exits 1 with
+`FAIL STRINGS-UNIT set replaces`, and the DEL-KEEPS-KEY mutant exits 1
+with `FAIL STRINGS-UNIT delete`.
+
+B-1. The arithmetic branch of `print/lua.ml` passed a false GET reply to
+`bytes`, which walks `#s`, so a missing key at the second read aborted
+the script with a raw Lua error instead of a typed Reply. The branch now
+answers the `nil` reply, as the GET and SET branch already does.
+Control on a copy: the emitted body of `examples/Strings.tet`, entry
+`main`, run under LuaJIT with a stub whose GET answers false, returns
+`attempt to get length of local 's' (a boolean value)` before the fix and
+the value `false` after it.
+
+B-2. DEL and EXISTS clamped the integer reply to `1` or `0`, which
+disagrees with `store/interp.ml`, where the count is formatted as it
+stands. The Lua runtime now formats the reported count and answers an
+`err` reply when the count reply is not an integer. `dev/STRINGS.md`
+records both behaviors.
+Control on a copy: the emitted `deleted` body under a stub whose DEL
+answers 2 returns `0` before the fix and `2` after it, and a stub whose
+DEL answers a table without `err` returns `0` before the fix and the err
+reply `ERR key count reply is not an integer` after it.
+
+C-1. The STRINGS-ORACLES store oracle accepted any of the three reply
+kinds, so a constructor swap in `store/interp.ml` survived it. `cases()`
+carries the expected reply kind as a fifth column and `store()` requires
+that exact kind.
+Control on a copy: `data "Reply" 3` changed to `data "Reply" 2` exits 1
+with `FAIL STRINGS-TESTS STRINGS store reply [b'REPLY bulk:4f4b\n']`,
+where the unmutated tree passes `PASS STRINGS-ORACLES store=21
+luajit=27`.
+
+C-2. `atomic_output` printed the length of the refusal list twice, so the
+field could never disagree with `cases`. The refusal loop counts the
+cases that published no output directory, requires that count to equal
+the number of refusals and prints the counted value. The merged item C-3
+is covered in `dev/strings-mutations.py`, which now records survivors
+instead of raising on the first one and counts the two restored control
+runs.
+Control on a copy: a driver that creates the output directory before
+compiling the two `Hash` refusal sources exits 1 with
+`STRINGS refusal output published 2`.
+
+C-4. `STRINGS-BUILD` built only `dev/strings_tests.exe`, although
+STRINGS-TESTS needs `bin/tether.exe` and `dev/store_run.exe`. The leg
+now builds the same three targets `dev/strings-mutations.py` builds.
+Control on a copy without `_build`: the old leg command leaves
+`bin/tether.exe` and `dev/store_run.exe` absent, and the new leg command
+produces all three.
+
+D-1. `dev/STAGE-D.md` still described the 2718 poll front end and the
+2724 poll gate case. `dev/stage-d-tests.py` measures 4621 polls with the
+M1 String prelude and runs its gate case at 4627, so the document now
+records 4621, the window 4621 through 4632 and the 4627 poll case. The
+numbers are the ones already measured in this slice.
+
+A-2 was refuted: the argument order difference between `store/store.ml`
+and `dev/lua-store.lua` follows the Redis order, and the input is
+unreachable behind the checker.
+
+The trusted census after the fixes is kernel 3997/4000, encoder 246/600,
+lua 294/320, sh 227/240, store 136/200, host-node 196/300,
+host-rest 156/300 and bin 393/450. The lua group grew by two lines and
+stays under the ruled 320.
+
+Round 2 closed three stale numbers left by the round 1 fixes. The two
+`print/lua.ml` corrections grew the Lua group by two lines and the store
+unit suite grew by ten cases, so three sentences written before those
+fixes no longer matched the gate rows.
+
+ND-1-1. `dev/STRINGS.md` stated "Current trusted counts are Lua 292/320
+and store 136/200". The gate of record prints `lua=294/320`, so the
+sentence now reads Lua 294/320.
+Control on a copy: `python3 -P dev/trusted-lines.py` prints
+`TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=294/320 sh=227/240
+store=136/200 host-node=196/300 host-rest=156/300 bin=393/450 OK`.
+
+ND-1-2. `dev/STRINGS.md` advertised "36 store checks" for the ladder.
+The suite prints `PASS STRINGS-UNIT cases=46`, so the sentence now reads
+46 store checks.
+Control on the same copy: `dune build dev/strings_tests.exe` then
+`_build/default/dev/strings_tests.exe` prints `PASS STRINGS-UNIT
+cases=46` and exits 0.
+
+ND-1-3. The stale Lua count also stood in `SPEC.md` line 102, which the
+finding reported as `README.md` line 102. `README.md` holds no trusted
+count; the sentence "implementation measures lua 292/320, including
+flags, SHA-1 and byte lowering" is in `SPEC.md`, and it now reads lua
+294/320. The census control above proves the number.
+
+No gate, bound, source file or measured run changed in this round. The
+three edits are text only.
+
+Round 3 of the review examined the gate finding GATE-2, which reported
+that the Stage F ladder or the Stage A mutation runner did not pass. The
+gate log of record for that round is
+`gates-gates-2.log` in the review directory, root mode, 03:25 to 03:32 on
+2026-09-12. It holds `PASS STAGE-F`, `PASS M1-DO`, `PASS M1-READONLY`,
+`PASS M1-STRINGS`, `EXIT 0`, `PASS STAGE-A-MUTATIONS killed=37
+survived=0 restored=1`, `EXIT-MUT 0` and `EXIT-ALL 0`. The only lines in
+that log that contain the word FAIL are the two mutation kill reasons
+`KILLED NEGATIVE-OVERFLOW by FAIL STRINGS-UNIT overflow` and `KILLED
+DEL-KEEPS-KEY by FAIL STRINGS-UNIT delete`, which are the required
+assertions of the mutants. The ladder therefore passed and GATE-2 needs
+no source change. The earlier red log `gates-fix-2.log` ran at a
+one-minute load of 68 to 98 and its FAIL rows were the timing wrappers
+alone, which is the documented load artifact.
+
+Round 3 also corrected two stale counts left in this file by the round 1
+split of the store unit suite. The evidence row for `run-slUzin` said
+"The new 36-case store test program built", and the prose after the
+evidence table said "The 36 store checks include exact arithmetic". The
+suite prints `PASS STRINGS-UNIT cases=46`, so the evidence row now
+records the count change of the review round and the prose reads 46
+store checks.
+Control on ROOT: `dune build dev/strings_tests.exe` then
+`_build/default/dev/strings_tests.exe` prints `PASS STRINGS-UNIT
+cases=46` and exits 0.
+
+Round 4 (by hand, 2026-09-12 04:3x). The round 3 check found a third
+stale count from the round 1 split of the store unit suite, in the
+summary sentence of the staged section ("The new suite reported 36
+store unit cases"). That sentence now records the count change of the
+review round. No measurement changed. The round 3 gate log
+`gates-gates-3.log` was red only on `FAIL M0-TIME median_ms=273.916
+bound_ms=150` at a one-minute load of 20.63; the round 1 and round 2
+gate logs measured 96.171 ms and 58.511 ms green at loads 16.66 and
+16.48. The closing ladder reruns the whole ladder at a calm load and
+the closing paragraph records its rows.
+The closing ladder ran twice. The first run, `gates-close.log`, ran from
+04:33:32 to 04:47:37 on 2026-09-12 at a one-minute load of 24.28. It was
+red only on `FAIL M0-TIME median_ms=157.738 bound_ms=150`, and its nine
+FAIL rows are that row plus MEASURE, STAGE-F twice, M1-DO twice,
+M1-READONLY twice and M1-STRINGS, which are wrappers that inherit the
+M0-TIME result. The second run, `gates-close-2.log`, ran from 04:50:34
+to 05:01:09 at a one-minute load of 17.06. It holds `PASS M0-TIME
+median_ms=131.457 bound_ms=150`, no FAIL row at all, `EXIT 0`,
+`EXIT-MUT 0` and `EXIT-ALL 0`. Both runs print the same functional rows:
+PASS STRINGS-BUILD, PASS STRINGS-UNIT cases=46, PASS STRINGS-ARTIFACTS
+pairs=9, PASS STRINGS-REFUSALS cases=8 atomic_output=8, PASS
+STRINGS-ORACLES store=21 luajit=27, PASS STRINGS-E2E cases=27 hosts=54,
+PASS STRINGS-TESTS and PASS STRINGS-MUTATIONS killed=4 survived=0
+restored=2. The trusted census prints five times as `TRUSTED-LINES
+kernel=3997/4000 encoder=246/600 lua=294/320 sh=227/240 store=136/200
+host-node=196/300 host-rest=156/300 bin=393/450 OK`, and PASS HOUSE
+prints five times. Stage E passes with STAGE-E-INTEGRITY killed=14
+restored=1, STAGE-E-MUTATIONS killed=15 restored=1 and STAGE-E-TESTS
+cases=10. Stage F passes with STAGE-F-MUTATIONS killed=3 survived=0
+restored=2 and PASS STAGE-F-TESTS. PASS STAGE-A-MUTATIONS killed=37
+survived=0 restored=1 and EXIT-MUT 0 close the mutation battery, and the
+porcelain blocks count 20 rows before and after each run. The timing
+control still bites: `KILLED SPINE-WORK by M0-TIME
+definitions_added=2000` at a mutant median of 404.257 ms in the first
+run, and `PASS M0-TIME-BOUNDARY below=149 at=150` in both. The source
+paths did not change after round 2, because rounds 3 and 4 edited
+documents only, and the round 1 and round 2 gates measured the same
+sources at 96.171 ms under load 16.66 and 58.511 ms under load 16.48.
+Verdict: GREEN-FULL. The second closing run has zero FAIL rows and
+EXIT-ALL 0 at a calm load, so the red M0-TIME row of the first run is a
+machine load artifact.

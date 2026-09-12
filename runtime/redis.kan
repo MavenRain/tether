@@ -49,6 +49,12 @@ mu Script (0 A : Type 0) : (0 g : Tag) -> Type 0 :=
 | pure : (0 g : Tag) -> A -> Script A g
 | incr : (0 g : Tag) -> Key (Str Int64) g -> (Reply -> Script A g) -> Script A g
 | get : (0 e : Encoding) -> (0 g : Tag) -> Key (Str e) g -> (Reply -> Script A g) -> Script A g
+| set : (0 g : Tag) -> Key (Str Binary) g -> Bytes -> (Reply -> Script A g) -> Script A g
+| setInt64 : (0 g : Tag) -> Key (Str Int64) g -> Signed64 -> (Reply -> Script A g) -> Script A g
+| incrby : (0 g : Tag) -> Key (Str Int64) g -> Signed64 -> (Reply -> Script A g) -> Script A g
+| decr : (0 g : Tag) -> Key (Str Int64) g -> (Reply -> Script A g) -> Script A g
+| del : (0 t : RedisType) -> (0 g : Tag) -> Key t g -> (Reply -> Script A g) -> Script A g
+| exists : (0 t : RedisType) -> (0 g : Tag) -> Key t g -> (Reply -> Script A g) -> Script A g
 
 mu Client (0 A : Type 0) : Type 0 :=
 | done : A -> Client A

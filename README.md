@@ -4,6 +4,11 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports typed SET, INCRBY, DECR, DEL and EXISTS alongside INCR
+and GET. `./tether exec examples/Strings.tet --host node` demonstrates
+exact arithmetic beyond 2^53. See `dev/STRINGS.md` for command types,
+examples and validation.
+
 M1 adds `do { reply <- command; finalTerm }` syntax for Script and Client
 continuations, plus read-only Redis dispatch. Scripts classified as
 `no-writes` use `EVALSHA_RO` and fall back to `EVAL_RO` on NOSCRIPT.
