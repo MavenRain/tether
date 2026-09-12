@@ -4,6 +4,10 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+The first M1 slice adds `do { reply <- command; finalTerm }` syntax for
+Script and Client continuations. Try `./tether run examples/DoCounter.tet`
+after building the driver. See `dev/DO-NOTATION.md` for syntax and checks.
+
 The Stage F driver emits an executable Client `prog.wasm` and `prog.sh`
 with the same canonical Lua bodies. Both run against local Redis hosts
 and agree with LuaJIT and the independent store interpreter. The final

@@ -1,10 +1,13 @@
 # tether specification
 
-Stage F implementation, 2026-09-11. The driver emits the executable Wasm
+M1 do-notation slice, 2026-09-11. The driver emits the executable Wasm
 Client and Bash pair. The foundation, counter surface, printers, store and
 local hosts are implemented. See `dev/STAGE-B.md` through `dev/STAGE-F.md`
 for syntax and limits. The latest build-log entry records whether the
 independent M0 timing gate has passed; this text does not stamp M0-EXIT.
+The first M1 slice adds do-notation, described in `dev/DO-NOTATION.md`.
+It expands reply binds into the existing Script and Client continuations
+before checking, without changing the foundation or artifact contract.
 
 ## Foundation (inherited)
 
@@ -109,8 +112,11 @@ the three observed surface declaration passes and does not instrument
 internal kernel traversals. `dev/stage-f.sh` returns failure if the
 compile-time median exceeds its bound, even when all functional gates pass.
 
-M1 adds the larger command surface, do-notation, EVALSHA_RO and a counted
-Lean 4 exporter. M2 adds migrations, batch, PUBLISH and parity gates.
+M1 do-notation is implemented. The larger command surface, the rate
+limiter, leaderboard, job queue and session-store examples, EVALSHA_RO,
+the counted Lean 4 exporter, and the M1 ratio and traversal gates remain
+M1 work. M2 adds migrations, batch,
+PUBLISH and parity gates.
 M3 adds universes, quotients, coinduction, a wasmtime host, RESP3, Streams
 and Redis Functions. Nested inductives are NEVER, using the mutual form
 as their encoding. Typeclasses and instance search are NEVER at M0 to M2.

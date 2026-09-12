@@ -364,3 +364,25 @@ battery was not rerun in this slice.
 Evidence: `/Users/oobi/Documents/gpt18/tether-stage-f/.kanon-exec/run-fsFrYo`
 (functional and mutation suite), `run-2ipnEn` (unmodified benchmark), and
 `run-K8oq9l` (inherited ladder), each with exit 0.
+
+### M1 do-notation 2026-09-11: continuation expansion
+
+`python3 -P dev/do-mutations.py` copies the source into a disposable tree,
+builds the real expander, and checks the unmodified control before mutation.
+Each mutant must compile successfully and then fail the syntax suite with
+the marker this table records for it. The runner carries one marker per
+row, so a mutant outside the bind arm is killed by its own message.
+
+| Mutation | Change | Caught by | Printed marker |
+| --- | --- | --- | --- |
+| REPLY-TYPE | Generate a Nat binder where the command supplies Reply. | DO-SYNTAX | `FAIL DO-SYNTAX continuation differs:` |
+| ACTION-ORDER | Apply the continuation to the action instead of the action to the continuation. | DO-SYNTAX | `FAIL DO-SYNTAX continuation differs:` |
+| LOST-TAIL | Replace the continuation body with nil. | DO-SYNTAX | `FAIL DO-SYNTAX continuation differs:` |
+| FINAL-SEMI | Accept a second semicolon before the final expression instead of refusing it. | DO-SYNTAX | `FAIL DO-SYNTAX malformed do accepted:` |
+
+All four were killed. The runner restores the original source, rebuilds,
+and requires the complete syntax suite to pass. The live checkout is never
+mutated. Result: `PASS DO-MUTATIONS killed=4 survived=0 restored=1`.
+Evidence: `tether-m1-do/.kanon-exec/run-WozCfU`, exit 0, for the first
+three rows; the FINAL-SEMI row was added in the review round of
+2026-09-11 and is recorded in `dev/M1-BUILD-LOG.md`.

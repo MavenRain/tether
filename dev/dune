@@ -32,3 +32,8 @@
  (name bytes_probe)
  (modules bytes_probe)
  (libraries tether_print kanon_kernel kanon_surface kanon_wasm))
+
+(executable
+ (name do_tests)
+ (modules do_tests)
+ (libraries tether_surface kanon_kernel kanon_surface))

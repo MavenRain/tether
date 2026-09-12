@@ -1,0 +1,24 @@
+module DoCounter
+schema hits : String -> Key (Str Int64) tag b"counter"
+
+def counter : Script Reply (tag b"counter") := do {
+  previous <- incr Reply (tag b"counter") (hits b"visits");
+  current <- get Reply Int64 (tag b"counter") (hits b"visits");
+  pure Reply (tag b"counter") current
+}
+
+def main : Client Reply := do {
+  reply <- inv Reply (tag b"counter") counter;
+  done Reply reply
+}
+
+def earlier : Client Reply := do {
+  first <- inv Reply (tag b"counter") counter;
+  second <- inv Reply (tag b"counter") counter;
+  done Reply first
+}
+
+def stopped : Client Reply := do {
+  _ <- inv Reply (tag b"counter") counter;
+  fail Reply Network
+}
