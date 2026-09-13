@@ -4,6 +4,11 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports typed LINDEX, LSET and LTRIM on List keys, with exact
+signed 64-bit indices. `./tether exec examples/RecentJobs.tet --host node`
+updates a queued job, retains the two newest jobs and prints
+`welcome:bob`. See `dev/LIST-ACCESS.md` for semantics and validation.
+
 M1 now supports typed LPUSH, RPUSH, LPOP, RPOP and LLEN on List keys.
 `./tether exec examples/JobQueue.tet --host node` drains a FIFO queue
 and prints its first job, `welcome:alice`. See `dev/LISTS.md` for types,

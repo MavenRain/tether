@@ -1408,3 +1408,274 @@ move. The round-1 ladders fix-1 and gates-1 were green on every
 functional row. They were red only on the timing cascade, at a
 one-minute load of 50 to 72. The final on-disk verification of the
 staged tree prints `VERIFY ok=81 bad=0`.
+
+### List access and trimming 2026-09-13
+
+Base: `5a951f465ffc0a2109d2ae46560e8ad4340fbcdb`, the committed List
+command slice and its review fixes. This slice appends typed LINDEX,
+LSET and LTRIM constructors and implements them in the Lua printer,
+independent store and LuaJIT twin. `examples/RecentJobs.tet` replaces
+the newest job, retains the newest two jobs and reads them by index.
+Its default entry prints `welcome:bob`; `newest` prints `retry:carol`.
+
+Signed64 operands retain their decimal bytes across Lua dispatch.
+Negative index normalization uses addition without negating Int64's
+minimum. LINDEX distinguishes empty bulk from nil. LSET checks missing
+keys and bounds before publishing a replacement. LTRIM clips the range,
+includes its stop element and removes an empty key. Error precedence is
+checked against Redis's List implementation and exercised directly in
+the store's erased-term tests. LINDEX uses read-only dispatch; the two
+writers remain writes even in reachable branches that are not taken.
+
+The interpreter factors repeated operand decoding, reply encoding and
+read-only store preservation into shared adapters. Octets and Signed
+operands remain distinct; malformed argument shapes still fail.
+Existing command tags and APIs are retained. The evaluator layout and
+shared count and Set-operation branches keep the store at 200 lines.
+The Lua printer measures 318/320. All other counts and all bounds are
+unchanged. The two pinned preludes now total 133 lines, recorded in
+`dev/PRELUDES.sha256`. The vendor pin, carried copies, frozen timing
+denominators and M0 build log are unchanged.
+
+| Focused check | Result |
+| --- | --- |
+| Store and erased interpreter | `PASS LIST-ACCESS-UNIT cases=83` |
+| Canonical artifact pairs and flags | `PASS LIST-ACCESS-ARTIFACTS pairs=19` |
+| Type refusals and output cleanup | `PASS LIST-ACCESS-REFUSALS cases=28 atomic_output=28` |
+| Independent store and LuaJIT | `PASS LIST-ACCESS-ORACLES store=49 luajit=49` |
+| Live Wasm and Bash hosts | `PASS LIST-ACCESS-E2E cases=49 hosts=98 readonly=38 utf8_refusals=2` |
+| RecentJobs example on three hosts | `PASS LIST-ACCESS-EXAMPLE exec=6` |
+| Compiled source mutations | `PASS LIST-ACCESS-MUTATIONS killed=12 survived=0 restored=6` |
+| OCaml house audit | `PASS HOUSE`, zero findings across 32 files |
+| Trusted lines | kernel 3997/4000, encoder 246/600, lua 318/320, sh 227/240, store 200/200, host-node 196/300, host-rest 156/300, bin 393/450 |
+
+The runtime checks cover missing lists, both signed extrema, inclusive
+and reversed ranges, key deletion, binary replacement, UTF-8 refusals,
+three seeded wrong Redis types, an unrelated key, an earlier captured
+reply after trimming, and read-only ACL enforcement. Unit cases add all
+five wrong data types, invalid integer spellings and argument-shape
+refusals. The gate pins every suite count and skips dependent suites
+after a failed build, so stale executables cannot turn that leg green.
+
+Captures under
+`/Users/oobi/Documents/gpt18/tether-m1-list-access/.kanon-exec/`:
+`run-imT8bG` (build), `run-OLDA2U` (unit), `run-Ast8Z0` (static),
+`run-vHDXPn` (full new host suite), `run-6VG6Na` (mutations), and
+`run-ASQue0` (house), all exit 0. The initial static capture used general
+CHECK markers for five operand-type refusals; the final suite requires
+their specific unbound-constructor diagnostics.
+
+A disposable counter probe measured 16228 polls before the Stage D
+static walk and 16240 after it, in `run-AOmeQa`. The refusal fixture now
+uses 16234, retaining six polls within the same 12-poll walk. Capture
+`run-XhgZzC` verifies CHECK budget at 16227 and 16240, SH-BUDGET at
+16228, 16234 and 16239, and no published output for any case. The first
+boundary probe, `run-iVrQnX`, stopped because `dev/sh_emit.exe` had not
+been built in the new checkout. Building that target resolved the
+setup error; it was not counted as a passing boundary run.
+
+TTL, bulk commands, List range replies, ZSet operations, the remaining
+M1 examples, the Lean exporter and M1 performance/traversal gates remain
+open. This slice does not declare M1 complete or grant M0-EXIT.
+
+The candidate ladder's production timing measurement in `run-EQIVEh`
+passed the unchanged strict 150 ms bound:
+
+| Measurement | Result |
+| --- | --- |
+| Compile time | median 97.273 ms, minimum 86.963 ms, maximum 262.611 ms, five runs |
+| M0 timing gate | `PASS M0-TIME median_ms=97.273 bound_ms=150` |
+| Frozen ratios | raw 14.953, corrected 23.740, end-to-end 3.482, informational |
+| Fresh TinyCC | median 50.904 ms, empty 62.769 ms, raw ratio 41.158, span 1.757 s |
+| Fixed cost | 50.673 ms, per definition 0.348 ms, 100 added definitions, informational |
+| Host load | 19.02, 30.21, 34.10 |
+
+The gate uses the median, so the maximum sample can exceed 150 ms.
+The ratios and fixed-cost estimates retain their informational status
+and do not establish the M1 performance milestone.
+
+The complete candidate command `sh dev/m1-list-access.sh` finished
+`PASS M1-LIST-ACCESS`, exit 0, in `run-EQIVEh`, with empty stderr. It
+passed Stages A through F, all earlier M1 command ladders, the final
+unit suite, the 19 artifact pairs, all 28 specific type
+refusals, the 49 store/LuaJIT comparisons, all 98 Wasm/Bash runs, six
+example runs and the new compiled mutants. The review round below
+records the counts after its fixes. The exact-count,
+house and trusted-line legs also passed. Stage A's separate 37-case
+mutation battery was not rerun; its foundation implementation and
+mutation runner are unchanged.
+
+### Review round 2026-09-13 (M1 List access)
+
+Nine review items were fixed on the staged tree. No bound moved, no
+frozen record was edited and no timing measurement changed.
+
+B-1. `print/lua.ml` retagged Redis replies in one shared block, and no
+mutant turned an `err` reply into a status reply, so that arm survived
+every socket-free leg. `dev/list-access-mutations.py` adds the twelfth
+mutant `LUA-ERR-TAG`, which the twin kills with
+`TWIN reply kind status wanted string`. The mutation runner now prints
+`PASS LIST-ACCESS-MUTATIONS killed=12 survived=0 restored=6`.
+
+A-2. The shared operand adapter of `store/interp.ml` decides the fault
+string of every older command on a malformed argument shape, and no
+case pinned it. `dev/list_access_tests.ml` adds shape rows that require
+`STORE-SCRIPT-COMMAND` for a wrong operand shape of each new tag. The
+unit suite reads `PASS LIST-ACCESS-UNIT cases=83`.
+
+C-3. `--probe ENTRY` refused the `earlier` entry, the one artifact with
+two invocations. The probe mode accepts every documented entry name.
+
+C-2. `--artifacts` and `--static` runs printed the same
+`PASS LIST-ACCESS-TESTS` row as a complete run, so a partial run could
+be read as the full suite. Every flagged run now prints the mode, for
+example `PASS LIST-ACCESS-TESTS mode=static`, and the complete run keeps
+the bare row that the ladder leg requires.
+
+D-1. `dev/LISTS.md` carried live counts in place of the close numbers of
+the List slice. That paragraph states the numbers of its own slice again
+and points at `SPEC.md` and `dev/LIST-ACCESS.md` for current counts.
+
+D-2. `dev/LIST-ACCESS.md` did not document `--artifacts`, although the
+mutation controls run it. The flag list records all four modes.
+
+ND-1-1. The capture section above promised a review round block that no
+heading provided. This block is that record, appended once.
+
+ND-1-2. The capture sentence of `dev/MUTATION-LOG.md` cited
+`killed=11` beside a table of twelve mutants. The sentence keeps the
+focused capture for the eleven-mutant state and records
+`PASS LIST-ACCESS-MUTATIONS killed=12 survived=0 restored=6` for this
+round.
+
+Row names in later logs: flagged runs of `dev/list-access-tests.py`
+print `PASS LIST-ACCESS-TESTS mode=NAME`; the complete run still prints
+`PASS LIST-ACCESS-TESTS`.
+
+Socket-free controls of this round, run from the repository root:
+
+| Control | Result |
+| --- | --- |
+| `dune build bin/tether.exe dev/store_run.exe dev/list_access_tests.exe` | exit 0 |
+| `_build/default/dev/list_access_tests.exe` | `PASS LIST-ACCESS-UNIT cases=83` |
+| `python3 -P dev/list-access-tests.py --static` | pairs 19, refusals 28, `mode=static` |
+| `python3 -P dev/list-access-tests.py --artifacts` | pairs 19, `mode=artifacts` |
+| `python3 -P dev/list-access-tests.py --offline` | oracles store 49, luajit 49, `mode=offline` |
+| `python3 -P dev/trusted-lines.py` | lua 318/320, sh 227/240, store 200/200, OK |
+| `sh dev/house.sh` | `PASS HOUSE`, zero findings across 32 files |
+| `./tether check examples/RecentJobs.tet` | `PASS CHECK definitions=54` |
+| `./tether emit examples/RecentJobs.tet` | `PASS EMIT`, prog.wasm and prog.sh |
+
+Findings of the review pass:
+
+| id | severity | file | one line fix or ruling |
+| --- | --- | --- | --- |
+| B-1 | medium | print/lua.ml:81 | FIXED: mutant LUA-ERR-TAG pins the err reply tag; killed=12. |
+| A-2 | low | store/interp.ml:75 | FIXED: shape rows pin STORE-SCRIPT-COMMAND; cases=83. |
+| C-3 | low | dev/list-access-tests.py:206 | FIXED: --probe accepts the earlier entry. |
+| C-2 | low | dev/list-access-tests.py:243 | FIXED: flagged runs print the mode in the pass row. |
+| D-1 | low | dev/LISTS.md:56 | FIXED: the List slice paragraph keeps its own close numbers. |
+| D-2 | low | dev/LIST-ACCESS.md:82 | FIXED: the flag list documents --artifacts. |
+| A-1 | low | store/store.ml:33 | REFUTED: Store.incr is called by dev/store_tests.ml and runs on every ladder. |
+| C-1 | low | dev/list-access-tests.py | MERGED into B-1, the same unpinned err arm. |
+| ND-1-1 | medium | dev/M1-BUILD-LOG.md:1502 | FIXED: the promised review round record is appended once, as this block. |
+| ND-1-2 | medium | dev/MUTATION-LOG.md:576 | FIXED: the capture sentence keeps the eleven mutant capture and records killed=12 for this round. |
+| E-1 | low | dev/MUTATION-LOG.md:551 | FIXED: the addendum heading was level 2 and the sibling slice sections are level 3; the heading is level 3 now. |
+| GATE-1 | high | (gate) | CLEARED: the round-1 ladder measured FAIL M0-TIME median_ms=535.486 bound_ms=150 at one-minute load 37, a load artifact, and the round-2 ladder passed every row at load 12. |
+
+Refuted: 1 item. A-1, because Store.incr has five live callers in
+`dev/store_tests.ml` (lines 12, 16, 18, 22, 24) that `dev/stage-e.sh`
+builds and runs on every ladder, so it is not dead code.
+
+Merged and dropped: 2 items. C-1 merged into B-1, the same unpinned err
+arm of `print/lua.ml:81`, with B-1 the clearer statement; A-1 dropped
+because the verifier refuted it and it was never revived.
+
+Gate rows of the last ladder, fix-2 (root mode, 13:07:05 to 13:30:15,
+log `gates-fix-2.log`, 455 rows, `sh dev/m1-list-access.sh` then the
+Stage A mutation runner). The one-minute load was 30.28 at the start,
+22.90 at the timing leg and 20.53 at the last row. No row failed and no
+mutant survived: `PASS M0-TIME median_ms=100.799 bound_ms=150`,
+`PASS MEASURE`, `PASS STAGE-F`, `PASS M1-DO`, `PASS M1-READONLY`,
+`PASS M1-STRINGS`, `PASS M1-HASHES`, `PASS M1-SETS`, `PASS M1-LISTS`,
+`PASS LIST-ACCESS-UNIT cases=83`,
+`PASS LIST-ACCESS-ARTIFACTS pairs=19`,
+`PASS LIST-ACCESS-REFUSALS cases=28 atomic_output=28`,
+`PASS LIST-ACCESS-ORACLES store=49 luajit=49`,
+`PASS LIST-ACCESS-E2E cases=49 hosts=98 readonly=38 utf8_refusals=2`,
+`PASS LIST-ACCESS-EXAMPLE exec=6`,
+`PASS LIST-ACCESS-MUTATIONS killed=12 survived=0 restored=6`,
+`PASS LIST-ACCESS-COUNTS`, `PASS M1-LIST-ACCESS`, `EXIT 0`,
+`PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`, `EXIT-MUT 0`
+and `EXIT-ALL 0`. The trusted-line row repeated
+kernel 3997/4000, encoder 246/600, lua 318/320, sh 227/240,
+store 200/200, host-node 196/300, host-rest 156/300, bin 393/450.
+The earlier review ladder measured `FAIL M0-TIME median_ms=194.312` at
+one-minute load 27.86; this run repeats the same tree and passes, so
+that row was a load artifact and no bound moved.
+
+Gate rows of the LAST ladder, gates-2 (root mode, log
+`gates-gates-2.log`, 455 rows, start 13:32:57, last row 13:43:23,
+`sh dev/m1-list-access.sh` then the Stage A mutation runner). Verdict
+GREEN: `EXIT-ALL 0` with fail count 0 and no SURVIVED row. The
+one-minute load was 22.72 at the start, 12.26 at the timing leg and
+15.06 at the last row. Carry row: `CARRY files=36 diff=0 vendor=32
+copies=4`, with `PIN 2c2e6e6 unlisted=0` and 21 porcelain rows before
+and after.
+
+| Leg | Verbatim row |
+| --- | --- |
+| M1-LISTS | `PASS M1-LISTS` |
+| LIST-ACCESS-BUILD | `PASS LIST-ACCESS-BUILD` |
+| LIST-ACCESS-UNIT-EXE | `PASS LIST-ACCESS-UNIT-EXE` |
+| LIST-ACCESS-TESTS-RUN | `PASS LIST-ACCESS-TESTS-RUN` |
+| LIST-ACCESS-MUTATIONS-RUN | `PASS LIST-ACCESS-MUTATIONS-RUN` |
+| LIST-ACCESS-COUNTS | `PASS LIST-ACCESS-COUNTS` |
+| HOUSE | `PASS HOUSE` |
+| TRUSTED-LINES | `PASS TRUSTED-LINES` |
+| ladder | `PASS M1-LIST-ACCESS` |
+| ladder exit | `EXIT 0` |
+| Stage A | `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1` |
+| queue exit | `EXIT-MUT 0` and `EXIT-ALL 0` |
+
+Count rows of that log: `PASS M0-TIME median_ms=105.412 bound_ms=150`,
+`PASS LIST-ACCESS-UNIT cases=83`, `PASS LIST-ACCESS-ARTIFACTS pairs=19`,
+`PASS LIST-ACCESS-REFUSALS cases=28 atomic_output=28`,
+`PASS LIST-ACCESS-ORACLES store=49 luajit=49`,
+`PASS LIST-ACCESS-E2E cases=49 hosts=98 readonly=38 utf8_refusals=2`,
+`PASS LIST-ACCESS-EXAMPLE exec=6`. Mutation summary of the slice:
+`killed=12`, survived 0, restored 6; Stage A killed 37, survived 0,
+restored 1.
+
+Closing numbers: the mutation row reads `killed=12` and the
+trusted-line triple reads `lua=318/320 sh=227/240 store=200/200`, both
+copied from `gates-gates-2.log`, the last gates log of this run. The
+closing ladder with the tag close was not queued when this block was
+written, so `gates-close.log` does not exist yet and the operator queues
+that run at a calm load.
+
+Review pass 1 (2026-09-12) fixed 9 findings.
+
+Fix rounds: 2.
+
+Close ladder: the ladder with the tag close ran in root mode on
+2026-09-13, from 14:25 to 14:40, with the one-minute load 16.77 at the
+timing leg. The timing rows read `PASS M0-TIME median_ms=133.671
+bound_ms=150` and `PASS M0-TIME-BOUNDARY below=149 at=150`. The slice
+rows read `PASS LIST-ACCESS-UNIT cases=83`,
+`PASS LIST-ACCESS-ARTIFACTS pairs=19`,
+`PASS LIST-ACCESS-REFUSALS cases=28 atomic_output=28`,
+`PASS LIST-ACCESS-ORACLES store=49 luajit=49`,
+`PASS LIST-ACCESS-E2E cases=49 hosts=98 readonly=38 utf8_refusals=2`,
+`PASS LIST-ACCESS-EXAMPLE exec=6`,
+`PASS LIST-ACCESS-MUTATIONS killed=12 survived=0 restored=6` and
+`PASS LIST-ACCESS-COUNTS`. The ladder row `PASS M1-LIST-ACCESS` sits
+above the nested rows `PASS M1-LISTS`, `PASS M1-SETS`,
+`PASS M1-HASHES`, `PASS M1-STRINGS`, `PASS M1-READONLY`, `PASS M1-DO`
+and `PASS STAGE-F`. The trusted-line row reads `TRUSTED-LINES
+kernel=3997/4000 encoder=246/600 lua=318/320 sh=227/240 store=200/200
+host-node=196/300 host-rest=156/300 bin=393/450 OK`. Stage A reads
+`PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`. The exit
+rows read `EXIT 0`, `EXIT-MUT 0` and `EXIT-ALL 0`. The porcelain count
+was 21 rows before the run and 21 rows after the run.
+The kit check verify-final.sh reports bad=0.

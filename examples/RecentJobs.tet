@@ -1,0 +1,25 @@
+module RecentJobs
+schema jobs : String -> Key List tag b"queue"
+
+def record : Script Reply (tag b"queue") := do {
+  _ <- rpush Reply (tag b"queue") (jobs b"mail") b"welcome:alice";
+  _ <- rpush Reply (tag b"queue") (jobs b"mail") b"welcome:bob";
+  _ <- rpush Reply (tag b"queue") (jobs b"mail") b"welcome:carol";
+  _ <- lset Reply (tag b"queue") (jobs b"mail") (int64 b"-1") b"retry:carol";
+  _ <- ltrim Reply (tag b"queue") (jobs b"mail") (int64 b"-2") (int64 b"-1");
+  r <- lindex Reply (tag b"queue") (jobs b"mail") (int64 b"0");
+  pure Reply (tag b"queue") r
+}
+def newestScript : Script Reply (tag b"queue") := do {
+  r <- lindex Reply (tag b"queue") (jobs b"mail") (int64 b"-1");
+  pure Reply (tag b"queue") r
+}
+def main : Client Reply := do {
+  r <- inv Reply (tag b"queue") record;
+  done Reply r
+}
+def newest : Client Reply := do {
+  _ <- inv Reply (tag b"queue") record;
+  r <- inv Reply (tag b"queue") newestScript;
+  done Reply r
+}

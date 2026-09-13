@@ -53,16 +53,19 @@ from an invocation stops the Client. The type checker refuses List
 commands on keys of another Redis type or tag.
 
 The five prelude constructors append without changing existing tags.
-Both preludes total 130 lines and are pinned in `dev/PRELUDES.sha256`.
-Trusted counts are Lua 315/320 and store 200/200. The store shares empty
+At that slice the two preludes totaled 130 lines and the trusted counts
+were Lua 315/320 and store 200/200. `SPEC.md` and `dev/LIST-ACCESS.md`
+record current counts. The store shares empty
 collection deletion among Hashes, Sets and Lists. Other trusted counts
 and every bound are unchanged. The independent OCaml list uses linear
 reversal for right-end operations; Redis supplies the production command
 implementation. No new performance milestone is claimed here.
 
 This slice accepts one element per push and one pop per command. List
-ranges, bulk operations, blocking commands and reliable queue protocols
-remain outside this slice. `SPEC.md` lists the remaining M1 work.
+range replies, bulk operations, blocking commands and reliable queue
+protocols remain outside this slice. Indexed access, replacement and
+trimming are documented in `dev/LIST-ACCESS.md`. `SPEC.md` lists the
+remaining M1 work.
 
 Run `sh dev/m1-lists.sh` with the toolchain in `dev/TOOLCHAIN.md`. It runs
 the full Set ladder, List unit tests, artifact and type checks, OCaml and

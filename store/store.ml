@@ -3,7 +3,7 @@ module Members = Set.Make (String)
 type data = Str of string | Hash of (string * string) list | List of string list
   | Set of string list | ZSet of (string * string) list | Stream of (string * string) list
 type t = data Keys.t
-type fault = Wrong_type | Not_integer | Hash_not_integer | Overflow
+type fault = Wrong_type | Not_integer | Hash_not_integer | Overflow | Missing_key | Index_range
 let empty = Keys.empty
 let put = Keys.add
 let save key value ~empty store = if empty then Keys.remove key store else put key value store
@@ -12,9 +12,10 @@ let message = function
   | Not_integer -> "ERR value is not an integer or out of range"
   | Hash_not_integer -> "ERR hash value is not an integer"
   | Overflow -> "ERR increment or decrement would overflow"
+  | Missing_key -> "ERR no such key"
+  | Index_range -> "ERR index out of range"
 let get key store = Keys.find_opt key store |> Option.fold ~none:(Ok None) ~some:(function
-  | Str value -> Ok (Some value)
-  | Hash _ | List _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
+  | Str value -> Ok (Some value) | Hash _ | List _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
 let integer text = Result.bind (Int64.of_string_opt text |> Option.to_result ~none:Not_integer)
   (fun value -> if Int64.to_string value = text then Ok value else Error Not_integer)
 let set key value store = "OK", put key (Str value) store
@@ -32,8 +33,7 @@ let incrby key amount store =
 let incr key store = incrby key "1" store
 let decr key store = incrby key "-1" store
 let hash key store = Keys.find_opt key store |> Option.fold ~none:(Ok Keys.empty) ~some:(function
-  | Hash fields -> Ok (Keys.of_seq (List.to_seq fields))
-  | Str _ | List _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
+  | Hash fields -> Ok (Keys.of_seq (List.to_seq fields)) | Str _ | List _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
 let save_hash key fields store = save key (Hash (Keys.bindings fields)) ~empty:(Keys.is_empty fields) store
 let hget key field store = let* fields = hash key store in Ok (Keys.find_opt field fields)
 let hexists key field store = let* fields = hash key store in Ok (if Keys.mem field fields then "1" else "0")
@@ -49,8 +49,7 @@ let hincrby key field amount store =
   let* value = integer (Option.value ~default:"0" old) |> Result.map_error (fun _ -> Hash_not_integer) in
   let* text = add value amount in let* _count, after = hset key field text store in Ok (text, after)
 let members key store = Keys.find_opt key store |> Option.fold ~none:(Ok Members.empty) ~some:(function
-  | Set values -> Ok (Members.of_list values)
-  | Str _ | Hash _ | List _ | ZSet _ | Stream _ -> Error Wrong_type)
+  | Set values -> Ok (Members.of_list values) | Str _ | Hash _ | List _ | ZSet _ | Stream _ -> Error Wrong_type)
 let save_set key values store = save key (Set (Members.elements values)) ~empty:(Members.is_empty values) store
 let sismember key member store = let* values = members key store in
   Ok (if Members.mem member values then "1" else "0")
@@ -62,8 +61,7 @@ let srem key member store = let* values = members key store in
   if Members.mem member values then Ok ("1", save_set key (Members.remove member values) store)
   else Ok ("0", store)
 let list key store = Keys.find_opt key store |> Option.fold ~none:(Ok []) ~some:(function
-  | List values -> Ok values
-  | Str _ | Hash _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
+  | List values -> Ok values | Str _ | Hash _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
 type side = Left | Right
 let orient = function Left -> Fun.id | Right -> List.rev
 let llen key store = let* values = list key store in Ok (string_of_int (List.length values))
@@ -73,3 +71,16 @@ let push side key value store = let* values = list key store in
 let pop side key store = let* values = list key store in match orient side values with
   | [] -> Ok (None, store)
   | value :: rest -> Ok (Some value, save key (List (orient side rest)) ~empty:(rest = []) store)
+let position values index = if index < 0L then Int64.add (Int64.of_int (List.length values)) index else index
+let indexed values = List.mapi (fun i v -> Int64.of_int i, v) values
+let lindex key index store = let* values = list key store in
+  if values = [] then Ok None else let* index = integer index in
+  Ok (List.assoc_opt (position values index) (indexed values))
+let lset key index value store = let* values = list key store in
+  if values = [] then Error Missing_key else let* index = integer index in let index = position values index in
+  if index < 0L || index >= Int64.of_int (List.length values) then Error Index_range else
+  Ok ("OK", put key (List (List.mapi (fun i v -> if Int64.of_int i = index then value else v) values)) store)
+let ltrim key first last store = let* first = integer first in let* last = integer last in
+  let* values = list key store in let first, last = position values first, position values last in
+  let values = List.filter_map (fun (i, v) -> if i >= first && i <= last then Some v else None) (indexed values) in
+  Ok ("OK", save key (List values) ~empty:(values = []) store)

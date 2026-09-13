@@ -547,3 +547,35 @@ documented static command therefore cannot stop checking refusals and
 the interpreter examples without a red ladder. That control runs before
 mutation, so the runner still reports `restored=2` from the unit and
 offline controls after it restores the source.
+
+### M1 List access commands 2026-09-13
+
+`python3 -P dev/list-access-mutations.py` builds each mutant in a
+disposable copy and requires both exit 1 and the intended diagnostic.
+The 83-case unit suite and five selected artifact/LuaJIT probes run as
+controls before mutation and after restoration. A missing or duplicate
+anchor, failed build, survivor, or failed control makes the run fail.
+
+| Mutant | Change | Required failure |
+| --- | --- | --- |
+| INDEX-NEGATIVE | Drop the list length when normalizing a negative index | `FAIL LIST-ACCESS-UNIT index negative` |
+| INDEX-MISSING | Return empty bulk for a missing index | `FAIL LIST-ACCESS-UNIT missing index before invalid integer` |
+| LSET-POSITION | Replace every position except the selected one | `FAIL LIST-ACCESS-UNIT set first` |
+| LTRIM-END | Exclude the stop element | `FAIL LIST-ACCESS-UNIT trim inclusive` |
+| LTRIM-EMPTY-KEY | Retain an empty List key | `FAIL LIST-ACCESS-UNIT trim reversed deletes key` |
+| LIST-ACCESS-ERR-TAG | Retag store errors as bulk replies | `FAIL LIST-ACCESS-UNIT set missing stops client` |
+| LINDEX-WRITE | Remove LINDEX from the read-only allowlist | `LIST-ACCESS write classification` |
+| LTRIM-READONLY | Admit LTRIM as read-only, including an untaken branch | `LIST-ACCESS write classification` |
+| LUA-INDEX | Always emit index zero | `LISTS LuaJIT reply` |
+| LUA-REPLACEMENT | Use the index bytes as the replacement | `TWIN list order mismatch` |
+| LUA-STATUS-TAG | Retag Redis status replies as bulk | `TWIN reply kind string wanted status` |
+| LUA-ERR-TAG | Retag Redis error replies of the shared reply block as status | `TWIN reply kind status wanted string` |
+
+Focused capture `run-6VG6Na` under
+`/Users/oobi/Documents/gpt18/tether-m1-list-access/.kanon-exec/` ended
+`PASS LIST-ACCESS-MUTATIONS killed=11 survived=0 restored=6`, exit 0,
+before the review round. The review round of 2026-09-13 adds the
+LUA-ERR-TAG row of the table above, so the runner prints
+`PASS LIST-ACCESS-MUTATIONS killed=12 survived=0 restored=6`, the row of
+the review ladder. The complete ladder result is recorded in
+`dev/M1-BUILD-LOG.md`.

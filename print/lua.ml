@@ -69,11 +69,14 @@ local function run(s)
         elseif read == false then r = {tag=0}
         else r = {tag=1,{tag=0,bytes(read)}} end
       end
-    elseif s.tag == 2 or s.tag == 3 or s.tag == 4 or s.tag == 10 or s.tag == 21 or s.tag == 22 then
+    elseif s.tag == 2 or s.tag == 3 or s.tag == 4 or s.tag == 10 or s.tag == 21 or s.tag == 22 or (s.tag >= 24 and s.tag <= 26) then
       local got
       if s.tag == 10 then got = redis.pcall('HGET',k,text(s[2])); next = s[3]
       elseif s.tag == 2 then got = redis.pcall('GET',k)
       elseif s.tag == 21 or s.tag == 22 then got = redis.pcall(s.tag == 21 and 'LPOP' or 'RPOP',k)
+      elseif s.tag == 24 then got = redis.pcall('LINDEX',k,text(s[2][1])); next = s[3]
+      elseif s.tag == 25 then got = redis.pcall('LSET',k,text(s[2][1]),text(s[3])); next = s[4]
+      elseif s.tag == 26 then got = redis.pcall('LTRIM',k,text(s[2][1]),text(s[3][1])); next = s[4]
       else got = redis.pcall('SET',k,text(s.tag == 3 and s[2] or s[2][1])); next = s[3] end
       if type(got) == 'table' and got.err then r = {tag=4,bytes(got.err)}
       elseif type(got) == 'table' and got.ok then r = {tag=3,bytes(got.ok)}

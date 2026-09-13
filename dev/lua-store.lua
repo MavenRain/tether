@@ -95,12 +95,46 @@ local function set_call(command, key, member)
   if next(members) == nil then values[key] = nil end
   return removed
 end
-local function list_call(command, key, value)
+local function list_offset(index, length)
+  if not canonical(index) then return nil end
+  local negative = index:sub(1,1) == '-'
+  local digits = negative and index:sub(2) or index
+  local limit = tostring(length)
+  if #digits > #limit or (#digits == #limit and digits > limit) then
+    return negative and -1 or length
+  end
+  -- Conversion is exact after bounding the magnitude by the list length.
+  local n = tonumber(index)
+  return n < 0 and length + n or n
+end
+local function list_call(command, key, value, extra)
+  if command == 'LTRIM' and (not canonical(value) or not canonical(extra)) then
+    return {err='ERR value is not an integer or out of range'}
+  end
   local stored = values[key]
   if stored ~= nil and (type(stored) ~= 'table' or stored[list_kind] == nil) then
     return {err='WRONGTYPE Operation against a key holding the wrong kind of value'}
   end
   local items = stored and stored[list_kind] or {}
+  if command == 'LINDEX' or command == 'LSET' then
+    if #items == 0 then
+      if command == 'LINDEX' then return false end
+      return {err='ERR no such key'}
+    end
+    local index = list_offset(value, #items)
+    if not index then return {err='ERR value is not an integer or out of range'} end
+    if command == 'LINDEX' then return items[index+1] or false end
+    if index < 0 or index >= #items then return {err='ERR index out of range'} end
+    items[index+1] = extra
+    return {ok='OK'}
+  end
+  if command == 'LTRIM' then
+    local first, last = list_offset(value, #items), list_offset(extra, #items)
+    local kept = {}
+    for i = math.max(0, first), math.min(#items-1, last) do kept[#kept+1] = items[i+1] end
+    values[key] = #kept > 0 and {[list_kind]=kept} or nil
+    return {ok='OK'}
+  end
   if command == 'LLEN' then return #items end
   if command == 'LPUSH' or command == 'RPUSH' then
     table.insert(items, command == 'LPUSH' and 1 or #items + 1, value)
@@ -118,8 +152,9 @@ local function call(command, key, amount, value)
   if command == 'SADD' or command == 'SREM' or command == 'SISMEMBER' or command == 'SCARD' then
     return set_call(command, key, amount)
   end
-  if command == 'LPUSH' or command == 'RPUSH' or command == 'LPOP' or command == 'RPOP' or command == 'LLEN' then
-    return list_call(command, key, amount)
+  if command == 'LPUSH' or command == 'RPUSH' or command == 'LPOP' or command == 'RPOP' or command == 'LLEN'
+    or command == 'LINDEX' or command == 'LSET' or command == 'LTRIM' then
+    return list_call(command, key, amount, value)
   end
   if command == 'EXISTS' then return values[key] ~= nil and 1 or 0 end
   if command == 'DEL' then

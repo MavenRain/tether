@@ -70,6 +70,9 @@ mu Script (0 A : Type 0) : (0 g : Tag) -> Type 0 :=
 | lpop : (0 g : Tag) -> Key List g -> (Reply -> Script A g) -> Script A g
 | rpop : (0 g : Tag) -> Key List g -> (Reply -> Script A g) -> Script A g
 | llen : (0 g : Tag) -> Key List g -> (Reply -> Script A g) -> Script A g
+| lindex : (0 g : Tag) -> Key List g -> Signed64 -> (Reply -> Script A g) -> Script A g
+| lset : (0 g : Tag) -> Key List g -> Signed64 -> Bytes -> (Reply -> Script A g) -> Script A g
+| ltrim : (0 g : Tag) -> Key List g -> Signed64 -> Signed64 -> (Reply -> Script A g) -> Script A g
 
 mu Client (0 A : Type 0) : Type 0 :=
 | done : A -> Client A
