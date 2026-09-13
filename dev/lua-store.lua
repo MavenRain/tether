@@ -1,6 +1,8 @@
 -- Independent test twin. Arithmetic uses decimal digits, never Lua integers.
 local config = dofile(arg[1])
 local values, output = config.values, nil
+local set_kind = {}
+for key, members in pairs(config.sets or {}) do values[key] = {[set_kind]=members} end
 local function canonical(s)
   local negative = s:sub(1,1) == '-'
   local digits = negative and s:sub(2) or s
@@ -36,7 +38,7 @@ local function hash_call(command, key, field, value)
   if command == 'HINCRBY' and not canonical(value) then
     return {err='ERR value is not an integer or out of range'}
   end
-  if values[key] ~= nil and type(values[key]) ~= 'table' then
+  if values[key] ~= nil and (type(values[key]) ~= 'table' or values[key][set_kind] ~= nil) then
     return {err='WRONGTYPE Operation against a key holding the wrong kind of value'}
   end
   local fields = values[key] or {}
@@ -67,8 +69,34 @@ local function hash_call(command, key, field, value)
   -- Redis answers the exact new value; the printed body reads it back with HGET.
   return updated
 end
+local function set_call(command, key, member)
+  local stored = values[key]
+  if stored ~= nil and (type(stored) ~= 'table' or stored[set_kind] == nil) then
+    return {err='WRONGTYPE Operation against a key holding the wrong kind of value'}
+  end
+  local members = stored and stored[set_kind] or {}
+  if command == 'SISMEMBER' then return members[member] and 1 or 0 end
+  if command == 'SCARD' then
+    local count = 0
+    for _ in pairs(members) do count = count + 1 end
+    return count
+  end
+  if command == 'SADD' then
+    local added = members[member] and 0 or 1
+    members[member], values[key] = true, {[set_kind]=members}
+    return added
+  end
+  if command ~= 'SREM' then error('TWIN unsupported set command') end
+  local removed = members[member] and 1 or 0
+  members[member] = nil
+  if next(members) == nil then values[key] = nil end
+  return removed
+end
 local function call(command, key, amount, value)
   if command:sub(1,1) == 'H' then return hash_call(command, key, amount, value) end
+  if command == 'SADD' or command == 'SREM' or command == 'SISMEMBER' or command == 'SCARD' then
+    return set_call(command, key, amount)
+  end
   if command == 'EXISTS' then return values[key] ~= nil and 1 or 0 end
   if command == 'DEL' then
     local count = values[key] ~= nil and 1 or 0
@@ -115,7 +143,7 @@ for _, check in ipairs(config.checks or {}) do
   local actual = values[check.key]
   if actual == nil then actual = false end
   if check.kind == 'hash' then
-    if type(actual) ~= 'table' then error('TWIN expected hash: ' .. check.key) end
+    if type(actual) ~= 'table' or actual[set_kind] ~= nil then error('TWIN expected hash: ' .. check.key) end
     if check.fields then
       for field, value in pairs(check.fields) do
         if actual[field] ~= value then error('TWIN hash field mismatch') end
@@ -124,10 +152,31 @@ for _, check in ipairs(config.checks or {}) do
         if check.fields[field] == nil then error('TWIN unexpected hash field') end
       end
     end
+  elseif check.kind == 'set' then
+    if type(actual) ~= 'table' or actual[set_kind] == nil then error('TWIN expected set') end
+    local members = actual[set_kind]
+    for member in pairs(check.members) do
+      if not members[member] then error('TWIN missing member') end
+    end
+    for member in pairs(members) do
+      if not check.members[member] then error('TWIN unexpected member') end
+    end
   elseif actual ~= check.value then error('TWIN stored value mismatch: ' .. check.key) end
 end
 if config.answer < 0 then error('Client fault') end
 output = answers[config.answer + 1]
+-- An int reply reaches this twin as a string, so 'string' covers int and bulk.
+local function kind_of(value)
+  if value == false or value == nil then return 'nil' end
+  if type(value) == 'string' then return 'string' end
+  if type(value) ~= 'table' then return 'other' end
+  if value.ok then return 'status' end
+  if value.err then return 'err' end
+  return 'array'
+end
+if config.kind and kind_of(output) ~= config.kind then
+  error('TWIN reply kind ' .. kind_of(output) .. ' wanted ' .. config.kind)
+end
 if output == false then io.write('\n')
 elseif type(output) == 'string' then io.write(output, '\n')
 elseif type(output) == 'table' and output.ok then io.write(output.ok, '\n')

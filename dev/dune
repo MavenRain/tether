@@ -47,3 +47,8 @@
  (name hashes_tests)
  (modules hashes_tests)
  (libraries tether_store kanon_kernel))
+
+(executable
+ (name sets_tests)
+ (modules sets_tests)
+ (libraries tether_store kanon_kernel))

@@ -1,0 +1,49 @@
+module Sets
+schema members : String -> Key Set tag b"team"
+
+def enroll : Script Reply (tag b"team") := do {
+  _ <- sadd Reply (tag b"team") (members b"red") b"alice";
+  _ <- sadd Reply (tag b"team") (members b"red") b"bob";
+  reply <- sadd Reply (tag b"team") (members b"red") b"alice";
+  pure Reply (tag b"team") reply
+}
+
+def count : Script Reply (tag b"team") := do {
+  reply <- scard Reply (tag b"team") (members b"red");
+  pure Reply (tag b"team") reply
+}
+
+def lookup : Script Reply (tag b"team") := do {
+  reply <- sismember Reply (tag b"team") (members b"red") b"alice";
+  pure Reply (tag b"team") reply
+}
+
+def remove : Script Reply (tag b"team") := do {
+  _ <- srem Reply (tag b"team") (members b"red") b"alice";
+  _ <- srem Reply (tag b"team") (members b"red") b"bob";
+  reply <- exists Reply Set (tag b"team") (members b"red");
+  pure Reply (tag b"team") reply
+}
+
+def main : Client Reply := do {
+  _ <- inv Reply (tag b"team") enroll;
+  reply <- inv Reply (tag b"team") count;
+  done Reply reply
+}
+
+def duplicate : Client Reply := do {
+  reply <- inv Reply (tag b"team") enroll;
+  done Reply reply
+}
+
+def present : Client Reply := do {
+  _ <- inv Reply (tag b"team") enroll;
+  reply <- inv Reply (tag b"team") lookup;
+  done Reply reply
+}
+
+def deleted : Client Reply := do {
+  _ <- inv Reply (tag b"team") enroll;
+  reply <- inv Reply (tag b"team") remove;
+  done Reply reply
+}

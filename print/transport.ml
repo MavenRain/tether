@@ -22,15 +22,6 @@ let entry ~budget globals name =
     d_kind = Check.Definition; d_ty = ty; d_body = Some (Term.Global name) }]
   |> Result.map (fun _rows -> ())
 
-(* These exports are the Stage C byte carrier; the Client reactor is Stage E. *)
-let wasm ~budget ~reactor (artifact : Lua.artifact) =
-  let source = reactor ^ "\ndef requestBody : Bytes := " ^ literal artifact.body ^
-    "\ndef scriptSha1 : Bytes := " ^ literal artifact.sha1 in
-  let* globals, rows = Kanon_surface.Elab.check_in ~budget Global.initial source in
-  let* rows = Erase.program ~budget globals rows in
-  Kanon_wasm.Emit.reactor rows
-    ~exports:["requestBody"; "scriptSha1"; "bytesEmpty"; "bytesHead"; "bytesTail"]
-
 (* Lower byte payloads directly to the carried Bytes representation. The
    generated reactor is checked with typed empty slots first; this total
    substitution avoids elaborating thousands of nested constructor calls. *)
@@ -50,3 +41,12 @@ let byte_constants constants rows =
               | E.KFun _ -> Error (Error.Mismatch "CLIENT-BYTES slot type")) decls)
           | Erase.Dropped | Erase.Postulate _ -> Error (Error.Mismatch "CLIENT-BYTES slot") in
         Ok (name, Erase.Code decls))) rows)
+
+(* These exports are the Stage C byte carrier, using the same checked slots as the Client. *)
+let wasm ~budget ~reactor (artifact : Lua.artifact) =
+  let source = reactor ^ "\ndef requestBody : Bytes := bytesNil\ndef scriptSha1 : Bytes := bytesNil" in
+  let* globals, rows = Kanon_surface.Elab.check_in ~budget Global.initial source in
+  let* rows = Erase.program ~budget globals rows in
+  let* rows = byte_constants ["requestBody", artifact.body; "scriptSha1", artifact.sha1] rows in
+  Kanon_wasm.Emit.reactor rows
+    ~exports:["requestBody"; "scriptSha1"; "bytesEmpty"; "bytesHead"; "bytesTail"]

@@ -62,10 +62,10 @@ This slice supports one field per command. HGETALL, multi-field forms,
 field expiry and key TTL remain outside this slice. The profile example
 does not implement the remaining M1 session-store application.
 
-The prelude appends six constructors, preserving existing tags. The
-two preludes total 121 lines and retain their checksum gate. Current
-trusted counts are Lua 305/320 and store 165/200. The other counts,
-all bounds, vendored kernel and reactor remain unchanged.
+The Hash slice appended six constructors, preserving existing tags.
+At its close the two preludes totaled 121 lines, with trusted counts
+Lua 305/320 and store 165/200. The subsequent Set slice and current
+counts are documented in `dev/SETS.md` and `SPEC.md`.
 
 Run `sh dev/m1-hashes.sh` with the toolchain in `dev/TOOLCHAIN.md`.
 It runs the complete String ladder, the Hash build and unit suite,

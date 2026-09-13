@@ -946,3 +946,252 @@ one-minute load of 29.19, log `gates-close.log` of the review kit,
 `PASS HASHES-MUTATIONS killed=6 survived=0 restored=2`,
 `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`, the same
 trusted-line row, and porcelain 21 rows before and after.
+
+### Set member commands 2026-09-12
+
+Built from clean `f41bc93`, the reviewed Hash slice. The implementation
+adds typed SADD, SREM, SISMEMBER and SCARD, with one member per mutation.
+The four constructors append to the trusted prelude and keep its earlier
+tags. Set keys and tags are checked by the inherited indexed types.
+
+The OCaml store uses a distinct-member set and preserves unrelated keys.
+Duplicate SADD returns zero; SREM deletes the key after removing the last
+member. Reads of missing keys return zero. All five other Redis types
+produce the existing WRONGTYPE fault. Interpreter tests require exact
+integer replies, errors that stop the Client and unchanged state when
+a Script inspects a fault. The LuaJIT twin distinguishes Sets from Hashes
+using a private table key, preserving arbitrary member bytes.
+
+The Lua printer shares the existing integer-count path. SISMEMBER and
+SCARD join the read-only allowlist; SADD and SREM retain write dispatch.
+Artifact tests include an untaken branch containing SADD, binary and
+empty members, and a Client that returns an earlier captured reply.
+`examples/Sets.tet` demonstrates enrollment, duplicate suppression,
+membership, cardinality and last-member deletion through the driver.
+
+Trusted counts are Lua 310/320, shell 227/240, store 185/200,
+Node host 196/300, REST host 156/300 and driver 393/450. Kernel and
+encoder counts remain 3997/4000 and 246/600. The two preludes total
+125 lines, and `dev/PRELUDES.sha256` pins their current contents.
+Every bound is unchanged.
+
+The larger prelude moves the Stage D static-walk entry to poll 9971.
+A temporary instrumented `sh_emit` measured 9971 before the walk and
+9983 after it in capture `run-enpxUh`. The instrumentation was removed.
+The refusal now uses fuel 9977, still six polls into the same 12-poll
+walk, and continues to require `SH-BUDGET` with no published output.
+
+Remaining M1 work includes TTL, bulk Hash operations, List and ZSet
+commands, Set enumeration and bulk operations, the four application
+examples, the counted Lean exporter and M1 performance and traversal
+gates. This slice does not declare M1 complete or ratify M0-EXIT.
+
+The first full `dev/m1-sets.sh` run, capture `run-gdxXCS`, hit the
+existing 120-second deadline while Stage D emitted `capturedReply`.
+One-minute load was observed at 215.39 immediately after the failure.
+Stages A through C passed, and M0-TIME passed at 144.560 ms, but the
+Stage D timeout made Stage E and Stage F red. The run was stopped
+before completing the later M1 legs and exited 143. No timeout, bound
+or source was changed in response to this run.
+
+The unchanged retry, `run-SVu3tC`, also reached a 120-second deadline,
+this time on the Stage C `classify` fixture. It was stopped with exit
+143 before all later legs completed. Investigation found that
+`Transport.wasm` still elaborated entire Lua bodies as nested byte
+constructors, although the full Client already used `byte_constants`.
+The carrier now checks typed empty slots and uses that existing lowering
+for the body and SHA-1. Its exports and the trusted-line counts are
+unchanged. The two failing fixtures then passed: `classify` in 16.95 s
+in `run-7twtfS`, and `capturedReply` in 7.64 s in `run-k5HYNs`.
+The extracted `classify` Wasm body equaled its Lua file byte for byte.
+These are individual elapsed samples, not performance milestone claims.
+
+The final-code ladder `sh dev/m1-sets.sh` completed all legs in
+`/Users/oobi/Documents/gpt18/tether-m1-sets/.kanon-exec/run-vrqc3i`.
+All functional, artifact, refusal, oracle, live host, mutation, house
+and trusted-line checks passed. The new Set rows were:
+
+| Check | Result |
+| --- | --- |
+| Unit | `PASS SETS-UNIT cases=56` |
+| Artifacts | `PASS SETS-ARTIFACTS pairs=12` |
+| Typed refusals | `PASS SETS-REFUSALS cases=19 atomic_output=19` |
+| Oracles | `PASS SETS-ORACLES store=34 luajit=34` |
+| Live hosts | `PASS SETS-E2E cases=34 hosts=68 readonly=28` |
+| Documented examples | `PASS SETS-EXAMPLE exec=6` |
+| Mutations | `PASS SETS-MUTATIONS killed=8 survived=0 restored=2` |
+
+Stages A through E passed, including the carrier body and SHA-1
+comparisons, 40 Bash reply cases and 11 Bash refusals. Stage F functional
+tests, do-notation, read-only dispatch, all 54 String host executions,
+all 84 Hash host executions and their source mutation controls passed.
+
+The full ladder exited 1 because M0-TIME measured 481.583 ms against
+the unchanged strict 150 ms bound at one-minute load 45.81. The only
+failing rows were M0-TIME, MEASURE and their aggregate Stage F and M1
+rows. Stderr was empty. A separate unchanged `sh dev/ratio.sh` run in
+`run-g8v5ro` measured 156.007 ms (115.063 minimum, 334.642 maximum) at
+load 28.50 and also exited 1. These runs do not establish a green
+aggregate ladder or M0-EXIT; the timing failure remains recorded.
+
+### Review round 2026-09-12 (M1 Set member commands)
+
+Seven findings were ruled fix. None was refuted. The round changed no
+bound, no pinned copy and no frozen record. The fixes touched three
+paths outside the slice as first staged, `dev/bytes_probe.ml`,
+`dev/stage-f-tests.py` and `dev/store_run.ml`, so the staged set holds
+25 paths.
+
+C-1. No socket-free leg could see the typed `err` reply of the Set
+commands. The generated `expose` definition of `dev/sets-tests.py`
+rewrote `err b` to `bulk b`, the store oracle hard-coded `bulk` for the
+WRONGTYPE rows, and the LuaJIT twin `dev/lua-store.lua` had no `err`
+arm at all. A copy of `print/lua.ml` that encoded the count-path fault
+as tag 2 instead of tag 4 passed `SETS-ARTIFACTS`, `SETS-REFUSALS`,
+`SETS-ORACLES`, `SETS-TESTS` and `SETS-UNIT`. `expose` now maps `err b`
+to `status b`, `offline()` requires the kind `status` for every
+WRONGTYPE row, the twin config carries the wanted kind, and the twin
+classifies its answer with `kind_of` and stops with
+`TWIN reply kind <got> wanted <want>` on a mismatch. `dev/sets_tests.ml`
+maps the exposed `err` arm to the `status` reply as well and requires
+`I.Status (S.message S.Wrong_type)`. A new mutant `SET-LUA-ERR-TAG` in
+`dev/sets-mutations.py` re-tags the count-path `got.err` reply of
+`print/lua.ml` from 4 to 2 under the offline suite. Control on a copy:
+the clean tree printed `PASS SETS-ORACLES store=34 luajit=34` and
+exited 0; the mutated tree exited 1 with
+`luajit: dev/lua-store.lua:178: TWIN reply kind string wanted status`.
+The ladder prints `KILLED SET-LUA-ERR-TAG by TWIN reply kind string
+wanted status`.
+
+B-2. The Stage F row `PASS BYTE-LOWERING reference=1 lowered=1` no
+longer compared two lowerings. After the carrier rewrite of
+`print/transport.ml`, `dev/bytes_probe.ml` built both rows through the
+same substitution routine, and a probe that resolved a matched name to
+the first constant left `requestBody` correct while `scriptSha1`
+carried the wrong 256 bytes, a field `dev/extract-body.mjs` never read.
+`dev/bytes_probe.ml` now elaborates REFERENCE from source literals
+through `P.Transport.literal` for `requestBody` and `scriptSha1`, with
+the reversed sample in the sha1 slot so the two exports differ, and
+builds LOWERED with the production `P.Transport.wasm` carrier.
+`dev/stage-f-tests.py` extracts `scriptSha1` as well and requires the
+reversed sample. The printed row text is unchanged, because
+`dev/M0-BUILD-LOG.md` quotes it and is frozen. Control: the ladders of
+tags `gates-1` and `gates-2` print `PASS BYTE-LOWERING reference=1
+lowered=1 all_bytes=256 empty=1 repeated=1`,
+`PASS STAGE-F-MUTATIONS killed=3 survived=0 restored=2` and
+`PASS STAGE-F`.
+
+C-3. Outside the unit suite the WRONGTYPE path ran only against a
+String key, so the `stored[set_kind] == nil` discrimination of
+`dev/lua-store.lua` and the shared count arm of `print/lua.ml` were
+never run against a Hash. A probe that dropped that guard passed the
+offline suite. `dev/sets-tests.py` adds four hash-seeded wrong-type
+rows, `HASHED = {b'f': b'v'}`, for add, remove, present and count, with
+`lua_fields` and a `kind="hash"` twin check; `dev/store_run.ml` accepts
+the seed argument `@hash` and stores `Hash ["f", "v"]`; the live leg
+seeds with HSET, requires TYPE `hash` after the call and reads the
+field back with HGET. The oracle count moves from 30 to 34 and the live
+row from `cases=30 hosts=60 readonly=24` to
+`cases=34 hosts=68 readonly=28`.
+
+C-2. Three of the nineteen typed-refusal rows, the `sadd`, `srem` and
+`sismember` forms with an `int64` operand in the member slot, required
+only the substring `CHECK`, so an unrelated refusal satisfied them. The
+rows now require the exact prefix
+`CHECK unbound: signed64Bytes is not a constructor of Bytes` through
+the `unbound` binding. Round 1 left the item open, because the probe of
+the exact diagnostic needed a scratch directory the sandbox denied;
+round 2 applied it. Control: `python3 -P dev/sets-tests.py --static`
+printed `PASS SETS-REFUSALS cases=19 atomic_output=19`.
+
+B-3. The emitted fault text named a member count for SISMEMBER, which
+answers a membership flag. `print/lua.ml` now selects `key count` for
+tags 7 and 8, `membership` for tag 17, `member count` for tags 15, 16
+and 18 and `field count` for the Hash tags, with the text
+`ERR <what> reply is not an integer`. The String and Hash texts are
+unchanged. The Lua trusted group moves from 310/320 to 311/320, under
+the unchanged bound.
+
+D-1. Three sentences of `dev/SETS.md` overstated the evidence: the
+controls of the mutation runner are the unit and offline suites only,
+the store half of the oracle checks the reply and not the stored
+members, and the unit suite did not pin the `err` variant. The
+sentences now read that the unit suite pins `int` replies and the
+stopped `Client` that a store fault gives, that the LuaJIT oracle
+checks every stored member and cardinality while the store oracle
+checks the reply, and that the controls are the unit and offline
+suites, with the Lua error tag named among the mutant targets. The
+merged items C-5, D-2 and C-4 named the same sentences. Control:
+`sh dev/house.sh` printed `PASS HOUSE`.
+
+A-1. `sadd` and `srem` in `store/store.ml` called `save_set` on every
+reply, so a zero SREM reply could delete a key and a zero SADD reply
+could rewrite the payload when a stored Set value was not canonical.
+Both now return the store unchanged on a zero reply and call `save_set`
+only on a real insert or removal. The `SADD-COUNT` mutation anchor of
+`dev/sets-mutations.py` moved to the new line. The store trusted group
+stays at 185/200. Control: `PASS SETS-UNIT cases=56` and
+`KILLED SADD-COUNT by FAIL SETS-UNIT duplicate count`.
+
+Round 2 of the review raised three items. GATE-1 cited the root-mode
+ladder of tag `gates-1`, started 19:40:42 at a one-minute load of
+49.67, which printed `FAIL SETS-MUTATIONS SURVIVED SET-LUA-ERR-TAG`,
+`FAIL M1-SETS`, `EXIT 1` and `EXIT-ALL 1` with every other row green,
+`PASS M0-TIME median_ms=96.835 bound_ms=150` among them. The claim was
+true: the round-1 entry of `SET-LUA-ERR-TAG` pinned the kill marker
+`SETS LuaJIT reply`, which the mutated tree never prints. ND-1-1 named
+the same defect. The entry now pins `TWIN reply kind string wanted
+status`, and `dev/MUTATION-LOG.md` records the row and the result
+`PASS SETS-MUTATIONS killed=8 survived=0 restored=2`. ND-1-2 found the
+Set table of this file stale after the fixes; it now carries the
+measured rows. The root-mode ladder of tag `fix-2`, started 20:15:02
+at a one-minute load of 21.16, passed every functional row and failed
+only `FAIL M0-TIME median_ms=154.887 bound_ms=150`, `FAIL MEASURE` and
+the aggregate rows that carry them. The root-mode ladder of tag
+`gates-2`, started 20:33:15 at a one-minute load of 47.23 and done at
+20:59:33 at 34.55, holds no row that starts with FAIL: `PASS STAGE-A`,
+`PASS STAGE-C`, `PASS STAGE-D`, `PASS STAGE-E`,
+`PASS M0-TIME median_ms=87.435 bound_ms=150`, `PASS STAGE-F`,
+`PASS M1-DO`, `PASS M1-READONLY`, `PASS M1-STRINGS`, `PASS M1-HASHES`,
+`PASS M1-SETS`, `EXIT 0`,
+`PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`, `EXIT-MUT 0`
+and `EXIT-ALL 0`. Its measured Set rows are `PASS SETS-BUILD`,
+`PASS SETS-UNIT cases=56`, `PASS SETS-ARTIFACTS pairs=12`,
+`PASS SETS-REFUSALS cases=19 atomic_output=19`,
+`PASS SETS-ORACLES store=34 luajit=34`,
+`PASS SETS-E2E cases=34 hosts=68 readonly=28`,
+`PASS SETS-EXAMPLE exec=6`, `PASS SETS-TESTS`, the eight killed mutants
+`SADD-COUNT`, `SREM-EMPTY-KEY`, `SISMEMBER-WRITE`, `SCARD-WRITE`,
+`SADD-READONLY`, `SET-LUA-COUNT`, `SET-ERR-TAG` and `SET-LUA-ERR-TAG`,
+`PASS SETS-MUTATIONS killed=8 survived=0 restored=2`,
+`PASS HASHES-UNIT cases=77`,
+`PASS HASHES-MUTATIONS killed=6 survived=0 restored=2`, `PASS HOUSE`
+and
+`TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=311/320 sh=227/240
+store=185/200 host-node=196/300 host-rest=156/300 bin=393/450 OK`.
+The 150 ms bound, the 120 s Stage C deadline and the eight trusted-line
+bounds did not move.
+
+The closing root-mode ladder of tag `close`, started 21:14:21 at a
+one-minute load of 31.40 and done at 21:29:57, holds no row that starts
+with FAIL: `PASS M0-TIME median_ms=63.367 bound_ms=150`,
+`PASS SETS-UNIT cases=56`, `PASS SETS-ORACLES store=34 luajit=34`,
+`PASS SETS-E2E cases=34 hosts=68 readonly=28`,
+`PASS SETS-MUTATIONS killed=8 survived=0 restored=2`, `PASS M1-SETS`,
+`EXIT 0`, `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`,
+`EXIT-MUT 0`, `EXIT-ALL 0` and the `TRUSTED-LINES` row with
+`lua=311/320 sh=227/240 store=185/200` under the same unchanged bounds.
+The staged set held 25 paths before and after the ladder, with no
+unstaged and no untracked path.
+
+| id | severity | file | fix or ruling |
+| --- | --- | --- | --- |
+| C-1 | high | dev/sets-tests.py:95 and dev/lua-store.lua:171 | `expose` maps `err b` to `status b`, the offline oracle requires the kind `status` for the WRONGTYPE rows, the twin classifies its answer with `kind_of`, and the new mutant `SET-LUA-ERR-TAG` dies with `TWIN reply kind string wanted status`; `PASS SETS-MUTATIONS killed=8 survived=0 restored=2`. |
+| B-2 | medium | print/transport.ml:50 and dev/bytes_probe.ml:13 | REFERENCE is elaborated from source literals through `P.Transport.literal` again, LOWERED is the production carrier, and `dev/stage-f-tests.py` also extracts `scriptSha1`; `PASS BYTE-LOWERING reference=1 lowered=1 all_bytes=256 empty=1 repeated=1` unchanged in text. |
+| C-3 | medium | dev/sets-tests.py:86 | four hash-seeded wrong-type rows with the `@hash` seed of `dev/store_run.ml`, the twin `kind="hash"` check and the live HSET seed; `PASS SETS-ORACLES store=34 luajit=34` and `PASS SETS-E2E cases=34 hosts=68 readonly=28`. |
+| C-2 | medium | dev/sets-tests.py:167 | the three loose rows require `CHECK unbound: signed64Bytes is not a constructor of Bytes`; `PASS SETS-REFUSALS cases=19 atomic_output=19` unchanged. |
+| B-3 | medium | print/lua.ml:94 | the emitted runtime names a membership fault for tag 17 and a member count for tags 15, 16 and 18; `TRUSTED-LINES lua=311/320`. |
+| D-1 | medium | dev/SETS.md:83 | the three sentences state the controls, the oracle scope and the pinned replies the tests prove; merges C-5, D-2 and C-4. |
+| A-1 | low | store/store.ml:55 | `sadd` and `srem` leave the store unchanged on a zero reply; `store=185/200` unchanged. |
+| ND-1-1, GATE-1 | high | dev/sets-mutations.py:34 | the round-1 kill marker of `SET-LUA-ERR-TAG` was wrong, so `gates-1` recorded the mutant as survived; the marker now matches the twin stop and `gates-2` is green in every row. |
+| ND-1-2 | medium | dev/M1-BUILD-LOG.md:1019 | the Set table carries the measured rows 34/34, 34/68/28 and killed=8. |

@@ -54,6 +54,8 @@ def byte_lowering(work):
             wasm = work / f'bytes-{i}-{name.decode()}.wasm'
             wasm.write_bytes(bytes.fromhex(value.decode()))
             require(run(['node', 'dev/extract-body.mjs', str(wasm)]) == sample, 'Byte lowering bytes')
+            require(run(['node', 'dev/extract-body.mjs', str(wasm), 'scriptSha1']) == sample[::-1],
+                    'Byte lowering sha1 bytes')
     print('PASS BYTE-LOWERING reference=1 lowered=1 all_bytes=256 empty=1 repeated=1', flush=True)
 
 

@@ -61,6 +61,10 @@ mu Script (0 A : Type 0) : (0 g : Tag) -> Type 0 :=
 | hexists : (0 g : Tag) -> Key Hash g -> Bytes -> (Reply -> Script A g) -> Script A g
 | hlen : (0 g : Tag) -> Key Hash g -> (Reply -> Script A g) -> Script A g
 | hincrby : (0 g : Tag) -> Key Hash g -> Bytes -> Signed64 -> (Reply -> Script A g) -> Script A g
+| sadd : (0 g : Tag) -> Key Set g -> Bytes -> (Reply -> Script A g) -> Script A g
+| srem : (0 g : Tag) -> Key Set g -> Bytes -> (Reply -> Script A g) -> Script A g
+| sismember : (0 g : Tag) -> Key Set g -> Bytes -> (Reply -> Script A g) -> Script A g
+| scard : (0 g : Tag) -> Key Set g -> (Reply -> Script A g) -> Script A g
 
 mu Client (0 A : Type 0) : Type 0 :=
 | done : A -> Client A

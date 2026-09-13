@@ -472,3 +472,29 @@ is killed specifically by the last-field deletion check.
 
 Evidence: `/Users/oobi/Documents/gpt18/tether-m1-hashes/.kanon-exec/run-3GbMit`,
 exit 0. The working checkout was unchanged by the mutation runner.
+
+### M1 Set commands 2026-09-12
+
+`python3 -P dev/sets-mutations.py` compiles production-source mutants in
+a disposable copy. The unit and offline controls run before mutation
+and after source restoration and rebuilding. Each mutant must compile
+and fail the specific assertion below to count as killed.
+
+| Mutation | Change | Required failed assertion |
+| --- | --- | --- |
+| SADD-COUNT | Report one when adding an existing member. | `FAIL SETS-UNIT duplicate count` |
+| SREM-EMPTY-KEY | Retain an existing key after removing its last member, preserving missing-key behavior. | `FAIL SETS-UNIT remove last member` |
+| SISMEMBER-WRITE | Remove SISMEMBER from the read-only allowlist. | `SETS write classification` |
+| SCARD-WRITE | Remove SCARD from the read-only allowlist. | `SETS write classification` |
+| SADD-READONLY | Classify SADD as read-only. | `SETS write classification` |
+| SET-LUA-COUNT | Emit zero for every integer count reply. | `SETS LuaJIT reply` |
+| SET-ERR-TAG | Encode a store fault as `bulk` instead of `err`. | `FAIL SETS-UNIT sadd wrong type stops client` |
+| SET-LUA-ERR-TAG | Encode an emitted count-path fault as `bulk` instead of `err`. | `TWIN reply kind string wanted status` |
+
+Result: `PASS SETS-MUTATIONS killed=8 survived=0 restored=2` in the
+review round ladder `gates-fix-2.log`. Every named mutant compiled and
+failed its specified assertion. Both restored controls, the unit suite
+and the offline suite, passed; the runner left the working sources
+unchanged. The STATIC suite is a kill test, not a control.
+This Set mutation result passed within a full ladder whose aggregate
+exit was 1 solely from the separate M0 timing leg and its cascades.

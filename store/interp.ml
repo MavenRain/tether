@@ -97,6 +97,11 @@ let run ~budget rows ~entry store =
           | 13, [k] -> Ok (integer (Store.hlen key store |> Result.map (fun s -> s, store)), k)
           | 14, [f; Data (E.Tid "mu<Signed64>", 0, [v]); k] -> let* f = text f in let* v = text v in
               Ok (integer (Store.hincrby key f v store), k)
+          | (15 | 16 | 17), [m; k] -> let* m = text m in
+              let result = if tag = 15 then Store.sadd key m store else if tag = 16 then Store.srem key m store
+                else Store.sismember key m store |> Result.map (fun s -> s, store) in
+              Ok (integer result, k)
+          | 18, [k] -> Ok (integer (Store.scard key store |> Result.map (fun s -> s, store)), k)
           | _, _ -> Error "STORE-SCRIPT-COMMAND" in
         let answer, store = Result.fold ~ok:Fun.id ~error:(fun e ->
           data "Reply" 4 [bytes (Store.message e)], store) result in

@@ -77,17 +77,23 @@ local function run(s)
       if type(got) == 'table' and got.err then r = {tag=4,bytes(got.err)}
       elseif type(got) == 'table' and got.ok then r = {tag=3,bytes(got.ok)}
       elseif got == false then r = {tag=0} else r = {tag=2,bytes(got)} end
-    elseif s.tag == 7 or s.tag == 8 or s.tag == 9 or s.tag == 11 or s.tag == 12 or s.tag == 13 then
+    elseif s.tag == 7 or s.tag == 8 or s.tag == 9 or s.tag == 11 or s.tag == 12 or s.tag == 13
+      or s.tag == 15 or s.tag == 16 or s.tag == 17 or s.tag == 18 then
       local got
       if s.tag == 9 then got = redis.pcall('HSET',k,text(s[2]),text(s[3])); next = s[4]
       elseif s.tag == 11 or s.tag == 12 then
         got = redis.pcall(s.tag == 11 and 'HDEL' or 'HEXISTS',k,text(s[2])); next = s[3]
       elseif s.tag == 13 then got = redis.pcall('HLEN',k)
+      elseif s.tag == 15 or s.tag == 16 or s.tag == 17 then
+        local command = s.tag == 15 and 'SADD' or (s.tag == 16 and 'SREM' or 'SISMEMBER')
+        got = redis.pcall(command,k,text(s[2])); next = s[3]
+      elseif s.tag == 18 then got = redis.pcall('SCARD',k)
       else got = redis.pcall(s.tag == 7 and 'DEL' or 'EXISTS',k) end
       if type(got) == 'table' and got.err then r = {tag=4,bytes(got.err)}
       elseif type(got) ~= 'number' then
-        local what = (s.tag == 7 or s.tag == 8) and 'key' or 'field'
-        r = {tag=4,bytes('ERR ' .. what .. ' count reply is not an integer')}
+        local what = (s.tag == 7 or s.tag == 8) and 'key count' or (s.tag == 17 and 'membership'
+          or (s.tag >= 15 and 'member count' or 'field count'))
+        r = {tag=4,bytes('ERR ' .. what .. ' reply is not an integer')}
       else r = {tag=1,{tag=0,bytes(string.format('%d',got))}} end
     else error('LUA-SCRIPT unsupported tag') end
     s = app(next,{r})
