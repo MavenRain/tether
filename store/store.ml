@@ -6,6 +6,7 @@ type t = data Keys.t
 type fault = Wrong_type | Not_integer | Hash_not_integer | Overflow
 let empty = Keys.empty
 let put = Keys.add
+let save key value ~empty store = if empty then Keys.remove key store else put key value store
 let message = function
   | Wrong_type -> "WRONGTYPE Operation against a key holding the wrong kind of value"
   | Not_integer -> "ERR value is not an integer or out of range"
@@ -33,8 +34,7 @@ let decr key store = incrby key "-1" store
 let hash key store = Keys.find_opt key store |> Option.fold ~none:(Ok Keys.empty) ~some:(function
   | Hash fields -> Ok (Keys.of_seq (List.to_seq fields))
   | Str _ | List _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
-let save_hash key fields store =
-  if Keys.is_empty fields then Keys.remove key store else put key (Hash (Keys.bindings fields)) store
+let save_hash key fields store = save key (Hash (Keys.bindings fields)) ~empty:(Keys.is_empty fields) store
 let hget key field store = let* fields = hash key store in Ok (Keys.find_opt field fields)
 let hexists key field store = let* fields = hash key store in Ok (if Keys.mem field fields then "1" else "0")
 let hlen key store = let* fields = hash key store in Ok (string_of_int (Keys.cardinal fields))
@@ -51,8 +51,7 @@ let hincrby key field amount store =
 let members key store = Keys.find_opt key store |> Option.fold ~none:(Ok Members.empty) ~some:(function
   | Set values -> Ok (Members.of_list values)
   | Str _ | Hash _ | List _ | ZSet _ | Stream _ -> Error Wrong_type)
-let save_set key values store =
-  if Members.is_empty values then Keys.remove key store else put key (Set (Members.elements values)) store
+let save_set key values store = save key (Set (Members.elements values)) ~empty:(Members.is_empty values) store
 let sismember key member store = let* values = members key store in
   Ok (if Members.mem member values then "1" else "0")
 let scard key store = let* values = members key store in Ok (string_of_int (Members.cardinal values))
@@ -62,3 +61,15 @@ let sadd key member store = let* values = members key store in
 let srem key member store = let* values = members key store in
   if Members.mem member values then Ok ("1", save_set key (Members.remove member values) store)
   else Ok ("0", store)
+let list key store = Keys.find_opt key store |> Option.fold ~none:(Ok []) ~some:(function
+  | List values -> Ok values
+  | Str _ | Hash _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
+type side = Left | Right
+let orient = function Left -> Fun.id | Right -> List.rev
+let llen key store = let* values = list key store in Ok (string_of_int (List.length values))
+let push side key value store = let* values = list key store in
+  let values = orient side (value :: orient side values) in
+  Ok (string_of_int (List.length values), put key (List values) store)
+let pop side key store = let* values = list key store in match orient side values with
+  | [] -> Ok (None, store)
+  | value :: rest -> Ok (Some value, save key (List (orient side rest)) ~empty:(rest = []) store)

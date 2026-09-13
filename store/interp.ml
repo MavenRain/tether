@@ -75,12 +75,12 @@ let run ~budget rows ~entry store =
     | Data (E.Tid "mu<Script>", tag, Data (E.Tid "mu<Key>", 0, [key]) :: args) ->
         let* key = text key in
         let integer result = Result.map (fun (s, st) -> data "Reply" 1 [data "Signed64" 0 [bytes s]], st) result in
-        let bulk result = Result.map (fun s ->
-          Option.fold ~none:(data "Reply" 0 []) ~some:(fun s -> data "Reply" 2 [bytes s]) s, store) result in
+        let bulk result = Result.map (fun (s, st) ->
+          Option.fold ~none:(data "Reply" 0 []) ~some:(fun s -> data "Reply" 2 [bytes s]) s, st) result in
         let status (s, st) = data "Reply" 3 [bytes s], st in
         let* result, k = match tag, args with
           | 1, [k] -> Ok (integer (Store.incr key store), k)
-          | 2, [k] -> Ok (bulk (Store.get key store), k)
+          | 2, [k] -> Ok (bulk (Store.get key store |> Result.map (fun s -> s, store)), k)
           | 3, [v; k] -> let* s = text v in Ok (Ok (status (Store.set key s store)), k)
           | 4, [Data (E.Tid "mu<Signed64>", 0, [v]); k] -> let* s = text v in
               Ok (Store.integer s |> Result.map (fun _n -> status (Store.set key s store)), k)
@@ -90,7 +90,7 @@ let run ~budget rows ~entry store =
           | 7, [k] -> Ok (integer (Ok (Store.del key store)), k)
           | 8, [k] -> Ok (integer (Ok (Store.exists key store, store)), k)
           | 9, [f; v; k] -> let* f = text f in let* v = text v in Ok (integer (Store.hset key f v store), k)
-          | 10, [f; k] -> let* f = text f in Ok (bulk (Store.hget key f store), k)
+          | 10, [f; k] -> let* f = text f in Ok (bulk (Store.hget key f store |> Result.map (fun s -> s, store)), k)
           | 11, [f; k] -> let* f = text f in Ok (integer (Store.hdel key f store), k)
           | 12, [f; k] -> let* f = text f in
               Ok (integer (Store.hexists key f store |> Result.map (fun s -> s, store)), k)
@@ -102,6 +102,10 @@ let run ~budget rows ~entry store =
                 else Store.sismember key m store |> Result.map (fun s -> s, store) in
               Ok (integer result, k)
           | 18, [k] -> Ok (integer (Store.scard key store |> Result.map (fun s -> s, store)), k)
+          | (19 | 20), [v; k] -> let* v = text v in
+              Ok (integer (Store.push (if tag = 19 then Store.Left else Store.Right) key v store), k)
+          | (21 | 22), [k] -> Ok (bulk (Store.pop (if tag = 21 then Store.Left else Store.Right) key store), k)
+          | 23, [k] -> Ok (integer (Store.llen key store |> Result.map (fun s -> s, store)), k)
           | _, _ -> Error "STORE-SCRIPT-COMMAND" in
         let answer, store = Result.fold ~ok:Fun.id ~error:(fun e ->
           data "Reply" 4 [bytes (Store.message e)], store) result in

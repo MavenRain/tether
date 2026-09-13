@@ -55,10 +55,10 @@ algebra, random members, multi-member forms and TTL remain outside this
 slice. The remaining M1 applications and performance gates are listed
 in `SPEC.md`; this slice does not declare M1 complete.
 
-The prelude appends four constructors, retaining existing tags. Its
-checksum is updated in `dev/PRELUDES.sha256`; the two preludes total
-125 lines. Trusted counts are Lua 310/320 and store 185/200. All other
-counts and every bound are unchanged.
+The Set slice appended four constructors, retaining existing tags.
+At that slice the two preludes totaled 125 lines and the trusted counts
+were Lua 310/320 and store 185/200. `SPEC.md` records current counts;
+`dev/PRELUDES.sha256` pins the current preludes. Every bound is unchanged.
 
 The Stage C byte carrier now uses the same checked empty slots and
 `byte_constants` lowering as the full Client. This avoids elaborating

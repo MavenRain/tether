@@ -1195,3 +1195,216 @@ unstaged and no untracked path.
 | A-1 | low | store/store.ml:55 | `sadd` and `srem` leave the store unchanged on a zero reply; `store=185/200` unchanged. |
 | ND-1-1, GATE-1 | high | dev/sets-mutations.py:34 | the round-1 kill marker of `SET-LUA-ERR-TAG` was wrong, so `gates-1` recorded the mutant as survived; the marker now matches the twin stop and `gates-2` is green in every row. |
 | ND-1-2 | medium | dev/M1-BUILD-LOG.md:1019 | the Set table carries the measured rows 34/34, 34/68/28 and killed=8. |
+
+### List commands and FIFO job queue 2026-09-12
+
+Built from clean `aa6c8ee`, the reviewed Set slice. Five typed List
+constructors append to the trusted prelude without renumbering existing
+constructors: LPUSH, RPUSH, LPOP, RPOP and LLEN. Pushes take one element,
+return the new length and retain duplicates. Pops return a bulk element
+or nil, preserve order at both ends and remove the final empty key.
+Wrong types return the existing typed error without changing the store.
+
+The Lua printer uses its existing bulk and integer reply paths. LLEN is
+read-only; both pushes and both pops use write dispatch. A reachable but
+untaken pop arm retains write classification. The independent LuaJIT
+twin distinguishes Lists, Sets and Hashes with private table keys and
+checks every remaining list element in order.
+
+The OCaml store shares empty collection deletion among Hashes, Sets and
+Lists. Its right-end List operations use linear reversal. The interpreter
+now carries the updated store with bulk replies from a pop; GET and HGET
+use the same reply helper with their unchanged store. Unit tests cover
+all five wrong types, errors that stop a Client, script-level inspection
+of errors, exact reply variants and unrelated keys.
+
+`examples/JobQueue.tet` enqueues two mail jobs with RPUSH and drains them
+with LPOP. The default entry returns the first captured job after the
+second dequeue, `remaining` reads LLEN in a separate read-only invocation,
+and `empty` returns nil after draining. It provides destructive dequeue
+without acknowledgement or retries.
+
+Binary elements survive in the interpreter and LuaJIT. Live Wasm and
+Bash preserve valid UTF-8, NUL, BOM and trailing newlines. Their existing
+text hosts reject invalid UTF-8 with exit 4 and no stdout, after the pop
+has already changed Redis. Live tests check that resulting state too.
+
+Trusted counts are Lua 315/320, shell 227/240, store 200/200, Node host
+196/300, REST host 156/300 and driver 393/450. Kernel and encoder remain
+3997/4000 and 246/600. The two pinned preludes total 130 lines. Every
+bound is unchanged.
+
+Capture `run-F7MaEX` measured the Stage D walk at polls 13588 through
+13599. The test uses fuel 13594, retaining six polls within the same
+12-poll static walk and requiring SH-BUDGET with no output. Temporary
+measurement code was removed before the full ladder.
+
+Remaining M1 work includes TTL, bulk Hash operations, List ranges and
+bulk operations, ZSet commands, Set enumeration and bulk operations,
+the other three application examples, the counted Lean exporter and
+M1 performance and traversal gates. This slice does not declare M1
+complete or ratify M0-EXIT.
+
+List functional results in `run-quMkCs`:
+
+| Check | Result |
+| --- | --- |
+| Unit | `PASS LISTS-UNIT cases=55` |
+| Artifacts | `PASS LISTS-ARTIFACTS pairs=9` |
+| Typed refusals | `PASS LISTS-REFUSALS cases=32 atomic_output=32` |
+| Oracles | `PASS LISTS-ORACLES store=42 luajit=42` |
+| Live hosts | `PASS LISTS-E2E cases=42 hosts=84 readonly=10 utf8_refusals=4` |
+| Example | `PASS LISTS-EXAMPLE exec=9` |
+| Mutations | `PASS LISTS-MUTATIONS killed=9 survived=0 restored=2` |
+
+The complete `sh dev/m1-lists.sh` run in
+`/Users/oobi/Documents/gpt18/tether-m1-lists/.kanon-exec/run-quMkCs`
+finished all legs. Stages A through F, do-notation, read-only dispatch,
+String, Hash, Set and List functional checks, Set and List mutants,
+house audits and trusted-line bounds passed. The timing leg measured
+`PASS M0-TIME median_ms=77.810 bound_ms=150`.
+
+Its exit was 1 solely from HDEL-EMPTY-KEY and the resulting Hash, Set
+and List aggregate failures. The retargeted Hash mutant had used
+`~empty:false`, which created an empty hash on a missing-key delete and
+failed `missing delete` before its required `delete last field` assertion.
+The replacement now preserves missing keys while retaining an existing
+empty hash. The required assertion, tested behavior, timeouts and all
+bounds remain unchanged. This correction changes only the mutation
+fixture; no implementation or functional test changed after this run.
+
+The initial full ladder, `run-z6zcgC`, used an incomplete PATH that
+omitted ripgrep and panicscan. It was stopped with exit 143 after those
+tool-availability failures. A preceding sandboxed List test run,
+`run-FT8OaB`, passed the offline legs but could not create its loopback
+listener. The full run used permission for temporary local listeners.
+
+The corrected Hash mutation suite ran in
+`/Users/oobi/Documents/gpt18/tether-m1-lists/.kanon-exec/run-ksAlmF`
+and exited 0 with no stderr: `PASS HASHES-MUTATIONS killed=6 survived=0
+restored=2`. HDEL-EMPTY-KEY failed its intended `delete last field`
+assertion. Final validation combines the completed functional ladder
+with this focused correction run; the full ladder was not repeated
+following the mutation-fixture-only correction.
+
+### Review round 2026-09-12 (M1 List commands)
+
+Six review items were fixed on the staged tree. No bound moved, no
+timing measurement changed and no frozen record was edited.
+
+D-1. The Stage D capture sentence above said polls 13588 through 13600.
+The printer guard refuses with `SH-BUDGET` from 13588 through 13599 and
+falls back to the `CHECK` budget refusal at 13600, which `dev/STAGE-D.md`
+already records. The sentence now reads 13588 through 13599.
+
+A-1. `dev/store_run.ml` sent every unrecognized seed to a `Str` key, so a
+later `@zset` or `@stream` oracle row would have tested a string key and
+still printed a pass. The seed selector now accepts `@zset` and `@stream`
+and refuses any other name that starts with `@` with `STORE-SEED`.
+
+A-2. The 16 binary round-trip rows of `dev/lists_tests.ml` shared one
+reason string. Each row now names its push tag, its pop tag and the
+payload in hexadecimal.
+
+C-1. No leg asserted the documented counts. `dev/lists_tests.ml` requires
+55 cases, `dev/lists-tests.py` requires 9 artifact pairs, 32 refusals with
+32 atomic outputs, 42 store and 42 LuaJIT oracles, 42 live cases with 84
+hosts, 10 read-only cases and 4 UTF-8 refusals, and 9 example runs. The
+new `LISTS-COUNTS` leg of `dev/m1-lists.sh` reads the captured suite rows
+and requires the same six rows.
+
+C-3. `LISTS-UNIT` ran the executable directly, so a red `LISTS-BUILD` leg
+could be followed by a green unit row from the previous build. The unit
+and test legs are renamed `LISTS-UNIT-EXE` and `LISTS-TESTS-RUN`, which
+also stops the leg row from shadowing the count row, and all dependent
+legs print `SKIPPED` and `FAIL` when the build is red.
+
+C-2. The documented `--static` flag was run by no gate.
+`dev/lists-mutations.py` now runs it as a control before mutation and
+requires `PASS LISTS-REFUSALS`. The restored count stays 2.
+
+Row names in later logs: `PASS LISTS-UNIT-EXE`, `PASS LISTS-TESTS-RUN`
+and `PASS LISTS-COUNTS` replace `PASS LISTS-UNIT` and `PASS LISTS-TESTS`
+as leg rows; the suites still print `PASS LISTS-UNIT cases=55` and
+`PASS LISTS-TESTS`.
+
+Findings of the review pass:
+
+| id | severity | file | one line fix or ruling |
+| --- | --- | --- | --- |
+| D-1 | medium | dev/M1-BUILD-LOG.md:1237 | FIXED: the Stage D capture sentence now reads polls 13588 through 13599, which matches dev/STAGE-D.md:69; frozen lines 1 to 1197 untouched. |
+| A-1 | low | dev/store_run.ml:36 | FIXED: the seed selector returns a Result, `@zset` and `@stream` seed real ZSet and Stream keys, and any other name that starts with `@` returns `Error (D.Syntax "STORE-SEED")`. |
+| A-2 | low | dev/lists_tests.ml:61 | FIXED: a new `hex` helper gives each binary round-trip row a reason that names its push tag, its pop tag and the payload. |
+| C-1 | low | dev/m1-lists.sh:14 | FIXED: the unit suite requires 55 cases, dev/lists-tests.py requires the six documented count rows, and the new `LISTS-COUNTS` leg reads the captured suite rows and requires the same six rows. |
+| C-3 | low | dev/m1-lists.sh:13 | FIXED: `LISTS-BUILD` is a guard, so a red build makes every dependent leg print `SKIPPED NAME after a red LISTS-BUILD` and `FAIL NAME` instead of running a stale executable. |
+| C-2 | low | dev/LISTS.md:73 | FIXED: dev/lists-mutations.py runs `--static` as a control before mutation and requires `PASS LISTS-REFUSALS`; the restored count stays 2. |
+
+Refuted: 0 items.
+
+Merged and dropped: 1 item. D-2 was dropped, refuted on the merits:
+dev/LISTS.md:44 names host implementations, not the host labels of the
+test loop; dev/trusted-lines.py:15 defines the group host-rest as
+runtime/rest-twin.mjs and runtime/rest-decode.mjs, and the `bash` rows of
+dev/lists-tests.py run the emitted prog.sh, which talks only to the REST
+twin. The rejection happens in the REST host: rest-decode.mjs decodes
+every bulk payload with a fatal UTF-8 decoder, the twin answers 502 and
+print/sh.ml:73-75 makes `curl -fsS` fail with exit 4 and no stdout. The
+REST host is therefore exercised and does reject invalid UTF-8, and the
+proposed wording would rename a host implementation after its client
+program. Nothing was merged: C-1 and C-3 share dev/m1-lists.sh but state
+different defects, so both stay.
+
+Gate rows of the last ladder, gates-1 (root mode, 01:01:44 to 01:45,
+log gates-gates-1.log, 423 rows). The one-minute load was 54.79 at the
+start of the run, 38.15 at the timing leg and 21.03 at the last row.
+Carry: `PIN 2c2e6e6 unlisted=0` and
+`CARRY files=36 diff=0 vendor=32 copies=4`.
+
+| leg | verbatim row |
+| --- | --- |
+| M1-SETS | `FAIL M1-SETS` |
+| LISTS-BUILD | `PASS LISTS-BUILD` |
+| LISTS-UNIT-EXE | `PASS LISTS-UNIT cases=55` then `PASS LISTS-UNIT-EXE` |
+| LISTS-TESTS-RUN | `PASS LISTS-ARTIFACTS pairs=9`, `PASS LISTS-REFUSALS cases=32 atomic_output=32`, `PASS LISTS-ORACLES store=42 luajit=42`, `PASS LISTS-E2E cases=42 hosts=84 readonly=10 utf8_refusals=4`, `PASS LISTS-EXAMPLE exec=9`, `PASS LISTS-TESTS` then `PASS LISTS-TESTS-RUN` |
+| LISTS-COUNTS | `PASS LISTS-COUNTS` |
+| LISTS-MUTATIONS | `PASS LISTS-MUTATIONS killed=9 survived=0 restored=2` then `PASS LISTS-MUTATIONS` |
+| HOUSE | `PASS HOUSE` |
+| TRUSTED-LINES | `TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=315/320 sh=227/240 store=200/200 host-node=196/300 host-rest=156/300 bin=393/450 OK` then `PASS TRUSTED-LINES` |
+| M1-LISTS | `FAIL M1-LISTS` |
+| STAGE-A-MUTATIONS | `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1` |
+| exit | `EXIT 1`, `EXIT-MUT 0`, `EXIT-ALL 1` |
+
+Every FAIL row of this ladder lies in the timing set and follows one
+row, `FAIL M0-TIME median_ms=338.045 bound_ms=150`, measured at a
+one-minute load of 54.79 at the start of the run and 38.15 at that leg:
+the MEASURE leg is not green in this log, the M0-TIME bound of 150 ms
+does not move, and the closing ladder below repeats the measurement
+under a calm load. Every other row is green: the list legs
+pass with the documented counts, `PASS LISTS-MUTATIONS killed=9` with
+survived 0 and restored 2, `PASS STAGE-A-MUTATIONS killed=37 survived=0
+restored=1`, and the trusted triple holds at `lua=315/320 sh=227/240
+store=200/200`, all copied from gates-gates-1.log, the last gates log on
+disk. The closing log gates-close.log now exists. The operator queued
+the tag close at a calm load, and the paragraph below reports that run.
+
+Review pass 1 (2026-09-12) fixed 6 findings.
+
+Fix rounds: 1.
+
+Closing ladder: the closing ladder (tag close), root mode, log
+gates-close.log, 423 rows, 01:49:47 to 02:01:18 at a one-minute load of
+20.94 at the start of the run. The verdict is GREEN-FULL. The log holds
+no FAIL row and no SURVIVED row. Rows: `PASS LISTS-UNIT cases=55`, `PASS
+LISTS-ORACLES store=42 luajit=42`, `PASS LISTS-REFUSALS cases=32
+atomic_output=32`, `PASS LISTS-E2E cases=42 hosts=84 readonly=10
+utf8_refusals=4`, `PASS LISTS-EXAMPLE exec=9`, `PASS LISTS-ARTIFACTS
+pairs=9`, `PASS LISTS-MUTATIONS killed=9 survived=0 restored=2`, `PASS
+STAGE-A-MUTATIONS killed=37 survived=0 restored=1`, `PASS M0-TIME
+median_ms=109.215 bound_ms=150`, `TRUSTED-LINES kernel=3997/4000
+encoder=246/600 lua=315/320 sh=227/240 store=200/200 host-node=196/300
+host-rest=156/300 bin=393/450 OK`, `EXIT-MUT 0` and `EXIT-ALL 0`. The
+timing row is green under the calm load and the 150 ms bound did not
+move. The round-1 ladders fix-1 and gates-1 were green on every
+functional row. They were red only on the timing cascade, at a
+one-minute load of 50 to 72. The final on-disk verification of the
+staged tree prints `VERIFY ok=81 bad=0`.

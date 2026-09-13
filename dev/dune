@@ -52,3 +52,8 @@
  (name sets_tests)
  (modules sets_tests)
  (libraries tether_store kanon_kernel))
+
+(executable
+ (name lists_tests)
+ (modules lists_tests)
+ (libraries tether_store kanon_kernel))

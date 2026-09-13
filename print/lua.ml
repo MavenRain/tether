@@ -69,16 +69,17 @@ local function run(s)
         elseif read == false then r = {tag=0}
         else r = {tag=1,{tag=0,bytes(read)}} end
       end
-    elseif s.tag == 2 or s.tag == 3 or s.tag == 4 or s.tag == 10 then
+    elseif s.tag == 2 or s.tag == 3 or s.tag == 4 or s.tag == 10 or s.tag == 21 or s.tag == 22 then
       local got
       if s.tag == 10 then got = redis.pcall('HGET',k,text(s[2])); next = s[3]
       elseif s.tag == 2 then got = redis.pcall('GET',k)
+      elseif s.tag == 21 or s.tag == 22 then got = redis.pcall(s.tag == 21 and 'LPOP' or 'RPOP',k)
       else got = redis.pcall('SET',k,text(s.tag == 3 and s[2] or s[2][1])); next = s[3] end
       if type(got) == 'table' and got.err then r = {tag=4,bytes(got.err)}
       elseif type(got) == 'table' and got.ok then r = {tag=3,bytes(got.ok)}
       elseif got == false then r = {tag=0} else r = {tag=2,bytes(got)} end
     elseif s.tag == 7 or s.tag == 8 or s.tag == 9 or s.tag == 11 or s.tag == 12 or s.tag == 13
-      or s.tag == 15 or s.tag == 16 or s.tag == 17 or s.tag == 18 then
+      or s.tag == 15 or s.tag == 16 or s.tag == 17 or s.tag == 18 or s.tag == 19 or s.tag == 20 or s.tag == 23 then
       local got
       if s.tag == 9 then got = redis.pcall('HSET',k,text(s[2]),text(s[3])); next = s[4]
       elseif s.tag == 11 or s.tag == 12 then
@@ -88,11 +89,14 @@ local function run(s)
         local command = s.tag == 15 and 'SADD' or (s.tag == 16 and 'SREM' or 'SISMEMBER')
         got = redis.pcall(command,k,text(s[2])); next = s[3]
       elseif s.tag == 18 then got = redis.pcall('SCARD',k)
+      elseif s.tag == 19 or s.tag == 20 then
+        got = redis.pcall(s.tag == 19 and 'LPUSH' or 'RPUSH',k,text(s[2])); next = s[3]
+      elseif s.tag == 23 then got = redis.pcall('LLEN',k)
       else got = redis.pcall(s.tag == 7 and 'DEL' or 'EXISTS',k) end
       if type(got) == 'table' and got.err then r = {tag=4,bytes(got.err)}
       elseif type(got) ~= 'number' then
         local what = (s.tag == 7 or s.tag == 8) and 'key count' or (s.tag == 17 and 'membership'
-          or (s.tag >= 15 and 'member count' or 'field count'))
+          or (s.tag >= 19 and 'list length' or (s.tag >= 15 and 'member count' or 'field count')))
         r = {tag=4,bytes('ERR ' .. what .. ' reply is not an integer')}
       else r = {tag=1,{tag=0,bytes(string.format('%d',got))}} end
     else error('LUA-SCRIPT unsupported tag') end

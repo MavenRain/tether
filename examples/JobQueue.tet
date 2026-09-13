@@ -1,0 +1,40 @@
+module JobQueue
+schema jobs : String -> Key List tag b"queue"
+
+def enqueue : Script Reply (tag b"queue") := do {
+  _ <- rpush Reply (tag b"queue") (jobs b"mail") b"welcome:alice";
+  reply <- rpush Reply (tag b"queue") (jobs b"mail") b"welcome:bob";
+  pure Reply (tag b"queue") reply
+}
+
+def dequeue : Script Reply (tag b"queue") := do {
+  reply <- lpop Reply (tag b"queue") (jobs b"mail");
+  pure Reply (tag b"queue") reply
+}
+
+def pending : Script Reply (tag b"queue") := do {
+  reply <- llen Reply (tag b"queue") (jobs b"mail");
+  pure Reply (tag b"queue") reply
+}
+
+def main : Client Reply := do {
+  _ <- inv Reply (tag b"queue") enqueue;
+  first <- inv Reply (tag b"queue") dequeue;
+  _ <- inv Reply (tag b"queue") dequeue;
+  done Reply first
+}
+
+def remaining : Client Reply := do {
+  _ <- inv Reply (tag b"queue") enqueue;
+  _ <- inv Reply (tag b"queue") dequeue;
+  count <- inv Reply (tag b"queue") pending;
+  done Reply count
+}
+
+def empty : Client Reply := do {
+  _ <- inv Reply (tag b"queue") enqueue;
+  _ <- inv Reply (tag b"queue") dequeue;
+  _ <- inv Reply (tag b"queue") dequeue;
+  reply <- inv Reply (tag b"queue") dequeue;
+  done Reply reply
+}

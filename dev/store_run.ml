@@ -29,10 +29,16 @@ let run path entry key initial fuel =
   let* _checked = kernel (K.Check.check_decls ~budget checked.globals [{ K.Check.d_name = "tetherStoreEntryCheck";
     d_kind = K.Check.Definition; d_ty = ty; d_body = Some (K.Term.Global entry) }]) in
   let* rows = kernel (K.Erase.program ~budget checked.globals checked.rows) in
-  let store = match initial with
-    | "@missing" -> Tether_store.Store.empty
-    | "@hash" -> Tether_store.Store.put key (Tether_store.Store.Hash ["f", "v"]) Tether_store.Store.empty
-    | _ -> Tether_store.Store.put key (Tether_store.Store.Str initial) Tether_store.Store.empty in
+  let seeded value = Ok (Tether_store.Store.put key value Tether_store.Store.empty) in
+  let* store = match initial with
+    | "@missing" -> Ok Tether_store.Store.empty
+    | "@hash" -> seeded (Tether_store.Store.Hash ["f", "v"])
+    | "@set" -> seeded (Tether_store.Store.Set ["m"])
+    | "@zset" -> seeded (Tether_store.Store.ZSet ["m", "1"])
+    | "@stream" -> seeded (Tether_store.Store.Stream [])
+    | _ ->
+      if String.starts_with ~prefix:"@" initial then Error (D.Syntax "STORE-SEED")
+      else seeded (Tether_store.Store.Str initial) in
   let* answer, _store = I.run ~budget rows ~entry store |> Result.map_error (fun e -> D.Syntax e) in
   print_endline ("REPLY " ^ encode answer); Ok ()
 let () = (match Array.to_list Sys.argv with

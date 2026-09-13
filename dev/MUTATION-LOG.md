@@ -498,3 +498,52 @@ and the offline suite, passed; the runner left the working sources
 unchanged. The STATIC suite is a kill test, not a control.
 This Set mutation result passed within a full ladder whose aggregate
 exit was 1 solely from the separate M0 timing leg and its cascades.
+
+### M1 List commands 2026-09-12
+
+`dev/lists-mutations.py` rebuilds each mutant in a disposable copy and
+requires its specific failed assertion. Passing unit and offline controls
+run before mutation and after restoring and rebuilding the source.
+
+| Mutation | Change | Required failed assertion |
+| --- | --- | --- |
+| RIGHT-ORIENTATION | Use left-end order for right-end operations. | `FAIL LISTS-UNIT right push order` |
+| RPOP-REMAINDER | Keep the reversed remainder after a right pop. | `FAIL LISTS-UNIT right pop order` |
+| POP-EMPTY-KEY | Retain a key after removing its last element. | `FAIL LISTS-UNIT left deletes last key` |
+| LLEN-COUNT | Return zero for nonempty lists. | `FAIL LISTS-UNIT length includes duplicates` |
+| LLEN-WRITE | Remove LLEN from the read-only allowlist. | `LISTS write classification` |
+| LPOP-READONLY | Admit LPOP to the read-only allowlist. | `LISTS write classification` |
+| LIST-LUA-DIRECTION | Swap LPUSH and RPUSH in emitted Lua. | `TWIN list order mismatch` |
+| LIST-LUA-NIL | Encode a missing pop as empty bulk. | `TWIN reply kind string wanted nil` |
+| LIST-ERR-TAG | Encode a store fault as bulk. | `FAIL LISTS-UNIT lpush wrong type stops client` |
+
+The Hash and Set empty-key mutants now target their calls to the shared
+`save` helper. The Hash mutant preserves missing-key deletion so its
+failure still identifies an existing hash whose final field was removed.
+The Set mutant continues to preserve missing-key behavior through SREM's
+existing absent-member branch. Their kill assertions are unchanged.
+
+The full ladder in
+`/Users/oobi/Documents/gpt18/tether-m1-lists/.kanon-exec/run-quMkCs`
+recorded `PASS LISTS-MUTATIONS killed=9 survived=0 restored=2` and
+`PASS SETS-MUTATIONS killed=8 survived=0 restored=2`. Each List mutant
+compiled and failed its named assertion, and both restored controls
+passed. The Hash mutant's first replacement failed the earlier
+`missing delete` assertion and therefore did not count as killed. Its
+corrected replacement preserves that case without changing the required
+`delete last field` assertion.
+
+The corrected Hash suite completed in
+`/Users/oobi/Documents/gpt18/tether-m1-lists/.kanon-exec/run-ksAlmF`
+with exit 0, no stderr and `PASS HASHES-MUTATIONS killed=6 survived=0
+restored=2`. HDEL-EMPTY-KEY failed `FAIL HASHES-UNIT delete last field`.
+The unit and offline restored controls passed. The earlier full ladder
+retains its exit 1 from the first Hash fixture and its aggregate
+failures; all functional legs and the separate M0 timing leg passed.
+
+The List runner also runs `python3 -P dev/lists-tests.py --static` as a
+control before mutation and requires `PASS LISTS-REFUSALS`. The
+documented static command therefore cannot stop checking refusals and
+the interpreter examples without a red ladder. That control runs before
+mutation, so the runner still reports `restored=2` from the unit and
+offline controls after it restores the source.
