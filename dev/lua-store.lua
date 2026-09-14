@@ -108,7 +108,7 @@ local function list_offset(index, length)
   return n < 0 and length + n or n
 end
 local function list_call(command, key, value, extra)
-  if command == 'LTRIM' and (not canonical(value) or not canonical(extra)) then
+  if (command == 'LTRIM' or command == 'LRANGE') and (not canonical(value) or not canonical(extra)) then
     return {err='ERR value is not an integer or out of range'}
   end
   local stored = values[key]
@@ -128,10 +128,11 @@ local function list_call(command, key, value, extra)
     items[index+1] = extra
     return {ok='OK'}
   end
-  if command == 'LTRIM' then
+  if command == 'LTRIM' or command == 'LRANGE' then
     local first, last = list_offset(value, #items), list_offset(extra, #items)
     local kept = {}
     for i = math.max(0, first), math.min(#items-1, last) do kept[#kept+1] = items[i+1] end
+    if command == 'LRANGE' then return kept end
     values[key] = #kept > 0 and {[list_kind]=kept} or nil
     return {ok='OK'}
   end
@@ -153,7 +154,7 @@ local function call(command, key, amount, value)
     return set_call(command, key, amount)
   end
   if command == 'LPUSH' or command == 'RPUSH' or command == 'LPOP' or command == 'RPOP' or command == 'LLEN'
-    or command == 'LINDEX' or command == 'LSET' or command == 'LTRIM' then
+    or command == 'LINDEX' or command == 'LSET' or command == 'LTRIM' or command == 'LRANGE' then
     return list_call(command, key, amount, value)
   end
   if command == 'EXISTS' then return values[key] ~= nil and 1 or 0 end
@@ -245,7 +246,21 @@ end
 if config.kind and kind_of(output) ~= config.kind then
   error('TWIN reply kind ' .. kind_of(output) .. ' wanted ' .. config.kind)
 end
-if output == false then io.write('\n')
+local function encode(value)
+  local function hex(s) return (s:gsub('.', function(c) return string.format('%02x', string.byte(c)) end)) end
+  if value == false then return 'null' end
+  if type(value) == 'string' then return 'bulk:' .. hex(value) end
+  if type(value) ~= 'table' then error('TWIN unsupported reply') end
+  if value.ok then return 'status:' .. hex(value.ok) end
+  if value.err then return 'error:' .. hex(value.err) end
+  local encoded = {}
+  for _, item in ipairs(value) do encoded[#encoded+1] = encode(item) end
+  return 'array:[' .. table.concat(encoded, ',') .. ']'
+end
+if config.reply then io.write(encode(output), '\n')
+elseif output == false then io.write('\n')
 elseif type(output) == 'string' then io.write(output, '\n')
 elseif type(output) == 'table' and output.ok then io.write(output.ok, '\n')
+elseif type(output) == 'table' then
+  io.write(encode(output), '\n')
 else error('TWIN reply outside spine') end

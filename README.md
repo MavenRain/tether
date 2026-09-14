@@ -4,6 +4,11 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports typed LRANGE on List keys, returning ordered arrays with
+exact signed 64-bit bounds. `./tether exec examples/QueuePreview.tet --host node`
+prints `["welcome:alice","welcome:bob"]`. The `retained` entry keeps that
+preview across a later trim. See `dev/LIST-RANGE.md` for semantics and validation.
+
 M1 now supports typed LINDEX, LSET and LTRIM on List keys, with exact
 signed 64-bit indices. `./tether exec examples/RecentJobs.tet --host node`
 updates a queued job, retains the two newest jobs and prints

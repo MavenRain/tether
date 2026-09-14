@@ -132,7 +132,7 @@ def lua(work, output, initial, expected, after, kind):
              else 'kind="set",members=' + lua_members(after) if isinstance(after, set)
              else 'value=' + ('false' if after is None else literal(after)))
     config = work / 'lists-config.lua'
-    reply_kind = 'nil' if kind == 'null' else 'status' if kind == 'status' else 'string'
+    reply_kind = 'nil' if kind == 'null' else 'status' if kind == 'status' else 'array' if kind == 'array' else 'string'
     config.write_text('return {values={other="kept",[' + literal(KEY) + ']=' + value + '},lists=' + lists +
         ',sets=' + sets + ',invokes={' + ','.join(calls) + '},answer=' + str(plan['answer']) +
         ',kind="' + reply_kind + '",checks={{key=' + literal(KEY) + ',' + check +

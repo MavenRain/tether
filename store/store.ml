@@ -51,15 +51,12 @@ let hincrby key field amount store =
 let members key store = Keys.find_opt key store |> Option.fold ~none:(Ok Members.empty) ~some:(function
   | Set values -> Ok (Members.of_list values) | Str _ | Hash _ | List _ | ZSet _ | Stream _ -> Error Wrong_type)
 let save_set key values store = save key (Set (Members.elements values)) ~empty:(Members.is_empty values) store
-let sismember key member store = let* values = members key store in
-  Ok (if Members.mem member values then "1" else "0")
+let sismember key member store = Result.map (fun values -> if Members.mem member values then "1" else "0") (members key store)
 let scard key store = let* values = members key store in Ok (string_of_int (Members.cardinal values))
-let sadd key member store = let* values = members key store in
-  if Members.mem member values then Ok ("0", store)
-  else Ok ("1", save_set key (Members.add member values) store)
-let srem key member store = let* values = members key store in
-  if Members.mem member values then Ok ("1", save_set key (Members.remove member values) store)
-  else Ok ("0", store)
+let change_set update key member store = let* values = members key store in let next = update member values in
+  if Members.equal values next then Ok ("0", store) else Ok ("1", save_set key next store)
+let sadd = change_set Members.add
+let srem = change_set Members.remove
 let list key store = Keys.find_opt key store |> Option.fold ~none:(Ok []) ~some:(function
   | List values -> Ok values | Str _ | Hash _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
 type side = Left | Right
@@ -80,7 +77,8 @@ let lset key index value store = let* values = list key store in
   if values = [] then Error Missing_key else let* index = integer index in let index = position values index in
   if index < 0L || index >= Int64.of_int (List.length values) then Error Index_range else
   Ok ("OK", put key (List (List.mapi (fun i v -> if Int64.of_int i = index then value else v) values)) store)
-let ltrim key first last store = let* first = integer first in let* last = integer last in
+let lrange key first last store = let* first = integer first in let* last = integer last in
   let* values = list key store in let first, last = position values first, position values last in
-  let values = List.filter_map (fun (i, v) -> if i >= first && i <= last then Some v else None) (indexed values) in
+  Ok (List.filter_map (fun (i, v) -> if i >= first && i <= last then Some v else None) (indexed values))
+let ltrim key first last store = let* values = lrange key first last store in
   Ok ("OK", save key (List values) ~empty:(values = []) store)

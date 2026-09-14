@@ -66,10 +66,11 @@ jobs and demonstrates replacement and trimming. It has no durable
 delivery, acknowledgement or retry protocol.
 
 The constructors append tags 24 through 26 without changing older tags.
-The two pinned preludes total 133 lines. Shared operand and reply
-adapters in the interpreter preserve the distinction between Bytes and
-Signed64 and convert store faults into typed errors. Current trusted
-counts are Lua 318/320 and store 200/200. Every bound is unchanged.
+At the List access close, the two pinned preludes totaled 133 lines.
+Shared operand and reply adapters in the interpreter preserve the
+distinction between Bytes and Signed64 and convert store faults into
+typed errors. Trusted counts at that close were Lua 318/320 and store
+200/200. Every bound is unchanged.
 
 The gate runs the complete List ladder, then requires 83 unit cases,
 19 artifact pairs, 28 typed refusals with no published output, 49 store
@@ -85,5 +86,6 @@ and makes the aggregate fail, so stale executables cannot satisfy it.
 only; `--probe ENTRY` runs a single artifact and its LuaJIT cases for
 mutation controls. A run with a mode flag prints its mode in the
 summary row. The build log records actual gate results and timing separately.
-LRANGE replies, bulk List operations, TTL, ZSet operations and the other
-remaining M1 work are still listed in `SPEC.md`.
+LRANGE replies are now implemented in `dev/LIST-RANGE.md`. Bulk List
+operations, TTL, ZSet operations and the other remaining M1 work are
+still listed in `SPEC.md`.

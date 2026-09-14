@@ -148,7 +148,7 @@ def lua_config(output, target):
         script = scripts[name]
         calls.append('{path=' + literal(output / (script['stem'] + '.lua')) + ',keys={' +
                      ','.join(literal(key) for key in script['keys']) + '}}')
-    target.write_text('return {values={},invokes={' + ','.join(calls) +
+    target.write_text('return {values={},reply=true,invokes={' + ','.join(calls) +
                       '},answer=' + str(plan['answer']) + '}\n')
 
 
@@ -181,14 +181,25 @@ def execute(args, source_root, path):
                 child = subprocess.run(command, capture_output=True, env=env, timeout=30)
         # A host that disagrees by crashing is a disagreement first: compare the
         # output before the exit status, so exit 4 means the outputs agreed.
-        if child.stdout != expected:
+        observed = child.stdout
+        if args.host == 'luajit' and child.returncode == 0:
+            try:
+                observed = reply_text(child.stdout.removesuffix(b'\n'))
+            except ValueError:
+                # An undecodable twin reply is a disagreement, never an
+                # agreement that crashed: report the raw bytes and exit 3.
+                report_bytes(child.stderr)
+                report_bytes(child.stdout)
+                print('TETHER E2E disagreement', file=sys.stderr)
+                return 3
+        if observed != expected:
             report_bytes(child.stderr)
             print('TETHER E2E disagreement', file=sys.stderr)
             return 3
         if child.returncode:
             report_bytes(child.stderr)
             return 4
-        sys.stdout.buffer.write(child.stdout)
+        sys.stdout.buffer.write(observed)
         return 0
 
 

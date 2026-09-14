@@ -214,7 +214,7 @@ def main():
         # Leave six polls for that walk, preserving the printer's own refusal.
         walk = directory / "budget-walk"
         run([sys.executable, "-P", "dev/emit-sh.py", "--root", "examples", "M0Spine.tet",
-             "--entry", "main", "-o", str(walk), "--fuel", "16234"],
+             "--entry", "main", "-o", str(walk), "--fuel", "17186"],
             code=2, diagnostic=b"SH-BUDGET")
         require(not walk.exists(), "refusal wrote output budget-walk")
         before = (outputs["main"] / "prog.sh").read_bytes()

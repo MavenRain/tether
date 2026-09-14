@@ -1679,3 +1679,307 @@ host-node=196/300 host-rest=156/300 bin=393/450 OK`. Stage A reads
 rows read `EXIT 0`, `EXIT-MUT 0` and `EXIT-ALL 0`. The porcelain count
 was 21 rows before the run and 21 rows after the run.
 The kit check verify-final.sh reports bad=0.
+
+### M1 List range slice, 2026-09-13
+
+Implemented from `10cf74d759bbd70e02a445b47b729bfa64977a98` in
+`/Users/oobi/Documents/gpt18/tether-m1-list-range`.
+
+LRANGE appends Script tag 27 and returns the existing typed array of bulk
+replies. The Lua adapter constructs Replies in Redis order, including
+empty arrays and binary elements. The interpreter retains the original
+store and uses the same exact inclusive range selection as LTRIM. The
+read-only classifier admits LRANGE while retaining reachable write arms.
+`QueuePreview.tet` demonstrates array output and retaining a preview
+across a later trim.
+
+Shared Set update handling preserves duplicate-add and missing-remove
+behavior. Its SADD-COUNT mutant now targets the SADD wrapper
+and still requires the duplicate-count assertion to fail. The LuaJIT
+test twin prints bulk arrays as tagged hexadecimal values so binary
+oracles do not depend on host JSON encoding.
+
+The pin and inherited sources are unchanged. The updated Redis prelude
+hash is `629b626f53473611fc0eca1b71b39045a0086f5931725c9b48abd11851613184`.
+Both preludes total 134 lines. Trusted counts are kernel 3997/4000,
+encoder 246/600, Lua 320/320, Bash 227/240, store 200/200,
+Node 196/300, REST 156/300 and driver 404/450. No bound changed.
+
+The Stage D static walk still spends 12 polls. A disposable probe measured
+17180 polls before that walk and 17192 after it. The test now uses fuel
+17186. The boundary check verified CHECK budget at 17179 and 17192,
+SH-BUDGET at 17180, 17186 and 17191, and no output directory at every
+refusal. Captures: `run-ClPDdX` and `run-2VH3q0` in this checkout's
+`.kanon-exec` directory.
+
+Initial focused validation passed the targeted build, 101 unit cases,
+HOUSE and all trusted bounds. Capture `run-pDnhrD` passed 18 artifact
+pairs, 18 typed refusals with no published output, and 40 store plus
+40 LuaJIT comparisons. It ended `PASS LIST-RANGE-TESTS mode=offline`.
+
+Full-ladder attempts did not establish M0-EXIT or PASS M1-LIST-RANGE.
+The first attempt, `run-ZvRsIH`, used an incomplete tool PATH, failed the
+rg audit, and encountered a Redis startup timeout. Its timing sample was
+`FAIL M0-TIME median_ms=511.212 bound_ms=150`. It was cancelled.
+The corrected attempt, `run-XLpNYB`, reached Stage B but its erasure
+subprocess exceeded the existing 30-second timeout. That run was also
+cancelled as the one-minute machine load rose above 160. These are
+incomplete validation attempts; no timeout or timing bound was relaxed.
+
+The affected-suite capture `run-zCSUbk` passed all four unit suites
+(LRANGE 101, List access 83, Lists 55, Sets 56), the 18 artifact pairs,
+18 refusals, 80 interpreter/LuaJIT comparisons and all 82 live Node/Bash
+host runs. It then exposed a LuaJIT CLI array-format mismatch in the
+queue example. The independent twin was returning tagged array text to
+a driver expecting JSON. The driver now explicitly requests tagged
+replies and decodes successful LuaJIT output through its existing reply
+formatter. Five CLI controls cover nil, status, empty and nested arrays,
+and a bulk string beginning with `array:[` with a trailing newline.
+The queue example subsequently passed under LuaJIT in `run-gKb01A`.
+
+An interleaved timing diagnostic, `run-al8n1i`, kept the main repository
+clean at the baseline and measured six emissions from each compiler.
+The unchanged baseline median was 536.833 ms (223.035 to 2394.856 ms);
+the List range median was 430.658 ms (289.218 to 998.778 ms). One-minute
+load was 46.65 before and 45.98 after. Both exceeded 150 ms. The samples
+show that the failure also occurs on the unchanged baseline; they do
+not replace the timing gate or establish a speedup.
+
+The full run caught an overly broad SADD-COUNT mutation anchor: changing
+the shared no-op result also changed SREM, so the unit suite failed at
+`missing remove` before reaching `duplicate count`. The mutant now
+changes only the SADD wrapper and retains the original required
+duplicate-count diagnostic. No production behavior or assertion changed
+for this correction.
+
+Final validation captures:
+
+| Capture | Result |
+| --- | --- |
+| `run-TZI6fw` | Complete `sh dev/m1-list-range.sh` run, exit 1 from M0-TIME and the original SADD mutation anchor. |
+| `run-N7X7nM` | Corrected Set mutation runner, exit 0; killed 8, survived 0, restored 2. SADD-COUNT failed at the required duplicate-count assertion. |
+
+The complete run passed all functional checks, including the Stage F
+driver checks, existing String/Hash/Set/List examples, and the List access
+suite (83 units, 19 artifact pairs, 28 refusals, 49 store and 49 LuaJIT
+comparisons, 98 live host runs and six example runs). All twelve List
+access mutants were killed, with six restored controls.
+
+The new slice printed every required count row:
+
+```text
+PASS LIST-RANGE-UNIT cases=101
+PASS LIST-RANGE-ARTIFACTS pairs=18
+PASS LIST-RANGE-REFUSALS cases=18 atomic_output=18
+PASS LIST-RANGE-ORACLES store=40 luajit=40
+PASS LIST-RANGE-DRIVER replies=8
+PASS LIST-RANGE-E2E cases=42 hosts=86 readonly=82 utf8_refusals=2 errors=2
+PASS LIST-RANGE-EXAMPLE exec=6
+PASS LIST-RANGE-TESTS
+PASS LIST-RANGE-MUTATIONS killed=11 survived=0 restored=5
+PASS LIST-RANGE-COUNTS
+```
+
+HOUSE reported zero findings across 33 files; trusted bounds passed.
+The aggregate remains red because the run recorded M0-TIME at 1610.482 ms
+against 150 ms, and the Set anchor was corrected in the focused rerun.
+Functional and mutation validation is green across these captures.
+M0-EXIT and PASS M1-LIST-RANGE are not claimed.
+
+### Review round 2026-09-13 (M1 List range)
+
+Seven review items and two follow-up items were fixed on the staged
+tree. No bound moved, no frozen record was edited and no timing
+measurement changed.
+
+A-1. `dev/list_range_tests.ml` counted the range block with the literal
+2 instead of the fold result, so half of `cases=101` was synthetic. The
+range cases are one `range_cases` list, the fold returns the counted
+rows, and the total is ranges plus payloads plus errors plus shapes.
+The unit suite still reads `PASS LIST-RANGE-UNIT cases=101`.
+
+B-1. `bin/driver.py` decoded the LuaJIT reply inside the agreement
+branch, so a malformed reply left the process with exit 4, the code that
+means the outputs agreed. The decode has its own guard and reports the
+stderr and stdout bytes with exit 3. The bin group grew to 404 of 450
+lines.
+
+C-1. The wrong-type oracle covered three of the five non-List kinds.
+`dev/list-range-tests.py` adds a live ZADD and XADD block for the ZSet
+and Stream kinds and counts every live row, so the row reads
+`PASS LIST-RANGE-E2E cases=42 hosts=86 readonly=82 utf8_refusals=2
+errors=2`.
+
+C-2. The expose helpers mapped `err` to a bulk string, so no row and no
+mutant defended the error tag of the tag 27 reply path. Both helpers
+keep the `status` kind, the wrong-type rows carry it, and the new
+`LUA-ERR-TAG` mutant of `dev/list-range-mutations.py` is killed by
+`TWIN reply kind string wanted status`. The runner prints
+`PASS LIST-RANGE-MUTATIONS killed=11 survived=0 restored=5`.
+
+B-2. No gate row ran the LuaJIT host on a binary or an empty array
+reply. Three LRANGE rows run through `--host luajit`: an empty range, a
+non-ASCII UTF-8 element and a binary element at exit 4. The row reads
+`PASS LIST-RANGE-DRIVER replies=8`.
+
+C-3. The control sweep matched a loose prefix and reported a constant
+`restored=5`. Each control carries its complete row marker, the restored
+count is measured, and the runner refuses a run whose inventory is not
+eleven kills and five controls.
+
+D-1. `dev/LIST-RANGE.md` named the driver alone for a count of three
+files. That sentence states the bin group and its 404 of 450 lines, and
+the mode sentence of `--probe` matches the printed row.
+
+ND-1-1. `SPEC.md` still stated bin 395/450 after the driver grew. The
+sentence states 404/450, the number the ladder measures.
+
+ND-1-2. The List range section above still held the pre-fix numbers.
+The trusted sentence reads driver 404/450, and the captured block reads
+`PASS LIST-RANGE-DRIVER replies=8`,
+`PASS LIST-RANGE-E2E cases=42 hosts=86 readonly=82 utf8_refusals=2
+errors=2` and
+`PASS LIST-RANGE-MUTATIONS killed=11 survived=0 restored=5`. This block
+is the promised review record, appended once.
+
+Socket-free controls of this round, run from the repository root:
+
+| Control | Result |
+| --- | --- |
+| `dune build bin/tether.exe dev/store_run.exe dev/list_range_tests.exe` | exit 0 |
+| `_build/default/dev/list_range_tests.exe` | `PASS LIST-RANGE-UNIT cases=101` |
+| `python3 -P dev/list-range-tests.py --offline` | pairs 18, refusals 18, oracles store 40 luajit 40, replies 8 |
+| `python3 -P dev/trusted-lines.py` | lua 320/320, sh 227/240, store 200/200, bin 404/450, OK |
+| `sh dev/house.sh` | `PASS HOUSE`, zero findings across 33 files |
+| `./tether check examples/QueuePreview.tet` | `PASS CHECK definitions=56` |
+| `./tether emit examples/QueuePreview.tet` | `PASS EMIT`, prog.wasm and prog.sh |
+
+Gate rows of the last ladder, fix-2 (root mode, 20:01 to 20:14, log
+`gates-fix-2.log`, 487 rows, `sh dev/m1-list-range.sh` then the Stage A
+mutation runner). The one-minute load was 13.50 at the start, 11.54 at
+the timing leg and 10.37 at the last row. No row failed and no mutant
+survived: `PASS M0-TIME median_ms=97.155 bound_ms=150`, `PASS MEASURE`,
+`PASS STAGE-F`, `PASS M1-DO`, `PASS M1-READONLY`, `PASS M1-STRINGS`,
+`PASS M1-HASHES`, `PASS M1-SETS`, `PASS M1-LISTS`,
+`PASS M1-LIST-ACCESS`, `PASS LIST-RANGE-BUILD`,
+`PASS LIST-RANGE-UNIT cases=101`, `PASS LIST-RANGE-UNIT-EXE`,
+`PASS LIST-RANGE-ARTIFACTS pairs=18`,
+`PASS LIST-RANGE-REFUSALS cases=18 atomic_output=18`,
+`PASS LIST-RANGE-ORACLES store=40 luajit=40`,
+`PASS LIST-RANGE-DRIVER replies=8`,
+`PASS LIST-RANGE-E2E cases=42 hosts=86 readonly=82 utf8_refusals=2
+errors=2`, `PASS LIST-RANGE-EXAMPLE exec=6`, `PASS LIST-RANGE-TESTS`,
+`PASS LIST-RANGE-MUTATIONS killed=11 survived=0 restored=5`,
+`PASS LIST-RANGE-COUNTS`, `PASS HOUSE`,
+`TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240
+store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK`,
+`PASS M1-LIST-RANGE`, `EXIT 0`,
+`PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`, `EXIT-MUT 0`
+and `EXIT-ALL 0`. This run is the first complete green run of
+`sh dev/m1-list-range.sh`, so `PASS M1-LIST-RANGE` is claimed now.
+
+Findings of this review round, in summary order. Every item is fixed
+and no item was ruled.
+
+| id | severity | file | fix |
+| --- | --- | --- | --- |
+| A-1 | medium | dev/list_range_tests.ml:63 | The range cases are one `range_cases` list built with `List.concat_map` over the two initial stores, the fold returns the counted rows, and the total is ranges plus payloads plus errors plus shapes; the row still reads `PASS LIST-RANGE-UNIT cases=101`. |
+| B-1 | medium | bin/driver.py:184 | The LuaJIT decode sits in its own guard and reports the stderr and stdout bytes with exit 3, so a malformed reply never leaves exit 4, the code that means the outputs agreed; the bin group grew to 404 of 450 lines. |
+| C-1 | medium | dev/list-range-tests.py:42 | A live ZADD and XADD block adds the ZSet and Stream wrong-type kinds and every live row is counted, so the row reads `PASS LIST-RANGE-E2E cases=42 hosts=86 readonly=82 utf8_refusals=2 errors=2`. |
+| C-2 | medium | dev/list-range-tests.py:54 | Both expose helpers keep the `status` kind for `err`, the three wrong-type rows carry it, and the new `LUA-ERR-TAG` mutant is killed by `TWIN reply kind string wanted status`. |
+| B-2 | low | dev/list-range-tests.py:153 | Three real LRANGE rows run through `--host luajit`, an empty range, a non-ASCII UTF-8 element and a binary element at exit 4, so the row reads `PASS LIST-RANGE-DRIVER replies=8`. |
+| C-3 | low | dev/list-range-mutations.py:58 | Each control is paired with its complete row marker, the restored count is measured, and the runner refuses a run whose inventory is not eleven kills and five controls. |
+| D-1 | low | dev/LIST-RANGE.md:63 | The sentence names the bin group and its 404 of 450 lines instead of the driver alone, and the gate paragraph and the `--probe` mode sentence match the printed rows. |
+| ND-1-1 | medium | SPEC.md:114 | The remaining-work sentence states bin 404/450, the number the ladder measures after the round one driver fix. |
+| ND-1-2 | medium | dev/M1-BUILD-LOG.md:1706 | The staged List range section states driver 404/450 and its captured block holds `PASS LIST-RANGE-DRIVER replies=8`, the `cases=42 hosts=86 readonly=82` row and `PASS LIST-RANGE-MUTATIONS killed=11 survived=0 restored=5`. |
+
+Refuted: 0 findings.
+
+Merged and dropped: 3 items, all verified true but ranked out at the
+seven item cap. C-4, `dev/list-range-tests.py:204` asserts the host
+triple while line 205 prints a literal `errors=2`; the raw loop has
+exactly two tuples, so the number is correct today and no behaviour is
+wrong, and its fix falls out of the C-1 fix hint. C-5,
+`dev/m1-list-range.sh:28-37` chains the nine `row()` checks with `&&`
+and `row()` returns 1 after one MISSING ROW line, so a run with several
+broken counts prints only the first diagnostic; the leg still fails and
+the ladder still reports FAIL LIST-RANGE-COUNTS, so no defect can
+escape the gate. C-6, the mode sentence of `dev/LIST-RANGE.md:78` is
+accurate for `--offline`, `--static` and `--artifacts` and only its
+first half fails for `--probe`, which prints
+`PASS LIST-RANGE-PROBE entry=NAME cases=N`; it is the weaker of the two
+prose defects and the reword was folded into the D-1 edit.
+
+Gate rows of the last gates ladder, tag gates-2 (root mode, 20:16:39 to
+20:34:37, log `gates-gates-2.log`, 487 rows, `sh dev/m1-list-range.sh`
+then the Stage A mutation runner). The one-minute load was 9.61 at the
+start, 8.51 at the timing leg, 47.01 at the last ladder row and 33.62
+at the end. The carry row is `CARRY files=36 diff=0 vendor=32 copies=4`
+with `PIN 2c2e6e6 unlisted=0`, and the porcelain held 24 rows before
+and after the run. No row failed and no mutant survived.
+
+| leg | row |
+| --- | --- |
+| M0-TIME | `PASS M0-TIME median_ms=87.852 bound_ms=150` |
+| MEASURE | `PASS MEASURE` |
+| STAGE-F | `PASS STAGE-F` |
+| M1-DO | `PASS M1-DO` |
+| M1-READONLY | `PASS M1-READONLY` |
+| M1-STRINGS | `PASS M1-STRINGS` |
+| M1-HASHES | `PASS M1-HASHES` |
+| M1-SETS | `PASS M1-SETS` |
+| M1-LISTS | `PASS M1-LISTS` |
+| M1-LIST-ACCESS | `PASS M1-LIST-ACCESS` |
+| LIST-RANGE-BUILD | `PASS LIST-RANGE-BUILD` |
+| LIST-RANGE-UNIT-EXE | `PASS LIST-RANGE-UNIT cases=101` and `PASS LIST-RANGE-UNIT-EXE` |
+| LIST-RANGE-TESTS-RUN | `PASS LIST-RANGE-ARTIFACTS pairs=18`, `PASS LIST-RANGE-REFUSALS cases=18 atomic_output=18`, `PASS LIST-RANGE-ORACLES store=40 luajit=40`, `PASS LIST-RANGE-DRIVER replies=8`, `PASS LIST-RANGE-E2E cases=42 hosts=86 readonly=82 utf8_refusals=2 errors=2`, `PASS LIST-RANGE-EXAMPLE exec=6`, `PASS LIST-RANGE-TESTS` and `PASS LIST-RANGE-TESTS-RUN` |
+| LIST-RANGE-MUTATIONS-RUN | `PASS LIST-RANGE-MUTATIONS killed=11 survived=0 restored=5` and `PASS LIST-RANGE-MUTATIONS-RUN` |
+| LIST-RANGE-COUNTS | `PASS LIST-RANGE-COUNTS` |
+| HOUSE | `PASS HOUSE` |
+| TRUSTED-LINES | `TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240 store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK` and `PASS TRUSTED-LINES` |
+| M1-LIST-RANGE | `PASS M1-LIST-RANGE` and `EXIT 0` |
+| EXIT-MUT | `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1` and `EXIT-MUT 0` |
+| EXIT-ALL | `EXIT-ALL 0` |
+
+The nested mutation summaries of the same log are
+`PASS STAGE-B-MUTATIONS killed=5 restored=1`,
+`PASS STAGE-C-MUTATIONS killed=3 restored=1`,
+`PASS STAGE-D-MUTATIONS killed=5 restored=1`,
+`PASS STAGE-E-MUTATIONS killed=15 restored=1`,
+`PASS STAGE-F-MUTATIONS killed=3 survived=0 restored=2`,
+`PASS DO-MUTATIONS killed=4 survived=0 restored=1`,
+`PASS RO-MUTATIONS killed=4 survived=0 restored=2`,
+`PASS STRINGS-MUTATIONS killed=4 survived=0 restored=2`,
+`PASS HASHES-MUTATIONS killed=6 survived=0 restored=2`,
+`PASS SETS-MUTATIONS killed=8 survived=0 restored=2`,
+`PASS LISTS-MUTATIONS killed=9 survived=0 restored=2`,
+`PASS LIST-ACCESS-MUTATIONS killed=12 survived=0 restored=6`,
+`PASS LIST-RANGE-MUTATIONS killed=11 survived=0 restored=5` and
+`PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`.
+
+The slice closes with the List range mutation row at `killed=11` and
+the trusted line triple at `lua=320/320 sh=227/240 store=200/200`.
+
+Three close ladders ran on the staged tree after the review block was
+written. No executable path changed after the gates-2 ladder: only
+this document changed. The ladder with the tag close started at
+21:06:29 at a one-minute load of 29.83. Its timing leg ran at 21:36 at
+a one-minute load of 34.60 and a five-minute load of 45.86 and
+printed `FAIL M0-TIME median_ms=198.779 bound_ms=150`. The ladder
+with the tag close-2 started at 22:06:48 at a one-minute load of
+25.91. Its timing leg ran at 22:16 at a one-minute load of 26.29 and
+a five-minute load of 35.31 and printed `FAIL M0-TIME
+median_ms=206.679 bound_ms=150`. In both ladders the 19 FAIL rows are
+the timing cascade that starts at that row, every functional row is
+PASS, and the mutation row is `PASS STAGE-A-MUTATIONS killed=37
+survived=0 restored=1`. The ladder with the tag close-3 started at
+22:32:48 at a one-minute load of 10.64 and a five-minute load of
+15.86. Its timing leg ran at 22:36 at a one-minute load of 9.32 and
+printed `PASS M0-TIME median_ms=122.639 bound_ms=150`. The log
+gates-close-3.log has 487 rows and 0 FAIL rows, and its last rows are
+`EXIT 0`, `EXIT-MUT 0` and `EXIT-ALL 0`. The porcelain count is 24
+before and after each ladder. The bound of 150 ms did not move.
+
+Review pass 1 (2026-09-13) fixed 9 findings.
+
+Fix rounds: 2.

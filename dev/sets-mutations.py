@@ -12,8 +12,8 @@ OFFLINE = [sys.executable, '-P', 'dev/sets-tests.py', '--offline']
 STATIC = [sys.executable, '-P', 'dev/sets-tests.py', '--static']
 BUILD = ['dune', 'build', 'bin/tether.exe', 'dev/store_run.exe', 'dev/sets_tests.exe']
 MUTANTS = [
-    ('SADD-COUNT', 'store/store.ml', b'if Members.mem member values then Ok ("0", store)',
-     b'if Members.mem member values then Ok ("1", store)',
+    ('SADD-COUNT', 'store/store.ml', b'let sadd = change_set Members.add',
+     b'let sadd key member store = Result.map (fun (_count, after) -> "1", after) (change_set Members.add key member store)',
      UNIT, b'FAIL SETS-UNIT duplicate count'),
     ('SREM-EMPTY-KEY', 'store/store.ml', b'~empty:(Members.is_empty values)',
      b'~empty:false',

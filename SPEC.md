@@ -1,6 +1,6 @@
 # tether specification
 
-M1 List access slice, 2026-09-13. The driver emits the executable Wasm
+M1 List range slice, 2026-09-13. The driver emits the executable Wasm
 Client and Bash pair. The foundation, counter surface, printers, store and
 local hosts are implemented. See `dev/STAGE-B.md` through `dev/STAGE-F.md`
 for syntax and limits. The latest build-log entry records whether the
@@ -21,6 +21,8 @@ List operations now include typed LPUSH, RPUSH, LPOP, RPOP and LLEN.
 See `dev/LISTS.md` for ordering, reply limits and the FIFO job queue.
 LINDEX, LSET and LTRIM add indexed reads, replacement and range trimming.
 See `dev/LIST-ACCESS.md` for signed indices and error precedence.
+LRANGE returns ordered bulk arrays without changing the List. See
+`dev/LIST-RANGE.md` for range semantics and array reply limits.
 
 ## Foundation (inherited)
 
@@ -107,11 +109,11 @@ global metatable.
 ## Bounds and milestone limits
 
 Inherited trusted lines: kernel 3997/4000 and encoder 246/600. The current
-implementation measures lua 318/320, including flags, SHA-1 and byte lowering; sh 227/240,
+implementation measures lua 320/320, including flags, SHA-1 and byte lowering; sh 227/240,
 including the shared Client plan and reactor printer; store 200/200;
-host-node 196/300; host-rest 156/300; and bin 393/450, covering the command
+host-node 196/300; host-rest 156/300; and bin 404/450, covering the command
 host, the driver and the local process owner. Both trusted preludes are pinned by
-`dev/PRELUDES.sha256`; their 133 lines are reported separately without
+`dev/PRELUDES.sha256`; their 134 lines are reported separately without
 adding or changing a ruled bound.
 The store and printers live outside `lib`.
 OCaml uses explicit Result/Option errors, exhaustive sum matches and total
@@ -129,9 +131,9 @@ compile-time median exceeds its bound, even when all functional gates pass.
 
 M1 do-notation, EVALSHA_RO dispatch, basic String/key commands and
 single-field Hash commands, basic Set and List commands, indexed List
-access and trimming, and a FIFO job queue example are implemented.
-TTL, bulk Hash operations, List range replies
-and bulk operations, ZSet commands, Set enumeration and
+access, trimming and range replies, and FIFO job queue and preview examples
+are implemented. TTL, bulk Hash operations, List bulk operations,
+ZSet commands, Set enumeration and
 bulk operations, the rate limiter,
 leaderboard and session-store
 examples, the counted Lean 4 exporter, and the M1 ratio and traversal gates remain

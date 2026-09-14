@@ -99,6 +99,8 @@ let run ~budget rows ~entry store =
           | 24, [Signed i] -> bulk (keep (Store.lindex key i store))
           | 25, [Signed i; Octets v] -> status (Store.lset key i v store)
           | 26, [Signed i; Signed j] -> status (Store.ltrim key i j store)
+          | 27, [Signed i; Signed j] -> finish (fun ss -> data "Reply" 5 [List.fold_right
+              (fun s rs -> data "Replies" 1 [scalar 2 s; rs]) ss (data "Replies" 0 [])]) (keep (Store.lrange key i j store))
           | _, _ -> Error "STORE-SCRIPT-COMMAND" in
         let* next = apply k [answer] in script store next
     | Data _ | Fields _ | Literal _ | Closure _ | Erased -> Error "STORE-SCRIPT" in

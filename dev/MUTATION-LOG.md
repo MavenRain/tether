@@ -579,3 +579,40 @@ LUA-ERR-TAG row of the table above, so the runner prints
 `PASS LIST-ACCESS-MUTATIONS killed=12 survived=0 restored=6`, the row of
 the review ladder. The complete ladder result is recorded in
 `dev/M1-BUILD-LOG.md`.
+
+### M1 List range controls, 2026-09-13
+
+`dev/list-range-mutations.py` compiles each mutation in a disposable copy
+and requires the intended assertion to fail. It runs five positive
+controls before and after mutation: the unit suite and the all, branch,
+tail and head probes. Each control requires its own complete row, so a
+control that stops checking what it names cannot pass. Build failures do
+not count as killed mutants.
+
+| Mutation | Change | Required failure |
+| --- | --- | --- |
+| RANGE-END | Exclude the stop element | `FAIL LIST-RANGE-UNIT range all` |
+| ARRAY-ORDER | Reverse interpreter array elements | `FAIL LIST-RANGE-UNIT range all` |
+| ARRAY-BULK | Encode interpreter elements as status | `FAIL LIST-RANGE-UNIT range all` |
+| RANGE-STATE | Drop the store after a read | `FAIL LIST-RANGE-UNIT range all` |
+| LRANGE-WRITE | Remove LRANGE from the read-only allowlist | `LIST-RANGE write classification` |
+| BRANCH-READONLY | Admit LTRIM in an untaken write arm | `LIST-RANGE write classification` |
+| LUA-ARRAY-ORDER | Reverse Lua array elements | `LISTS LuaJIT reply` |
+| LUA-RANGE-STOP | Use the start index for the stop | `LISTS LuaJIT reply` |
+| LUA-ARRAY-TAG | Retag the array as nil | `TWIN reply kind nil wanted array` |
+| LUA-ARRAY-ELEMENT | Retag a selected bulk element as status | `TWIN reply kind status wanted string` |
+| LUA-ERR-TAG | Retag the error reply of the List arm as a bulk string | `TWIN reply kind string wanted status` |
+
+The existing SADD-COUNT anchor now selects the SADD wrapper only;
+its required failure remains `FAIL SETS-UNIT duplicate count`.
+Execution results are recorded in the List range entry of `dev/M1-BUILD-LOG.md`.
+
+Capture `run-TZI6fw` in the List range checkout printed
+`PASS LIST-RANGE-MUTATIONS killed=10 survived=0 restored=5`, before the
+review round. The review round of 2026-09-13 adds the LUA-ERR-TAG row of
+the table above, so the runner prints
+`PASS LIST-RANGE-MUTATIONS killed=11 survived=0 restored=5`, the row of
+the review ladder.
+The narrowed Set control was rerun in `run-N7X7nM`, which printed
+`KILLED SADD-COUNT by FAIL SETS-UNIT duplicate count` and
+`PASS SETS-MUTATIONS killed=8 survived=0 restored=2`, exit 0.

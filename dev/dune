@@ -62,3 +62,8 @@
  (name list_access_tests)
  (modules list_access_tests)
  (libraries tether_store kanon_kernel))
+
+(executable
+ (name list_range_tests)
+ (modules list_range_tests)
+ (libraries tether_store kanon_kernel))

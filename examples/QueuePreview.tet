@@ -1,0 +1,33 @@
+module QueuePreview
+
+schema jobs : String -> Key List tag b"queue"
+
+def seed : Script Reply (tag b"queue") := do {
+  _ <- rpush Reply (tag b"queue") (jobs b"mail") b"welcome:alice";
+  _ <- rpush Reply (tag b"queue") (jobs b"mail") b"welcome:bob";
+  _ <- rpush Reply (tag b"queue") (jobs b"mail") b"retry:carol";
+  pure Reply (tag b"queue") nil
+}
+
+def preview : Script Reply (tag b"queue") := do {
+  r <- lrange Reply (tag b"queue") (jobs b"mail") (int64 b"0") (int64 b"1");
+  pure Reply (tag b"queue") r
+}
+
+def trim : Script Reply (tag b"queue") := do {
+  r <- ltrim Reply (tag b"queue") (jobs b"mail") (int64 b"-1") (int64 b"-1");
+  pure Reply (tag b"queue") r
+}
+
+def main : Client Reply := do {
+  _ <- inv Reply (tag b"queue") seed;
+  r <- inv Reply (tag b"queue") preview;
+  done Reply r
+}
+
+def retained : Client Reply := do {
+  _ <- inv Reply (tag b"queue") seed;
+  r <- inv Reply (tag b"queue") preview;
+  _ <- inv Reply (tag b"queue") trim;
+  done Reply r
+}
