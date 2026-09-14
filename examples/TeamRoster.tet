@@ -1,0 +1,33 @@
+module TeamRoster
+
+schema members : String -> Key Set tag b"team"
+
+def enroll : Script Reply (tag b"team") := do {
+  _ <- sadd Reply (tag b"team") (members b"red") b"bob";
+  _ <- sadd Reply (tag b"team") (members b"red") b"alice";
+  _ <- sadd Reply (tag b"team") (members b"red") b"alice";
+  pure Reply (tag b"team") nil
+}
+
+def roster : Script Reply (tag b"team") := do {
+  r <- smembers Reply (tag b"team") (members b"red");
+  pure Reply (tag b"team") r
+}
+
+def leave : Script Reply (tag b"team") := do {
+  r <- srem Reply (tag b"team") (members b"red") b"alice";
+  pure Reply (tag b"team") r
+}
+
+def main : Client Reply := do {
+  _ <- inv Reply (tag b"team") enroll;
+  r <- inv Reply (tag b"team") roster;
+  done Reply r
+}
+
+def retained : Client Reply := do {
+  _ <- inv Reply (tag b"team") enroll;
+  r <- inv Reply (tag b"team") roster;
+  _ <- inv Reply (tag b"team") leave;
+  done Reply r
+}

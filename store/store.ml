@@ -4,8 +4,7 @@ type data = Str of string | Hash of (string * string) list | List of string list
   | Set of string list | ZSet of (string * string) list | Stream of (string * string) list
 type t = data Keys.t
 type fault = Wrong_type | Not_integer | Hash_not_integer | Overflow | Missing_key | Index_range
-let empty = Keys.empty
-let put = Keys.add
+let empty = Keys.empty let put = Keys.add
 let save key value ~empty store = if empty then Keys.remove key store else put key value store
 let message = function
   | Wrong_type -> "WRONGTYPE Operation against a key holding the wrong kind of value"
@@ -30,8 +29,7 @@ let incrby key amount store =
   let* amount = integer amount in let* value = get key store in
   let* value = integer (Option.value ~default:"0" value) in
   let* text = add value amount in Ok (text, put key (Str text) store)
-let incr key store = incrby key "1" store
-let decr key store = incrby key "-1" store
+let incr key store = incrby key "1" store let decr key store = incrby key "-1" store
 let hash key store = Keys.find_opt key store |> Option.fold ~none:(Ok Keys.empty) ~some:(function
   | Hash fields -> Ok (Keys.of_seq (List.to_seq fields)) | Str _ | List _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
 let save_hash key fields store = save key (Hash (Keys.bindings fields)) ~empty:(Keys.is_empty fields) store
@@ -53,10 +51,10 @@ let members key store = Keys.find_opt key store |> Option.fold ~none:(Ok Members
 let save_set key values store = save key (Set (Members.elements values)) ~empty:(Members.is_empty values) store
 let sismember key member store = Result.map (fun values -> if Members.mem member values then "1" else "0") (members key store)
 let scard key store = let* values = members key store in Ok (string_of_int (Members.cardinal values))
+let smembers key store = Result.map Members.elements (members key store)
 let change_set update key member store = let* values = members key store in let next = update member values in
   if Members.equal values next then Ok ("0", store) else Ok ("1", save_set key next store)
-let sadd = change_set Members.add
-let srem = change_set Members.remove
+let sadd = change_set Members.add let srem = change_set Members.remove
 let list key store = Keys.find_opt key store |> Option.fold ~none:(Ok []) ~some:(function
   | List values -> Ok values | Str _ | Hash _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
 type side = Left | Right

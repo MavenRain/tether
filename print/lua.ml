@@ -4,7 +4,6 @@ let all xs = List.fold_right (fun x acc -> let* x = x in let* xs = acc in Ok (x 
 let quote_bytes ns = "\"" ^ String.concat "" (List.map (Printf.sprintf "\\%03d") ns) ^ "\""
 let quote s = quote_bytes (List.of_seq (Seq.map Char.code (String.to_seq s)))
 type artifact = { body : string; sha1 : string; no_writes : bool; keys : int list list }
-
 let rec literal_bytes = function
   | E.KTag (E.Tid "mu<Bytes>", 0, []) -> Some []
   | E.KTag (E.Tid "mu<Bytes>", 1, [E.KLit (Kanon_kernel.Literal.LInt n); tail]) ->
@@ -13,7 +12,6 @@ let rec literal_bytes = function
   | E.KVar _ | E.KLit _ | E.KGlobal _ | E.KErased | E.KLet _ | E.KClos _
   | E.KApp _ | E.KTail _ | E.KStruct _ | E.KProj _ | E.KTag _ | E.KCase _
   | E.KDelay _ | E.KForce _ -> None
-
 let runtime = {|local function bytes(s)
   local b = {tag=0}
   for i = #s, 1, -1 do b = {tag=1, string.byte(s,i), b} end
@@ -42,8 +40,7 @@ local function app(f,args)
 end
 local function reply(r)
   if r.tag == 0 then return false end
-  if r.tag == 1 then return text(r[1][1]) end
-  if r.tag == 2 then return text(r[1]) end
+  if r.tag == 1 or r.tag == 2 then return text(r.tag == 1 and r[1][1] or r[1]) end
   if r.tag == 3 then return {ok=text(r[1])} end
   if r.tag == 4 then return {err=text(r[1])} end
   if r.tag == 5 then
@@ -52,6 +49,12 @@ local function reply(r)
     return out
   end
   error('LUA-REPLY unsupported tag')
+end
+local function byte_less(a,b)
+  for i = 1, math.min(#a,#b) do
+    local x,y = string.byte(a,i),string.byte(b,i); if x ~= y then return x < y end
+  end
+  return #a < #b
 end
 local function run(s)
   while s.tag ~= 0 do
@@ -69,10 +72,11 @@ local function run(s)
         elseif read == false then r = {tag=0}
         else r = {tag=1,{tag=0,bytes(read)}} end
       end
-    elseif s.tag == 2 or s.tag == 3 or s.tag == 4 or s.tag == 10 or s.tag == 21 or s.tag == 22 or (s.tag >= 24 and s.tag <= 27) then
+    elseif s.tag == 2 or s.tag == 3 or s.tag == 4 or s.tag == 10 or s.tag == 21 or s.tag == 22 or (s.tag >= 24 and s.tag <= 28) then
       local got
       if s.tag == 10 then got = redis.pcall('HGET',k,text(s[2])); next = s[3]
       elseif s.tag == 2 then got = redis.pcall('GET',k)
+      elseif s.tag == 28 then got = redis.pcall('SMEMBERS',k)
       elseif s.tag == 21 or s.tag == 22 then got = redis.pcall(s.tag == 21 and 'LPOP' or 'RPOP',k)
       elseif s.tag == 24 then got = redis.pcall('LINDEX',k,text(s[2][1])); next = s[3]
       elseif s.tag == 25 then got = redis.pcall('LSET',k,text(s[2][1]),text(s[3])); next = s[4]
@@ -80,11 +84,11 @@ local function run(s)
       else got = redis.pcall('SET',k,text(s.tag == 3 and s[2] or s[2][1])); next = s[3] end
       if type(got) == 'table' and got.err then r = {tag=4,bytes(got.err)}
       elseif type(got) == 'table' and got.ok then r = {tag=3,bytes(got.ok)}
-      elseif s.tag == 27 then
+      elseif s.tag == 27 or s.tag == 28 then
+        if s.tag == 28 then table.sort(got,byte_less) end
         local rs = {tag=0}; for i = #got, 1, -1 do rs = {tag=1,{tag=2,bytes(got[i])},rs} end; r = {tag=5,rs}
       elseif got == false then r = {tag=0} else r = {tag=2,bytes(got)} end
-    elseif s.tag == 7 or s.tag == 8 or s.tag == 9 or s.tag == 11 or s.tag == 12 or s.tag == 13
-      or s.tag == 15 or s.tag == 16 or s.tag == 17 or s.tag == 18 or s.tag == 19 or s.tag == 20 or s.tag == 23 then
+    elseif (s.tag >= 7 and s.tag <= 13) or (s.tag >= 15 and s.tag <= 20) or s.tag == 23 then
       local got
       if s.tag == 9 then got = redis.pcall('HSET',k,text(s[2]),text(s[3])); next = s[4]
       elseif s.tag == 11 or s.tag == 12 then
@@ -109,7 +113,6 @@ local function run(s)
   end
   return reply(s[1])
 end|}
-
 let emit rows ~entry =
   let* functions = Flags.reachable rows entry in
   let lookup name = List.assoc_opt name functions |> Option.to_result ~none:("LUA-GLOBAL " ^ name) in

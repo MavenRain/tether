@@ -78,6 +78,8 @@ let run ~budget rows ~entry store =
         let scalar tag s = data "Reply" tag [bytes s] in
         let integer = finish (fun s -> data "Reply" 1 [data "Signed64" 0 [bytes s]]) in
         let bulk = finish (Option.fold ~none:(data "Reply" 0 []) ~some:(scalar 2)) in
+        let array = finish (fun ss -> data "Reply" 5 [List.fold_right
+          (fun s rs -> data "Replies" 1 [scalar 2 s; rs]) ss (data "Replies" 0 [])]) in
         let status = finish (scalar 3) in let keep r = Result.map (fun s -> s, store) r in
         let* answer, store = match tag, args with
           | (1 | 6), [] -> integer (Store.incrby key (if tag = 1 then "1" else "-1") store)
@@ -99,8 +101,8 @@ let run ~budget rows ~entry store =
           | 24, [Signed i] -> bulk (keep (Store.lindex key i store))
           | 25, [Signed i; Octets v] -> status (Store.lset key i v store)
           | 26, [Signed i; Signed j] -> status (Store.ltrim key i j store)
-          | 27, [Signed i; Signed j] -> finish (fun ss -> data "Reply" 5 [List.fold_right
-              (fun s rs -> data "Replies" 1 [scalar 2 s; rs]) ss (data "Replies" 0 [])]) (keep (Store.lrange key i j store))
+          | 27, [Signed i; Signed j] -> array (keep (Store.lrange key i j store))
+          | 28, [] -> array (keep (Store.smembers key store))
           | _, _ -> Error "STORE-SCRIPT-COMMAND" in
         let* next = apply k [answer] in script store next
     | Data _ | Fields _ | Literal _ | Closure _ | Erased -> Error "STORE-SCRIPT" in

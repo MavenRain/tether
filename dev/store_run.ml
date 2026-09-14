@@ -33,6 +33,7 @@ let run path entry key initial fuel =
   let* store = match initial with
     | "@missing" -> Ok Tether_store.Store.empty
     | "@hash" -> seeded (Tether_store.Store.Hash ["f", "v"])
+    | "@list" -> seeded (Tether_store.Store.List ["m"])
     | "@set" -> seeded (Tether_store.Store.Set ["m"])
     | "@zset" -> seeded (Tether_store.Store.ZSet ["m", "1"])
     | "@stream" -> seeded (Tether_store.Store.Stream [])

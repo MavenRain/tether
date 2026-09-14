@@ -4,6 +4,10 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports typed SMEMBERS on Set keys, with members sorted by bytes.
+`./tether exec examples/TeamRoster.tet --host node` prints
+`["alice","bob"]`. See `dev/SET-MEMBERS.md` for ordering and validation.
+
 M1 now supports typed LRANGE on List keys, returning ordered arrays with
 exact signed 64-bit bounds. `./tether exec examples/QueuePreview.tet --host node`
 prints `["welcome:alice","welcome:bob"]`. The `retained` entry keeps that

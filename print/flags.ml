@@ -1,6 +1,5 @@
 module E = Kanon_kernel.Eterm
 let ( let* ) = Result.bind
-
 (* This walk includes every case arm and closure capture. *)
 let children = function
   | E.KVar _ | E.KLit _ | E.KGlobal _ | E.KErased -> []
@@ -10,12 +9,10 @@ let children = function
   | E.KApp (f, xs) | E.KTail (f, xs) -> f :: xs
   | E.KProj (_, _, x) | E.KForce x -> [x]
   | E.KCase (_, x, bs) -> x :: List.map (fun (b : E.kbranch) -> b.body) bs
-
 let reference = function
   | E.KGlobal name | E.KClos (E.Fid name, _, _) | E.KDelay (E.Fid name, _) -> [name]
   | E.KVar _ | E.KLit _ | E.KErased | E.KLet _ | E.KApp _ | E.KTail _
   | E.KStruct _ | E.KProj _ | E.KTag _ | E.KCase _ | E.KForce _ -> []
-
 let rec terms t = t :: List.concat_map terms (children t)
 let functions rows = List.concat_map (fun (_name, entry) -> match entry with
   | Kanon_kernel.Erase.Dropped | Kanon_kernel.Erase.Postulate _ -> []
@@ -38,7 +35,7 @@ let reachable rows entry =
 let no_writes functions =
   not (List.exists (fun (_, (_, _, body)) -> List.exists (function
     | E.KTag (E.Tid "mu<Script>", tag, _) -> tag <> 0 && tag <> 2 && tag <> 8
-        && tag <> 10 && tag <> 12 && tag <> 13 && tag <> 17 && tag <> 18 && tag <> 23 && tag <> 24 && tag <> 27
+        && tag <> 10 && tag <> 12 && tag <> 13 && tag <> 17 && tag <> 18 && tag <> 23 && tag <> 24 && tag <> 27 && tag <> 28
     | E.KVar _ | E.KLit _ | E.KGlobal _ | E.KErased | E.KLet _ | E.KClos _
     | E.KApp _ | E.KTail _ | E.KStruct _ | E.KProj _ | E.KTag _ | E.KCase _
     | E.KDelay _ | E.KForce _ -> false) (terms body)) functions)

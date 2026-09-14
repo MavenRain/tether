@@ -50,9 +50,10 @@ includes writes in reachable case arms even when that arm is not taken.
 Scripts can inspect an `err`; returning it from an invocation stops the
 Client. Schema checking refuses Set commands on other key types or tags.
 
-This slice supports one member per SADD and SREM. Enumeration, set
-algebra, random members, multi-member forms and TTL remain outside this
-slice. The remaining M1 applications and performance gates are listed
+This slice supports one member per SADD and SREM. Set enumeration is
+described in `dev/SET-MEMBERS.md`. Set algebra, random members,
+multi-member forms and TTL remain outside this slice.
+The remaining M1 applications and performance gates are listed
 in `SPEC.md`; this slice does not declare M1 complete.
 
 The Set slice appended four constructors, retaining existing tags.

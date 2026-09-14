@@ -1983,3 +1983,243 @@ before and after each ladder. The bound of 150 ms did not move.
 Review pass 1 (2026-09-13) fixed 9 findings.
 
 Fix rounds: 2.
+
+### 2026-09-14: M1 Set enumeration
+
+Added typed `smembers` on `Key Set g`, returning an array of bulk replies
+in unsigned byte order. Script command tag 28 follows LRANGE. The Lua
+adapter sorts Redis's unordered result before constructing the existing
+Reply and Replies values; the independent store enumerates its ordered
+member set. The LuaJIT twin returns an independent member collection.
+Read-only dispatch includes SMEMBERS and still detects reachable writes
+in case arms. `TeamRoster.tet` demonstrates duplicate enrollment and a
+captured roster retained across a later removal.
+
+The interpreter shares its array adapter with LRANGE. Related store
+aliases and printer layout keep Lua at 320/320 lines and the store at
+200/200. The prelude manifest records 135 lines across its two files.
+The LRANGE error-tag mutation anchor follows the shared array branch;
+its required failure is unchanged. The test-only store driver can seed
+a List to exercise the new command's wrong-type path.
+
+Adding the constructor moves the front-end fuel boundary. A disposable
+instrumented emitter measured 18080 polls before the unchanged 12-poll
+static walk, so the Stage D test now uses 18086. Boundary probes at
+18079 and 18092 produce `CHECK budget`; 18080, 18086 and 18091 produce
+`SH-BUDGET`, all without publishing output. Disabling the printer guard
+changes the 18086 diagnostic to `CHECK budget`, so the corrected assertion
+still detects that defect. Capture `run-gJWxb9` under the gpt18 workspace
+records the measurement and negative control. The earlier ladder
+`run-JLLQPO` encountered the old 17186 calibration and was stopped before
+the complete ladder was restarted with the correction.
+
+Validation used the zxcaml-p1 OCaml switch and temporary localhost Redis
+and REST servers in `/Users/oobi/Documents/gpt18/tether-m1-set-members`.
+The complete `sh dev/m1-set-members.sh` ladder is captured in
+`.kanon-exec/run-cUQ1BJ`, exit 1. It includes all preceding M0 and
+M1 ladders. Its M0 timing median is 291.731 ms against the existing
+strict 150 ms bound. The foundation carry is unchanged at pin 2c2e6e6.
+All functional and mutation legs passed. The 21 FAIL rows comprise
+M0-TIME, MEASURE and their parent aggregate summaries; stderr is empty.
+The timing leg ran at a one-minute load of 35.17.
+
+A separate five-sample timing run after the ladder, captured in
+`.kanon-exec/run-RM56yS`, passed at 139.460 ms (minimum 114.879 ms,
+maximum 246.768 ms) at a one-minute load of 21.85, exit 0. The earlier
+`run-JLLQPO` sample was 121.720 ms. These samples show timing variability;
+the complete ladder's exit remains 1 and is not reported as a green run.
+
+```text
+PASS SET-MEMBERS-UNIT cases=14
+PASS SET-MEMBERS-ARTIFACTS pairs=6
+PASS SET-MEMBERS-REFUSALS cases=6 atomic_output=6
+PASS SET-MEMBERS-ORACLES store=16 luajit=16
+PASS SET-MEMBERS-E2E cases=18 hosts=38 readonly=32 utf8_refusals=2 errors=2
+PASS SET-MEMBERS-EXAMPLE exec=6
+PASS SET-MEMBERS-TESTS
+PASS SET-MEMBERS-MUTATIONS killed=9 survived=0 restored=4
+PASS SET-MEMBERS-COUNTS
+PASS HOUSE
+TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240 store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK
+FAIL M0-TIME median_ms=291.731 bound_ms=150
+FAIL M1-SET-MEMBERS
+```
+
+The new unit cases cover missing and empty sets, duplicate normalization,
+prefix order, all 256 byte values, complete 129-member arrays, every
+wrong Redis type, unchanged stores and malformed operand shapes. The
+live suite checks complete stored values with DUMP, unrelated keys,
+read-only ACLs, UTF-8 refusals, unhandled errors and arrays retained
+across Script and Client writes. Every artifact pair has identical Lua
+bodies, and both example entries agree across Node, Bash and LuaJIT.
+
+Set bulk operations, TTL, the other remaining command families and the
+remaining M1 milestones are still listed in `SPEC.md`.
+
+### Review round 2026-09-14 (M1 Set enumeration)
+
+Round 1 of the slice review. The baseline ladder `gates-baseline.log`
+exited 1 with 21 FAIL rows, all of them in the timing set, led by
+`FAIL M0-TIME median_ms=180.128 bound_ms=150` at one-minute load 22.23.
+The calm rerun `gates-baseline-2.log` exited 0. The review keeps that row
+as gate row G0 under the load rule, not as a defect of the slice.
+
+Seven findings were kept, all low. Six are fixed in this round. Finding
+A-1 asks to restore one definition per line in `store/store.ml`, which
+needs the ruled store bound 200/200 to move, so it is not fixed.
+
+C-1: `dev/set-members-tests.py` accepts `--static` again, as the list
+range, lists and sets suites do. The mode runs the artifacts, the
+refusals and the interpreter examples, and it skips the oracles.
+`python3 -P dev/set-members-tests.py --static` prints
+`PASS SET-MEMBERS-ARTIFACTS pairs=6`,
+`PASS SET-MEMBERS-REFUSALS cases=6 atomic_output=6` and
+`PASS SET-MEMBERS-TESTS mode=static`, exit 0. An unknown flag prints the
+new usage line and exits 1. `dev/SET-MEMBERS.md` records the mode.
+
+C-5: the live fixtures add Set members in reverse reply order. The
+expected replies are unchanged, so a lowering that kept the seed order
+now fails on the node and bash hosts. The List fixture keeps its
+fixture order for RPUSH.
+
+C-7: `offline()` counts the store replies and the LuaJIT replies
+separately. The row keeps its values:
+`PASS SET-MEMBERS-ORACLES store=16 luajit=16` from
+`python3 -P dev/set-members-tests.py --offline`, exit 0.
+
+B-1: the entry `raw` carries no case row, so `--probe raw` is refused.
+`dev/SET-MEMBERS.md` now names the entries with cases: all, head,
+earlier, within and branch. The counts are unchanged.
+
+C-3: the three ordering mutants had the inherited marker
+`LISTS LuaJIT reply`. The suite now wraps each LuaJIT comparison, so a
+sorted array case reports `SET-MEMBERS LuaJIT member order`. The three
+mutant rows and the table of `dev/MUTATION-LOG.md` name that marker. A
+copy with the LUA-BYTE-ORDER edit (`return x < y` to `return x > y`)
+printed
+`FAIL SET-MEMBERS-TESTS SET-MEMBERS LuaJIT member order: LISTS LuaJIT reply`,
+exit 1, and the clean copy printed
+`PASS SET-MEMBERS-PROBE entry=all cases=10`, exit 0.
+
+C-6: `dev/SET-MEMBERS.md` states which wrong-type keys the offline
+oracles cover (String, Hash and List) and which the live hosts add
+(ZSet and Stream). No count changes.
+
+No fix moves a ruled bound, edits a pinned file or records a new timing
+measurement. `python3 -P dev/trusted-lines.py` prints
+`TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240
+store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK`.
+
+The fix ladder `gates-fix-1.log` ran on the complete tree at one-minute
+load 26.73 and exited 0 with no FAIL row, 519 rows. It recorded
+`PASS M0-TIME median_ms=103.985 bound_ms=150`, `PASS STAGE-F`,
+`PASS M1-DO`, `PASS M1-READONLY`, `PASS M1-STRINGS`, `PASS M1-HASHES`,
+`PASS M1-SETS`, `PASS M1-LISTS`, `PASS M1-LIST-ACCESS`,
+`PASS M1-LIST-RANGE`, `PASS SET-MEMBERS-UNIT cases=14`,
+`PASS SET-MEMBERS-ARTIFACTS pairs=6`,
+`PASS SET-MEMBERS-REFUSALS cases=6 atomic_output=6`,
+`PASS SET-MEMBERS-ORACLES store=16 luajit=16`,
+`PASS SET-MEMBERS-E2E cases=18 hosts=38 readonly=32 utf8_refusals=2
+errors=2`, `PASS SET-MEMBERS-EXAMPLE exec=6`,
+`PASS SET-MEMBERS-MUTATIONS killed=9 survived=0 restored=4`,
+`PASS SET-MEMBERS-COUNTS`, `PASS M1-SET-MEMBERS`, `EXIT 0`,
+`PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`, `EXIT-MUT 0`
+and `EXIT-ALL 0`. The three ordering mutants now print
+`KILLED LUA-MEMBERS-SORT by SET-MEMBERS LuaJIT member order`,
+`KILLED LUA-BYTE-ORDER by SET-MEMBERS LuaJIT member order` and
+`KILLED LUA-PREFIX-ORDER by SET-MEMBERS LuaJIT member order`. This is the
+first fully green complete run of the slice, so gate row G0 is closed.
+
+Findings of the round:
+
+| Id | Severity | File | Fix or ruling |
+| --- | --- | --- | --- |
+| C-1 | low | `dev/set-members-tests.py` | `dev/set-members-tests.py` accepts `--static` again: the flag tuple and the usage line take the mode, and the `offline()` call is guarded, so the mode runs artifacts, refusals and the interpreter examples only; `dev/SET-MEMBERS.md` records it. |
+| C-5 | low | `dev/set-members-tests.py` | `live()` seeds the Set fixtures with `list(reversed(sorted(initial)))` and keeps `list(initial)` for the RPUSH fixture, so the host paths now test order independence; `dev/SET-MEMBERS.md` records it. |
+| C-7 | low | `dev/set-members-tests.py` | `offline()` counts `stores` and `twins` separately and prints both, so the ORACLES row no longer prints one counter under two names. |
+| B-1 | low | `dev/set-members-tests.py` | `dev/SET-MEMBERS.md` names the `--probe ENTRY` entries that carry case rows (all, head, earlier, within and branch), so the doc no longer promises a probe for the entry `raw`. |
+| C-3 | low | `dev/set-members-mutations.py` | A new `twin()` wrapper reports `SET-MEMBERS LuaJIT member order` for a sorted array case, LUA-MEMBERS-SORT, LUA-BYTE-ORDER and LUA-PREFIX-ORDER require that marker, and `dev/MUTATION-LOG.md` names it in the three Required assertion cells. |
+| C-6 | low | `dev/set-members-tests.py` | `dev/SET-MEMBERS.md` states that the offline oracles cover String, Hash and List wrong-type keys and that the live hosts add ZSet and Stream. |
+| A-1 | low | `store/store.ml` | Ruled, no fix this round: the store group sits exactly at the ruled cap 200/200 and the two interpreter arms the fix proposes to fold are already folded (`store/interp.ml:85` and `:97`), so restoring one definition per line needs the ruled bound to move. |
+
+Refuted: 8. A-2 asks for a supported member count that no sibling doc
+states, and its premise that SMEMBERS is the first reply sized by server
+state alone is false because LRANGE already clips both bounds. B-2 is
+false in both claims: tag 10 reaching the integer arm would issue
+EXISTS, never the quoted error, and removing the `s.tag == 10` disjunct
+turns the gated hashes oracles red. B-3 needs a Reply whose payload head
+is false or nil, which no emission path builds. C-2 reproduces verbatim
+by measurement: the refusal window is 18080 through 18091 and 18092 does
+produce `CHECK budget`. C-4 reads on the cited text, which says
+`unknown or empty probe` and so already names the raw case. D-1 is
+measured true: the static walk spends 12 polls, so the window is 12
+wide. D-2 counts static checker refusals, the house sense of typed
+refusals, and the wrong-type coverage is stated separately. D-3 records
+two roles that do not conflict, because `dev/gates.sh` continues past
+STAGE-E to MEASURE.
+
+Merged and dropped: 0. No finding was merged into another and none was
+dropped at the cap.
+
+Gates of the round, from the last gates log
+`gates-gates-1.log`, root mode, tag gates-1, start 02:21:10, end
+02:33:48, 516 rows, 0 FAIL rows, `EXIT-ALL 0`, one-minute load 18.82 at
+the start (`2:21  up 28 days,  4:56, 29 users, load averages: 18.82
+18.67 21.73`). The legs of `dev/m1-set-members.sh`:
+
+| Leg | Verbatim row |
+| --- | --- |
+| M1-LIST-RANGE | `PASS M1-LIST-RANGE` |
+| SET-MEMBERS-BUILD | `PASS SET-MEMBERS-BUILD` |
+| SET-MEMBERS-UNIT-EXE | `PASS SET-MEMBERS-UNIT-EXE` |
+| SET-MEMBERS-TESTS-RUN | `PASS SET-MEMBERS-TESTS-RUN` |
+| SET-MEMBERS-MUTATIONS-RUN | `PASS SET-MEMBERS-MUTATIONS-RUN` |
+| SET-MEMBERS-COUNTS | `PASS SET-MEMBERS-COUNTS` |
+| HOUSE | `PASS HOUSE` |
+| TRUSTED-LINES | `PASS TRUSTED-LINES` |
+| ladder | `PASS M1-SET-MEMBERS`, `EXIT 0` |
+| Stage A queue | `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`, `EXIT-MUT 0`, `EXIT-ALL 0` |
+
+The count rows of the same log: `PASS SET-MEMBERS-UNIT cases=14`,
+`PASS SET-MEMBERS-ARTIFACTS pairs=6`,
+`PASS SET-MEMBERS-REFUSALS cases=6 atomic_output=6`,
+`PASS SET-MEMBERS-ORACLES store=16 luajit=16`,
+`PASS SET-MEMBERS-E2E cases=18 hosts=38 readonly=32 utf8_refusals=2
+errors=2`, `PASS SET-MEMBERS-EXAMPLE exec=6` and
+`PASS SET-MEMBERS-TESTS`. Mutation summary:
+`PASS SET-MEMBERS-MUTATIONS killed=9 survived=0 restored=4` and
+`PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`. Trusted lines:
+`TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240
+store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK`.
+Carry: `CARRY files=36 diff=0 vendor=32 copies=4` with
+`PIN 2c2e6e6 unlisted=0`.
+
+The closing run of the slice keeps the set enumeration mutants at
+`killed=9` and the ruled groups at `lua=320/320 sh=227/240
+store=200/200`, both copied from the last gates log
+`gates-gates-1.log` because the closing ladder with the tag close was
+not yet run when this block was written.
+
+Review pass 1 (2026-09-14) fixed 6 findings.
+
+Fix rounds: 1.
+
+The queue daemon ran the closing ladder gates-close.log from
+02:48:48 to 03:02:14 on 2026-09-14 at one-minute load 12.16: 516
+rows, 0 FAIL rows, `PASS M0-TIME median_ms=85.949 bound_ms=150` at
+row 216, `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1` at
+row 509, `EXIT 0` at row 468, `EXIT-MUT 0` at row 510, and
+`EXIT-ALL 0` at row 516, with porcelain 24 rows before and after.
+The first baseline ladder gates-baseline.log showed one timing-only
+red, `FAIL M0-TIME median_ms=180.128 bound_ms=150` at one-minute
+load 22.23, with every functional, mutation and house leg passing;
+the calm rerun gates-baseline-2.log of the unchanged staged tree
+showed `PASS M0-TIME median_ms=121.103 bound_ms=150` and
+`EXIT-ALL 0`. The fix-round ladder gates-gates-1.log showed
+`PASS M0-TIME median_ms=98.906 bound_ms=150` at one-minute load
+26.38, `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`, and
+`EXIT-ALL 0`. The check stage ran the C-3 marker probe twice in
+daemon.log: the mutant ladder check-1-C-3-m ended `EXIT-ALL 1` and
+was killed, and the clean ladder check-1-C-3-c ended `EXIT-ALL 0`.
+After the closing ladder the closer edited only dev/M1-BUILD-LOG.md
+and the commit message.

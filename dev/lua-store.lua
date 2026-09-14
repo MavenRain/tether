@@ -78,6 +78,11 @@ local function set_call(command, key, member)
     return {err='WRONGTYPE Operation against a key holding the wrong kind of value'}
   end
   local members = stored and stored[set_kind] or {}
+  if command == 'SMEMBERS' then
+    local out = {}
+    for member in pairs(members) do out[#out+1] = member end
+    return out
+  end
   if command == 'SISMEMBER' then return members[member] and 1 or 0 end
   if command == 'SCARD' then
     local count = 0
@@ -150,7 +155,7 @@ local function list_call(command, key, value, extra)
 end
 local function call(command, key, amount, value)
   if command:sub(1,1) == 'H' then return hash_call(command, key, amount, value) end
-  if command == 'SADD' or command == 'SREM' or command == 'SISMEMBER' or command == 'SCARD' then
+  if command == 'SADD' or command == 'SREM' or command == 'SISMEMBER' or command == 'SCARD' or command == 'SMEMBERS' then
     return set_call(command, key, amount)
   end
   if command == 'LPUSH' or command == 'RPUSH' or command == 'LPOP' or command == 'RPOP' or command == 'LLEN'

@@ -616,3 +616,31 @@ the review ladder.
 The narrowed Set control was rerun in `run-N7X7nM`, which printed
 `KILLED SADD-COUNT by FAIL SETS-UNIT duplicate count` and
 `PASS SETS-MUTATIONS killed=8 survived=0 restored=2`, exit 0.
+
+### M1 Set enumeration mutations, 2026-09-14
+
+`dev/set-members-mutations.py` builds every mutant in a temporary source
+copy and requires its intended assertion to fail. The unit suite and
+the all, branch and head LuaJIT probes pass before and after mutation.
+
+| Mutant | Change | Required assertion |
+| --- | --- | --- |
+| MEMBERS-ORDER | Reverse store member order | `FAIL SET-MEMBERS-UNIT unique order` |
+| MEMBERS-STATE | Discard the store after enumeration | `FAIL SET-MEMBERS-UNIT missing` |
+| MEMBERS-WRITE | Remove the SMEMBERS read-only exemption | `SET-MEMBERS write classification` |
+| MEMBERS-BRANCH | Treat a reachable SREM as read-only | `SET-MEMBERS write classification` |
+| LUA-MEMBERS-SORT | Reverse the array sort | `SET-MEMBERS LuaJIT member order` |
+| LUA-BYTE-ORDER | Reverse the byte comparison | `SET-MEMBERS LuaJIT member order` |
+| LUA-PREFIX-ORDER | Put longer equal prefixes first | `SET-MEMBERS LuaJIT member order` |
+| LUA-MEMBERS-ARRAY | Replace the array tag with nil | `TWIN reply kind nil wanted array` |
+| LUA-MEMBERS-BULK | Replace bulk element tags with status | `TWIN reply kind status wanted string` |
+
+Review round 2026-09-14 narrowed the three ordering mutants. The suite
+wraps each LuaJIT comparison in `dev/set-members-tests.py`, so a sorted
+array case reports `SET-MEMBERS LuaJIT member order` and every other
+case keeps its own reason. The shared helper is unchanged, so the lists,
+sets, hashes, list access and list range ladders keep their markers.
+
+The complete ladder's capture `run-cUQ1BJ` records
+`PASS SET-MEMBERS-MUTATIONS killed=9 survived=0 restored=4`. The shared LRANGE branch retains all eleven
+List range mutant kills and their five restored controls.
