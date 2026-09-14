@@ -29,7 +29,7 @@ MUTANTS = [
      probe('all'), b'LIST-RANGE write classification'),
     ('BRANCH-READONLY', 'print/flags.ml', b'&& tag <> 27', b'&& tag <> 26 && tag <> 27',
      probe('branch'), b'LIST-RANGE write classification'),
-    ('LUA-ARRAY-ORDER', 'print/lua.ml', b'for i = #got, 1, -1 do', b'for i = 1, #got do',
+    ('LUA-ARRAY-ORDER', 'print/lua.ml', b'for n = #order, 1, -1 do', b'for n = 1, #order do',
      probe('all'), b'LISTS LuaJIT reply'),
     ('LUA-RANGE-STOP', 'print/lua.ml', b"or 'LRANGE',k,text(s[2][1]),text(s[3][1]))",
      b"or 'LRANGE',k,text(s[2][1]),text(s[2][1]))", probe('tail'), b'LISTS LuaJIT reply'),
@@ -40,10 +40,10 @@ MUTANTS = [
     ('LUA-ERR-TAG', 'print/lua.ml',
      b"      if type(got) == 'table' and got.err then r = {tag=4,bytes(got.err)}\n"
      b"      elseif type(got) == 'table' and got.ok then r = {tag=3,bytes(got.ok)}\n"
-     b'      elseif s.tag == 27 or s.tag == 28 then',
+     b'      elseif s.tag >= 27 and s.tag <= 29 then',
      b"      if type(got) == 'table' and got.err then r = {tag=2,bytes(got.err)}\n"
      b"      elseif type(got) == 'table' and got.ok then r = {tag=3,bytes(got.ok)}\n"
-     b'      elseif s.tag == 27 or s.tag == 28 then',
+     b'      elseif s.tag >= 27 and s.tag <= 29 then',
      probe('all'), b'TWIN reply kind string wanted status'),
 ]
 

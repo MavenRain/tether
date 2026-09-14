@@ -55,7 +55,7 @@ entry previews the first two jobs. `retained` returns that captured array
 after trimming the queue to its last job. Each run owns an empty temporary
 store. These examples do not provide a durable delivery protocol.
 
-The two pinned preludes total 135 lines. Lua uses 320/320 lines and the
+The two pinned preludes total 136 lines. Lua uses 320/320 lines and the
 store uses 200/200. Sharing Set update handling preserves no-op behavior
 and makes room for the array adapter within the existing store bound.
 The Set mutation anchor follows that refactor and still requires the

@@ -1,0 +1,26 @@
+module HashSnapshot
+
+schema profile : String -> Key Hash tag b"people"
+
+def prepare : Script Reply (tag b"people") := do {
+  _ <- hset Reply (tag b"people") (profile b"alice") b"visits" b"9007199254740993";
+  _ <- hset Reply (tag b"people") (profile b"alice") b"name" b"Alice";
+  r <- hgetall Reply (tag b"people") (profile b"alice");
+  pure Reply (tag b"people") r
+}
+
+def rename : Script Reply (tag b"people") := do {
+  r <- hset Reply (tag b"people") (profile b"alice") b"name" b"Alicia";
+  pure Reply (tag b"people") r
+}
+
+def main : Client Reply := do {
+  r <- inv Reply (tag b"people") prepare;
+  done Reply r
+}
+
+def retained : Client Reply := do {
+  r <- inv Reply (tag b"people") prepare;
+  _ <- inv Reply (tag b"people") rename;
+  done Reply r
+}

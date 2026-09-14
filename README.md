@@ -4,6 +4,11 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports typed HGETALL on Hash keys, with field/value pairs sorted
+by field bytes. `./tether exec examples/HashSnapshot.tet --host node`
+prints `["name","Alice","visits","9007199254740993"]`. See
+`dev/HASH-ENTRIES.md` for ordering, retained replies and validation.
+
 M1 now supports typed SMEMBERS on Set keys, with members sorted by bytes.
 `./tether exec examples/TeamRoster.tet --host node` prints
 `["alice","bob"]`. See `dev/SET-MEMBERS.md` for ordering and validation.

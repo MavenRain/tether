@@ -2223,3 +2223,225 @@ daemon.log: the mutant ladder check-1-C-3-m ended `EXIT-ALL 1` and
 was killed, and the clean ladder check-1-C-3-c ended `EXIT-ALL 0`.
 After the closing ladder the closer edited only dev/M1-BUILD-LOG.md
 and the commit message.
+
+## 2026-09-14: Hash enumeration
+
+Base: `caa905917a241b658327ecf9b55df44ab8ed61ae`, the committed Set
+enumeration slice and its review fixes. This slice adds typed HGETALL to
+Hash keys. Constructor tag 29 follows SMEMBERS and preserves every earlier
+tag. The store and Lua lowering return alternating bulk fields and values,
+sorted by unsigned field bytes with shorter prefixes first. Sorting keeps
+each value attached to its field. Missing keys return an empty array;
+wrong-type keys return typed errors, and reads preserve stored values.
+
+The array adapter now orders element or pair indices before constructing
+Replies. LRANGE retains list order, SMEMBERS retains byte order, and
+HGETALL orders pairs. HSET and HDEL share update/count handling to make
+room in the store group. Read-only dispatch includes HGETALL and still
+rejects write-capable EVAL commands in the read-only live fixtures. The
+HashSnapshot example demonstrates exact decimal bytes and a captured
+array surviving a later HSET. The independent LuaJIT twin enumerates Hash
+fields in reverse order, and the live fixtures seed fields in reverse
+reply order.
+
+Validation from the complete ladder:
+
+`sh dev/m1-hash-entries.sh` completed with all functional checks passing.
+The full command returned exit 1 because M0-TIME measured 160.626 ms
+against the unchanged 150 ms bound. Its MEASURE failure propagated through
+the enclosing stage summaries. The 489-line capture contains no other
+root failure. The HGETALL rows were:
+
+```text
+PASS HASH-ENTRIES-UNIT cases=16
+PASS HASH-ENTRIES-ARTIFACTS pairs=7
+PASS HASH-ENTRIES-REFUSALS cases=6 atomic_output=6
+PASS HASH-ENTRIES-ORACLES store=19 luajit=19
+PASS HASH-ENTRIES-E2E cases=21 hosts=44 readonly=38 utf8_refusals=4 errors=2
+PASS HASH-ENTRIES-EXAMPLE exec=6
+PASS HASH-ENTRIES-TESTS
+PASS HASH-ENTRIES-MUTATIONS killed=11 survived=0 restored=4
+PASS HASH-ENTRIES-COUNTS
+```
+
+The Set enumeration battery kept all nine kills and four restored controls;
+List range kept eleven kills and five controls. The Hash suite passed its
+77 unit cases, 84 host runs and six mutants. The separate foundation
+battery passed with `killed=37 survived=0 restored=1`. Carry remained
+`files=36 diff=0 vendor=32 copies=4`, with pin `2c2e6e6` and no unlisted files.
+
+All source groups passed: kernel 3997/4000, encoder 246/600, Lua 320/320,
+Bash 227/240, store 200/200, Node 196/300, REST 156/300 and bin 404/450.
+The house audit found no prohibited OCaml patterns across 35 files.
+
+Timing was checked separately after the full ladder finished. The unchanged
+`sh dev/m0-bench.sh` passed at median 115.406 ms, minimum 114.575 ms and
+maximum 125.579 ms over five samples, at one-minute load 19.86. No source,
+bound or benchmark change separated that pass from the earlier failure.
+An earlier interleaved comparison at load 34.46 measured 236.816 ms for
+the clean `caa9059` baseline and 286.115 ms for this slice. Those widely
+varying samples do not isolate a causal regression. The complete ladder
+was not repeated after the successful timing-only check; its recorded
+exit remains 1, while the separate timing command returned 0.
+
+Captures under `/Users/oobi/Documents/gpt18/tether-m1-hash-entries/.kanon-exec`:
+`run-kaXlej` (full ladder), `run-cPAiKW` (foundation mutants) and `run-L7IeV6`
+(final timing). `/Users/oobi/Documents/gpt18/.kanon-exec/run-ue83nX` holds
+the interleaved comparison, `run-xUcUFj` the budget control, and `run-GfBLKQ`
+the focused HSET mutant control.
+
+The static-walk budget was measured in a disposable copy: front-end work
+spends 19006 polls and the walk spends 12. Fuel 19005 yields CHECK budget;
+19006, 19012 and 19017 yield SH-BUDGET; 19018 reaches the later checker
+budget guard. Every probe leaves no output. Disabling the printer budget
+check at 19012 changes the refusal to CHECK budget, so the updated gate
+still detects a missing guard. The gate uses 19012. The two pinned
+preludes now total 136 lines; the manifest records the changed redis.kan.
+
+The first complete-ladder attempt was stopped after its explicit PATH
+omitted rg and panicscan. That attempt retained no capture, so the capture
+list above holds no id for it. Its Hash overwrite-count mutant also affected
+HDEL after the helper refactor, reaching the missing-delete assertion
+instead. The revised mutant changes HSET counts only. A focused compiled
+control confirms the original overwrite-count assertion; the complete
+rerun uses the required tool paths. No count, source bound, refusal or
+mutation requirement was weakened.
+
+This completes Hash enumeration only. Other bulk Hash commands, TTL,
+ZSet commands, the remaining applications and the remaining M1 gates
+are still future work.
+
+### Review round 2026-09-14 (M1 Hash enumeration)
+
+Four review items were fixed on the staged tree. No bound moved, no frozen
+record was edited, and no implementation file changed.
+
+A-2. `dev/hash_entries_tests.ml` held no fixture with a multi-byte decimal
+field, so a numeric-first order in `store/store.ml` kept the unit suite
+green. The suite now adds the `decimal order` case
+`{10: z, 2: a, 01: 1}`, whose reply is `["01","1","10","z","2","a"]`, and
+the total rises to `PASS HASH-ENTRIES-UNIT cases=16`. The recorded count
+row above, `dev/m1-hash-entries.sh` and the unit control of
+`dev/hash-entries-mutations.py` carry the same number. A copy with a
+numeric-first comparator in `hgetall` now prints
+`FAIL HASH-ENTRIES-UNIT decimal order`, exit 1, while the unmutated copy
+prints `PASS HASH-ENTRIES-UNIT cases=16`, exit 0.
+
+C-1. `dev/hash-entries-tests.py --probe raw` reported the same message and
+exit code as an unknown name, although `raw` is one of the seven emitted
+artifacts. The probe path now rejects a name outside `ENTRIES` with
+`HASH-ENTRIES unknown probe` and reports
+`HASH-ENTRIES entry raw has no LuaJIT cases` for a known entry without
+cases. The case inventory stays at 19 rows and
+`PASS HASH-ENTRIES-ORACLES store=19 luajit=19` is unchanged.
+
+D-4. `dev/HASH-ENTRIES.md` charged the O(N log N) comparisons to
+retrieval. Only the emitted Lua sorts: `store/store.ml` reads
+`Keys.bindings` in field order and the shared array adapter of
+`store/interp.ml` does not sort. The sentence now names the emitted Lua
+and keeps the common byte prefix and 2N element statements.
+
+D-3. The stopped first complete-ladder attempt is now described as
+retaining no capture, so no reader searches the capture list for an id
+that is not there.
+
+The unit count is the only recorded number this round changed. Both
+ruled groups are untouched, so `lua=320/320` and `store=200/200` stand.
+
+Findings of this round:
+
+| id | severity | file | fix or ruling |
+|----|----------|------|---------------|
+| A-2 | low | dev/hash_entries_tests.ml | Adds the `decimal order` case `{10: z, 2: a, 01: 1}` with reply `["01","1","10","z","2","a"]`; the total rises to `PASS HASH-ENTRIES-UNIT cases=16` in the recorded row, `dev/m1-hash-entries.sh` and the unit control of `dev/hash-entries-mutations.py`. |
+| C-1 | low | dev/hash-entries-tests.py | The probe path rejects a name outside `ENTRIES` with `HASH-ENTRIES unknown probe` and reports `HASH-ENTRIES entry raw has no LuaJIT cases` for a known entry without cases; the case inventory stays 19 rows. |
+| D-4 | low | dev/HASH-ENTRIES.md | The sentence now names the emitted Lua as the sorter and keeps the common byte prefix and 2N element statements. |
+| D-3 | low | dev/M1-BUILD-LOG.md | The stopped first complete-ladder attempt is described as retaining no capture, so no reader searches the capture list for an id. |
+
+Refuted: 6 items, A-1, B-1, C-2, C-3, D-1 and D-2. A-1: this slice changes
+zero net lines in both ruled groups, and the zero headroom is pre-existing
+and ruled. B-1: the two shared-marker mutants are killed by tag 29 cases
+only, the staged diff retargets the set-members battery onto the new
+comparator, and dropping mutants reds HASH-ENTRIES-COUNTS through the exact
+row `killed=11 survived=0 restored=4`. C-2: both named regressions are
+killed beneath the same ladder, by HDEL-EMPTY-KEY and by the `missing` case
+of `dev/hash_entries_tests.ml`. C-3: the tag 27 guard is pinned by the
+required row `PASS LIST-RANGE-ORACLES store=40 luajit=40`. D-1: the
+same-tree m0-bench spread is 57.8 percent, which swallows the 20.8 percent
+gap, and `dev/m0-bench.py` does compare against `BOUND_MS = 150.0`. D-2:
+both logs have used level-2 sections under a level-1 title since Stage 0.
+
+Merged and dropped: 0 merged and 6 dropped. Nothing was merged, because the
+four kept items sit in four files and name four defects. The six dropped
+items are the six refuted items above, each refuted at verification and not
+revived. No kept item was cut for the seven finding cap.
+
+Gates, from the last gates log `gates-gates-1.log`, root mode, leg full,
+start 10:30:57 and end 10:57:21, 456 rows, one-minute load 587.58 at start,
+63.89 at 10:40 and 14.98 at the end, with `CARRY files=36 diff=0 vendor=32
+copies=4`. The log has no `EXIT-ALL` row: it was read while the Stage A
+mutation runner was still going, so the run is INCOMPLETE, not green. The 22
+FAIL rows all lie in the timing set (STAGE-E, STAGE-F twice and the M1
+aggregates M1-DO, M1-READONLY, M1-STRINGS, M1-HASHES, M1-SETS, M1-LISTS,
+M1-LIST-ACCESS, M1-LIST-RANGE and M1-SET-MEMBERS twice each, with
+M1-HASH-ENTRIES once) at a one-minute load far above 40, which the LOAD RULE
+names RED-LOAD. No functional FAIL row.
+
+| leg | verbatim line |
+|-----|---------------|
+| M0-TIME | `PASS M0-TIME median_ms=96.249 bound_ms=150` |
+| MEASURE | `PASS MEASURE` |
+| HASH-ENTRIES-BUILD | `PASS HASH-ENTRIES-BUILD` |
+| HASH-ENTRIES-UNIT | `PASS HASH-ENTRIES-UNIT cases=16` |
+| HASH-ENTRIES-UNIT-EXE | `PASS HASH-ENTRIES-UNIT-EXE` |
+| HASH-ENTRIES-ARTIFACTS | `PASS HASH-ENTRIES-ARTIFACTS pairs=7` |
+| HASH-ENTRIES-REFUSALS | `PASS HASH-ENTRIES-REFUSALS cases=6 atomic_output=6` |
+| HASH-ENTRIES-ORACLES | `PASS HASH-ENTRIES-ORACLES store=19 luajit=19` |
+| HASH-ENTRIES-E2E | `PASS HASH-ENTRIES-E2E cases=21 hosts=44 readonly=38 utf8_refusals=4 errors=2` |
+| HASH-ENTRIES-EXAMPLE | `PASS HASH-ENTRIES-EXAMPLE exec=6` |
+| HASH-ENTRIES-TESTS | `PASS HASH-ENTRIES-TESTS` |
+| HASH-ENTRIES-TESTS-RUN | `PASS HASH-ENTRIES-TESTS-RUN` |
+| HASH-ENTRIES-MUTATIONS | `PASS HASH-ENTRIES-MUTATIONS killed=11 survived=0 restored=4` |
+| HASH-ENTRIES-MUTATIONS-RUN | `PASS HASH-ENTRIES-MUTATIONS-RUN` |
+| HASH-ENTRIES-COUNTS | `PASS HASH-ENTRIES-COUNTS` |
+| HOUSE | `PASS HOUSE` |
+| TRUSTED-LINES | `TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240 store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK` |
+| M1-HASH-ENTRIES | `FAIL M1-HASH-ENTRIES` |
+
+The mutation summary of the hash enumeration leg is killed=11, survived=0
+and restored=4, and the eleven KILLED rows are ENTRIES-ORDER, ENTRIES-PAIR,
+ENTRIES-STATE, ENTRIES-WRITE, ENTRIES-BRANCH, LUA-FIELD-SORT,
+LUA-PAIR-STRIDE, LUA-FIELD-BYTES, LUA-FIELD-PREFIX, LUA-ENTRIES-ARRAY and
+LUA-ENTRIES-BULK.
+
+Close ladder: the closing run keeps the hash enumeration mutants at
+`killed=11` and the ruled groups at `lua=320/320 sh=227/240 store=200/200`.
+The closing ladder with the tag close was not yet run when this block was
+written, so both numbers are copied from the last gates log
+`gates-gates-1.log`. No executable path changed after gates-1; only
+`dev/M1-BUILD-LOG.md` changed.
+
+Review pass 1 (2026-09-14) fixed 4 findings.
+
+Fix rounds: 1.
+
+Close ladder verdict: the ladder with the tag close ran through the daemon,
+queued 11:01:22 on 2026-09-14. The one-minute load was 32.32 at start and
+11.68 at 11:18 at the end. The log `gates-close.log` holds 547 rows and ends
+with `EXIT-ALL 0`. It holds zero FAIL rows. `PASS M0-TIME median_ms=143.200
+bound_ms=150`. `EXIT-MUT 0`. `PASS STAGE-A-MUTATIONS killed=37 survived=0
+restored=1`. The porcelain count is 26 before and 26 after. The nested log
+holds 19 `PASS HOUSE` rows, 10 `PASS TRUSTED-LINES` rows and 12 full
+`TRUSTED-LINES` rows with the ruled groups `lua=320/320 sh=227/240
+store=200/200`. The hash enumeration leg passed in full: `PASS
+HASH-ENTRIES-UNIT cases=16` and `PASS HASH-ENTRIES-MUTATIONS killed=11
+survived=0 restored=4`. The record log is `gates-close.log`; no rerun was
+needed. Disclosure: the baseline ladder gave `EXIT-ALL 1` with 23 timing
+FAIL rows at one-minute load 40 to 66, with every functional row green (G0).
+The baseline-2 ladder gave `EXIT-ALL 1` with 23 timing FAIL rows, M0-TIME
+1203.179 ms at start load 111.19 and `EXIT-MUT 0` (G0). The gates-1 ladder
+is recorded above; the completed log `gates-gates-1.log` ends with `EXIT-ALL
+1`, its one `FAIL STAGE-E` row came from the 120 s subprocess deadline in
+`dev/stage-c-tests.py` on `dev/emit-lua.py --root examples LuaCases.tet
+--entry maximum` at one-minute load 587, the STAGE-F and 19 M1 aggregate
+FAIL rows are propagation, M0-TIME 96.249 ms passed, every hash-entries row
+passed and `EXIT-MUT 0` (G0).

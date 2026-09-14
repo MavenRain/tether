@@ -644,3 +644,40 @@ sets, hashes, list access and list range ladders keep their markers.
 The complete ladder's capture `run-cUQ1BJ` records
 `PASS SET-MEMBERS-MUTATIONS killed=9 survived=0 restored=4`. The shared LRANGE branch retains all eleven
 List range mutant kills and their five restored controls.
+
+## 2026-09-14: Hash enumeration
+
+`dev/hash-entries-mutations.py` builds every mutant in a disposable copy
+and requires both exit 1 and the intended assertion marker. Four controls
+run before mutation and after restoring and rebuilding the source.
+
+| Mutant | Required assertion |
+| --- | --- |
+| ENTRIES-ORDER | HASH-ENTRIES-UNIT pair order |
+| ENTRIES-PAIR | HASH-ENTRIES-UNIT pair order |
+| ENTRIES-STATE | HASH-ENTRIES-UNIT missing |
+| ENTRIES-WRITE | HASH-ENTRIES write classification |
+| ENTRIES-BRANCH | HASH-ENTRIES write classification |
+| LUA-FIELD-SORT | HASH-ENTRIES LuaJIT field/value order |
+| LUA-PAIR-STRIDE | HASH-ENTRIES LuaJIT field/value order |
+| LUA-FIELD-BYTES | HASH-ENTRIES LuaJIT field/value order |
+| LUA-FIELD-PREFIX | HASH-ENTRIES LuaJIT field/value order |
+| LUA-ENTRIES-ARRAY | TWIN reply kind nil wanted array |
+| LUA-ENTRIES-BULK | TWIN reply kind status wanted string |
+
+Review round 2026-09-14 added the `decimal order` store case, so the unit
+control of this suite now requires `PASS HASH-ENTRIES-UNIT cases=16`. The
+mutant inventory, the required assertions and the four controls are unchanged.
+
+The complete ladder recorded `PASS HASH-ENTRIES-MUTATIONS killed=11
+survived=0 restored=4` and `PASS HASH-ENTRIES-COUNTS`. The separate foundation
+battery recorded `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`.
+The ladder's only root failure was the independent M0 timing limit; the
+unchanged timing command passed separately at 115.406 ms. See the Hash
+enumeration entry in `dev/M1-BUILD-LOG.md` for the full validation scope.
+
+The existing Hash overwrite-count, List array traversal/error and Set
+state/order mutation anchors follow the shared implementation. Their
+required assertions and inventories remain unchanged. The revised Hash
+count mutant preserves HDEL behavior and reaches the original HSET
+overwrite-count assertion.

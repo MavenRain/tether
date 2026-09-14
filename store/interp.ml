@@ -102,7 +102,7 @@ let run ~budget rows ~entry store =
           | 25, [Signed i; Octets v] -> status (Store.lset key i v store)
           | 26, [Signed i; Signed j] -> status (Store.ltrim key i j store)
           | 27, [Signed i; Signed j] -> array (keep (Store.lrange key i j store))
-          | 28, [] -> array (keep (Store.smembers key store))
+          | (28 | 29), [] -> array (keep ((if tag = 28 then Store.smembers else Store.hgetall) key store))
           | _, _ -> Error "STORE-SCRIPT-COMMAND" in
         let* next = apply k [answer] in script store next
     | Data _ | Fields _ | Literal _ | Closure _ | Erased -> Error "STORE-SCRIPT" in

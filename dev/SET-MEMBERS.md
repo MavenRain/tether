@@ -64,6 +64,6 @@ LuaJIT cases; the entries with cases are `all`, `head`, `earlier`,
 satisfy the complete ladder.
 
 Lua remains at 320/320 lines and the store at 200/200. The shared array
-adapter handles both LRANGE and SMEMBERS. The two pinned preludes total
-135 lines. See `dev/M1-BUILD-LOG.md` for measured validation results.
+adapter handles LRANGE, SMEMBERS and HGETALL. The two pinned preludes total
+136 lines. See `dev/M1-BUILD-LOG.md` for measured validation results.
 Set algebra, multi-member writes, random members and TTL are outside this slice.

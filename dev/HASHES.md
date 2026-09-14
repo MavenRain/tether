@@ -58,8 +58,9 @@ reachable branch and closure capture. Script errors remain typed `err`
 replies; a Script can inspect them, and an error returned from an
 invocation stops the Client.
 
-This slice supports one field per command. HGETALL, multi-field forms,
-field expiry and key TTL remain outside this slice. The profile example
+The original Hash slice supports one field per command. HGETALL is now
+available in `dev/HASH-ENTRIES.md`. Multi-field writes, field expiry and
+key TTL remain future work. The profile example
 does not implement the remaining M1 session-store application.
 
 The Hash slice appended six constructors, preserving existing tags.
