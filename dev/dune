@@ -82,3 +82,8 @@
  (name hash_projections_tests)
  (modules hash_projections_tests)
  (libraries tether_store kanon_kernel))
+
+(executable
+ (name set_algebra_tests)
+ (modules set_algebra_tests)
+ (libraries tether_store kanon_kernel))

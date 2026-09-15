@@ -88,6 +88,24 @@ local function set_call(command, key, member)
     return {err='WRONGTYPE Operation against a key holding the wrong kind of value'}
   end
   local members = stored and stored[set_kind] or {}
+  if command == 'SUNION' or command == 'SINTER' or command == 'SDIFF' then
+    local other = values[member]
+    if other ~= nil and (type(other) ~= 'table' or other[set_kind] == nil) then
+      return {err='WRONGTYPE Operation against a key holding the wrong kind of value'}
+    end
+    local right, out = other and other[set_kind] or {}, {}
+    for value in pairs(members) do
+      if command == 'SUNION' or (command == 'SINTER' and right[value])
+        or (command == 'SDIFF' and not right[value]) then out[#out+1] = value end
+    end
+    if command == 'SUNION' then
+      for value in pairs(right) do
+        if not members[value] then out[#out+1] = value end
+      end
+    end
+    table.sort(out, function(a,b) return a > b end)
+    return out
+  end
   if command == 'SMEMBERS' then
     local out = {}
     for member in pairs(members) do out[#out+1] = member end
@@ -165,7 +183,8 @@ local function list_call(command, key, value, extra)
 end
 local function call(command, key, amount, value)
   if command:sub(1,1) == 'H' then return hash_call(command, key, amount, value) end
-  if command == 'SADD' or command == 'SREM' or command == 'SISMEMBER' or command == 'SCARD' or command == 'SMEMBERS' then
+  if command == 'SADD' or command == 'SREM' or command == 'SISMEMBER' or command == 'SCARD' or command == 'SMEMBERS'
+    or command == 'SUNION' or command == 'SINTER' or command == 'SDIFF' then
     return set_call(command, key, amount)
   end
   if command == 'LPUSH' or command == 'RPUSH' or command == 'LPOP' or command == 'RPOP' or command == 'LLEN'

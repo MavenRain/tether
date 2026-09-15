@@ -72,11 +72,13 @@ local function run(s)
         elseif read == false then r = {tag=0}
         else r = {tag=1,{tag=0,bytes(read)}} end
       end
-    elseif s.tag == 2 or s.tag == 3 or s.tag == 4 or s.tag == 10 or s.tag == 21 or s.tag == 22 or (s.tag >= 24 and s.tag <= 31) then
+    elseif s.tag == 2 or s.tag == 3 or s.tag == 4 or s.tag == 10 or s.tag == 21 or s.tag == 22 or (s.tag >= 24 and s.tag <= 34) then
       local got
       if s.tag == 10 then got = redis.pcall('HGET',k,text(s[2])); next = s[3]
       elseif s.tag == 2 then got = redis.pcall('GET',k)
-      elseif s.tag >= 28 and s.tag <= 31 then got = redis.pcall(({[28]='SMEMBERS',[29]='HGETALL',[30]='HKEYS',[31]='HVALS'})[s.tag],k)
+      elseif s.tag >= 28 and s.tag <= 34 then
+        local args = {k}; if s.tag >= 32 then args[2], next = key(s[2]), s[3] end
+        got = redis.pcall(({[28]='SMEMBERS',[29]='HGETALL',[30]='HKEYS',[31]='HVALS',[32]='SUNION',[33]='SINTER',[34]='SDIFF'})[s.tag],unpack(args))
       elseif s.tag == 21 or s.tag == 22 then got = redis.pcall(s.tag == 21 and 'LPOP' or 'RPOP',k)
       elseif s.tag == 24 then got = redis.pcall('LINDEX',k,text(s[2][1])); next = s[3]
       elseif s.tag == 25 then got = redis.pcall('LSET',k,text(s[2][1]),text(s[3])); next = s[4]
@@ -84,7 +86,7 @@ local function run(s)
       else got = redis.pcall('SET',k,text(s.tag == 3 and s[2] or s[2][1])); next = s[3] end
       if type(got) == 'table' and got.err then r = {tag=4,bytes(got.err)}
       elseif type(got) == 'table' and got.ok then r = {tag=3,bytes(got.ok)}
-      elseif s.tag >= 27 and s.tag <= 31 then
+      elseif s.tag >= 27 and s.tag <= 34 then
         local stride, order = s.tag == 29 and 2 or 1, {}; for i = 1, #got, stride do order[#order+1] = i end
         if s.tag ~= 27 then table.sort(order,function(a,b) return byte_less(got[a],got[b]) end) end
         local rs = {tag=0}; for n = #order, 1, -1 do for i = order[n]+stride-1, order[n], -1 do rs = {tag=1,{tag=2,bytes(got[i])},rs} end end; r = {tag=5,rs}
@@ -94,11 +96,9 @@ local function run(s)
       if s.tag == 9 then got = redis.pcall('HSET',k,text(s[2]),text(s[3])); next = s[4]
       elseif s.tag == 11 or s.tag == 12 then
         got = redis.pcall(s.tag == 11 and 'HDEL' or 'HEXISTS',k,text(s[2])); next = s[3]
-      elseif s.tag == 13 or s.tag == 18 or s.tag == 23 then
-        got = redis.pcall(s.tag == 13 and 'HLEN' or (s.tag == 18 and 'SCARD' or 'LLEN'),k)
+      elseif s.tag == 13 or s.tag == 18 or s.tag == 23 then got = redis.pcall(s.tag == 13 and 'HLEN' or (s.tag == 18 and 'SCARD' or 'LLEN'),k)
       elseif s.tag == 15 or s.tag == 16 or s.tag == 17 then
-        local command = s.tag == 15 and 'SADD' or (s.tag == 16 and 'SREM' or 'SISMEMBER')
-        got = redis.pcall(command,k,text(s[2])); next = s[3]
+        got = redis.pcall(s.tag == 15 and 'SADD' or (s.tag == 16 and 'SREM' or 'SISMEMBER'),k,text(s[2])); next = s[3]
       elseif s.tag == 19 or s.tag == 20 then
         got = redis.pcall(s.tag == 19 and 'LPUSH' or 'RPUSH',k,text(s[2])); next = s[3]
       else got = redis.pcall(s.tag == 7 and 'DEL' or 'EXISTS',k) end

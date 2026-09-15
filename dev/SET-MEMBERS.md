@@ -64,6 +64,7 @@ LuaJIT cases; the entries with cases are `all`, `head`, `earlier`,
 satisfy the complete ladder.
 
 Lua remains at 320/320 lines and the store at 200/200. The shared array
-adapter handles LRANGE, SMEMBERS, HGETALL, HKEYS and HVALS. `SPEC.md`
+adapter handles LRANGE, SMEMBERS, HGETALL, HKEYS, HVALS, SUNION, SINTER
+and SDIFF. `SPEC.md`
 records the current prelude count. See `dev/M1-BUILD-LOG.md` for validation.
 Set algebra, multi-member writes, random members and TTL are outside this slice.

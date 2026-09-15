@@ -53,6 +53,7 @@ let save_set key values store = save key (Set (Members.elements values)) ~empty:
 let sismember key member store = Result.map (fun values -> if Members.mem member values then "1" else "0") (members key store)
 let scard key store = let* values = members key store in Ok (string_of_int (Members.cardinal values))
 let smembers key store = Result.map Members.elements (members key store)
+let scombine op key other store = let* left = members key store in let* right = members other store in Ok (Members.elements (op left right))
 let change_set update key member store = let* values = members key store in let next = update member values in
   if Members.equal values next then Ok ("0", store) else Ok ("1", save_set key next store)
 let sadd = change_set Members.add let srem = change_set Members.remove

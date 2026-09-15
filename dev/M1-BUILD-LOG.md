@@ -2656,3 +2656,229 @@ Tier rulings: finder, builder and closer stayed unmet this round, opus
 pinned with the tier markers even though the Fable probe was alive at
 14:20, per the closer fallback ruling. The verifier ruling stayed met,
 opus at high effort.
+
+### 2026-09-14: M1 Set algebra
+
+Added typed two-key `sunion`, `sinter` and `sdiff`, with Script tags 32,
+33 and 34. Both operands require `Key Set g`. Replies contain unique
+bulk members sorted by unsigned bytes. Missing keys act as empty Sets;
+wrong stored types on either side produce catchable errors without
+changing either key. Same-key and reversed-operand cases are covered.
+
+The Lua printer declares both keys, shares the array adapter and uses
+the read-only Redis commands. The independent store decodes key
+operands separately from bytes and uses Set operations. Its scalar
+reply decoding and Client error check share equivalent branches. The
+LuaJIT twin calculates membership independently and emits reverse order
+to make the adapter's sort observable. `TeamAccess.tet` demonstrates
+union, intersection, difference and a reply retained after a later delete.
+
+Trusted counts remain Lua 320/320 and store 200/200. The two prelude
+files total 141 lines, pinned in `dev/PRELUDES.sha256`. No foundation
+source or bound changed. The existing LRANGE error mutation follows
+the expanded array branch; its assertion and failure requirement stay
+unchanged.
+
+A disposable instrumented emitter measured 24551 front-end polls and
+24563 after the unchanged 12-poll static walk (`run-gu4u0l`). Stage D
+now probes 24557. Boundary checks at 24550 and 24563 report
+`CHECK budget`; 24551, 24557 and 24562 report `SH-BUDGET`. Removing
+the printer guard makes 24557 report `CHECK budget`. Every refusal
+leaves no output (`run-H9UnTz`).
+
+Validation used `/Users/oobi/Documents/gpt18/tether-m1-set-algebra`
+at base 0926bdb and the zxcaml-p1 OCaml switch. The initial sandboxed
+integration attempt passed all offline checks, then could not create
+the local server sockets (`run-p7nGMb`). With localhost server access,
+the complete new suite passed (`run-OSuyhy`):
+
+```text
+PASS SET-ALGEBRA-UNIT cases=106
+PASS SET-ALGEBRA-ARTIFACTS pairs=24
+PASS SET-ALGEBRA-REFUSALS cases=36 atomic_output=36
+PASS SET-ALGEBRA-STORE-EXAMPLE cases=4
+PASS SET-ALGEBRA-ORACLES luajit=90
+PASS SET-ALGEBRA-E2E cases=114 hosts=234 readonly=216 utf8_refusals=6 errors=6
+PASS SET-ALGEBRA-EXAMPLE exec=12
+PASS SET-ALGEBRA-MUTATIONS killed=17 survived=0 restored=6
+```
+
+The unit executable was run separately after build capture `run-Q2GrpU`.
+Mutation capture `run-DQA2xc` killed all 17 compiled mutants and passed
+all six restored controls. The suite covers complete 129-member arrays,
+all 256 byte values, both wrong-type positions, malformed erased
+operands, empty and prefix bytes, decimal-looking members, and replies
+retained across Script and Client deletions. Live checks compare both
+complete values with DUMP and preserve an unrelated key. ACL restrictions
+require the read-only dispatch path. Invalid UTF-8 output is refused
+by both text hosts.
+
+The first complete-ladder attempt (`run-x9DUMt`) omitted
+`/Users/oobi/.cargo/bin` from PATH, so HOUSE could not find panicscan
+and Stage E stopped before its functional tests. The attempt was
+cancelled with exit 137 during the later command suites. Its independent
+M0 timing leg had passed at 117.167 ms. The corrected environment passed
+HOUSE across all 37 OCaml files (`run-rzpXcW`).
+
+The corrected complete `sh dev/m1-set-algebra.sh` run (`run-57sAta`)
+finished with exit 1. All functional, mutation, inventory, foundation,
+HOUSE, trusted-line and prelude checks passed, including the restored
+Stage E coverage and this slice's final count gate. Its 27 FAIL rows
+were `M0-TIME median_ms=234.573 bound_ms=150`, MEASURE and the Stage F
+and M1 aggregates that include that timing gate. All 566 stdout lines
+were inspected; stderr was empty. The complete ladder did not pass.
+
+A final standalone `python3 -P dev/m0-bench.py` recheck (`run-4UI4yM`)
+passed with median 95.849 ms, minimum 95.333 ms and maximum 103.220 ms
+over five samples, at one-minute load 8.42. The 150 ms bound is unchanged.
+Both timing results are retained here; the full run's recorded exit
+status remains 1.
+
+TTL, other bulk operations, ZSet commands and the remaining M1 milestones
+are still listed in `SPEC.md`. This slice implements the two-key forms;
+variadic Set operands and destination-writing forms remain future work.
+
+### Review round 2026-09-14 (M1 Set algebra)
+
+An independent review of the staged slice kept six findings, all low, and
+refuted one. Fix round 1 applied all six. No bound moved, no pinned file
+changed, and no recorded count changed.
+
+C-1: `dev/m1-set-algebra.sh` printed no row for the four dependent legs
+after a red `SET-ALGEBRA-BUILD`. The else branch now prints
+`SKIPPED NAME after a red SET-ALGEBRA-BUILD` and `FAIL NAME` for
+`SET-ALGEBRA-UNIT-EXE`, `SET-ALGEBRA-TESTS-RUN`,
+`SET-ALGEBRA-MUTATIONS-RUN` and `SET-ALGEBRA-COUNTS`, the shape of
+`dev/m1-hash-projections.sh`. Every leg again prints one PASS or FAIL row.
+
+A-3: the new `mu<Key>` operand arm of `store/interp.ml` makes a key-shaped
+operand on an older tag answer `STORE-SCRIPT-COMMAND` where it answered
+`STORE-BYTES`. The assertion label in `dev/set_algebra_tests.ml` now reads
+"key operand is not a command shape", so the recorded reason matches the
+message. `store/interp.ml` is unchanged and the store group stays at 200/200.
+
+D-1: `dev/SET-ALGEBRA.md` now documents the partial modes `--offline`,
+`--static` and `--probe ENTRY`, the entries that own LuaJIT cases, and the
+rule that partial runs cannot satisfy the complete ladder.
+
+D-2: `dev/SET-MEMBERS.md` now names SUNION, SINTER and SDIFF in the shared
+array adapter list, which covers tags 27 through 34.
+
+D-3: the set algebra section of `dev/MUTATION-LOG.md` uses heading level
+`###`, like the other slice sections, so the last `###` heading of the file
+is the table a later round extends. Lines 1 to 718 are unchanged.
+
+C-2: `dev/set-algebra-tests.py` keeps one probe guard,
+`require(bool(rows), 'SET-ALGEBRA probe has no cases')`, so the probe domain
+is exactly the entries that own oracle rows. `--probe union` passes with 22
+cases; `--probe unionRaw` and an unknown entry fail with that one message.
+
+A-2 was refuted: the sentence about the five wrong Redis types scopes to the
+live runs and its own qualifier, and the counts 90 plus 24 equal the
+documented `PASS SET-ALGEBRA-E2E cases=114`.
+
+Fix smoke `gates-fix-1.log` (root mode, 624 rows, last row `EXIT-ALL 1`)
+holds `PASS SET-ALGEBRA-UNIT cases=106`, `PASS SET-ALGEBRA-ARTIFACTS
+pairs=24`, `PASS SET-ALGEBRA-REFUSALS cases=36 atomic_output=36`,
+`PASS SET-ALGEBRA-STORE-EXAMPLE cases=4`, `PASS SET-ALGEBRA-ORACLES
+luajit=90`, `PASS SET-ALGEBRA-E2E cases=114 hosts=234 readonly=216
+utf8_refusals=6 errors=6`, `PASS SET-ALGEBRA-EXAMPLE exec=12`,
+`PASS SET-ALGEBRA-MUTATIONS killed=17 survived=0 restored=6`,
+`PASS SET-ALGEBRA-COUNTS`, the unchanged HASH-PROJECTIONS rows,
+`PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`, the unchanged
+`TRUSTED-LINES` row and `EXIT-MUT 0`. Its 27 FAIL rows are
+`M0-TIME median_ms=240.780 bound_ms=150`, MEASURE and the aggregates that
+include that timing gate, at one-minute load 14.81. The 150 ms bound is
+unchanged; the calm rerun is `gates-gates-1.log` (22:47 to 23:58); the
+later rerun `gates-close.log` went red on the timing leg only, at
+one-minute load 20.15.
+
+Findings table:
+
+| id | severity | file | fix or ruling |
+| --- | --- | --- | --- |
+| C-1 | low | `dev/m1-set-algebra.sh` | The else branch of the SET-ALGEBRA-BUILD guard now prints FAIL SET-ALGEBRA-BUILD, sets failed=1 and prints SKIPPED NAME then FAIL NAME for the four dependent legs. |
+| A-3 | low | `store/interp.ml` | The assertion label at `dev/set_algebra_tests.ml` line 66 becomes "key operand is not a command shape"; `store/interp.ml` is untouched and the store group stays at 200/200. |
+| D-1 | low | `dev/SET-ALGEBRA.md` | The partial-mode paragraph is appended, naming --offline, --static and --probe ENTRY, the entries that own LuaJIT cases and the rule that partial runs cannot satisfy the complete ladder. |
+| D-2 | low | `dev/SET-MEMBERS.md` | Line 67 now reads "adapter handles LRANGE, SMEMBERS, HGETALL, HKEYS, HVALS, SUNION, SINTER and SDIFF.", matching the tag range 27 to 34 of `print/lua.ml`. |
+| D-3 | low | `dev/MUTATION-LOG.md` | The set algebra heading at line 720 moves from level ## to ###, so it is the last ### heading of the file; lines 1 to 718 are unchanged. |
+| C-2 | low | `dev/set-algebra-tests.py` | The probe path drops the `entry in ENTRIES` guard and keeps `require(bool(rows), 'SET-ALGEBRA probe has no cases')`, so the probe domain is exactly the entries that own oracle rows. |
+
+Refuted: 1 finding. A-2, because `dev/SET-ALGEBRA.md` lines 51 to 53 scope
+"All five wrong Redis types are tested on both sides" to the live runs and
+to its own qualifier "with the other key either missing or present", the
+operand-position loop, and 90 oracle cases plus 24 live extras equal the
+documented `PASS SET-ALGEBRA-E2E cases=114`.
+
+Merged and dropped: 2 items. A-1 was merged into C-1, same file
+`dev/m1-set-algebra.sh`, same line 49 and same defect, because C-1 cites the
+three sibling fan-out sites with line numbers, and A-1's claim "unlike every
+earlier per-slice ladder" is inaccurate since `dev/m1-do.sh`,
+`dev/m1-readonly.sh`, `dev/m1-strings.sh`, `dev/m1-hashes.sh` and
+`dev/m1-sets.sh` hold no if/else at all. A-2 was dropped after the verifier
+refuted it and was not revived.
+
+Gates, from the last gates log `gates-gates-1.log` (root mode, 624 rows,
+0 FAIL rows, last row `EXIT-ALL 0`), one row per leg of
+`dev/m1-set-algebra.sh`:
+
+| leg | verbatim row |
+| --- | --- |
+| M1-HASH-PROJECTIONS | `PASS M1-HASH-PROJECTIONS` |
+| SET-ALGEBRA-BUILD | `PASS SET-ALGEBRA-BUILD` |
+| SET-ALGEBRA-UNIT-EXE | `PASS SET-ALGEBRA-UNIT-EXE` |
+| SET-ALGEBRA-TESTS-RUN | `PASS SET-ALGEBRA-TESTS-RUN` |
+| SET-ALGEBRA-MUTATIONS-RUN | `PASS SET-ALGEBRA-MUTATIONS-RUN` |
+| SET-ALGEBRA-COUNTS | `PASS SET-ALGEBRA-COUNTS` |
+| HOUSE | `PASS HOUSE` |
+| TRUSTED-LINES | `PASS TRUSTED-LINES` |
+| ladder | `PASS M1-SET-ALGEBRA` |
+| queue | `EXIT 0`, `EXIT-MUT 0`, `EXIT-ALL 0` |
+
+The one-minute load was 15.48 at the start row `22:47  up 29 days,  1:22,
+29 users, load averages: 15.48 15.87 17.44`, 17.49 at the timing leg row
+`LOAD 22:51  up 29 days,  1:26, 29 users, load averages: 17.49 18.25
+18.12`, and 33.86 at the end row `23:58  up 29 days,  2:33, 29 users, load
+averages: 33.86 121.22 151.01`. The timing leg is green at that load:
+`PASS M0-TIME median_ms=119.751 bound_ms=150` and
+`PASS M0-TIME-BOUNDARY below=149 at=150`.
+
+The carry row is `CARRY files=36 diff=0 vendor=32 copies=4` with
+`PIN 2c2e6e6 unlisted=0` and `R0-COUNT formers=2 schema=4 shapes=5
+admitted=3`. The count rows are `PASS SET-ALGEBRA-UNIT cases=106`,
+`PASS SET-ALGEBRA-ARTIFACTS pairs=24`, `PASS SET-ALGEBRA-REFUSALS cases=36
+atomic_output=36`, `PASS SET-ALGEBRA-STORE-EXAMPLE cases=4`,
+`PASS SET-ALGEBRA-ORACLES luajit=90`, `PASS SET-ALGEBRA-E2E cases=114
+hosts=234 readonly=216 utf8_refusals=6 errors=6` and
+`PASS SET-ALGEBRA-EXAMPLE exec=12`. The mutation summaries are
+`PASS SET-ALGEBRA-MUTATIONS killed=17 survived=0 restored=6`,
+`PASS HASH-PROJECTIONS-MUTATIONS killed=16 survived=0 restored=6` and
+`PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`.
+
+The closing ladder log `gates-close.log` was queued at one-minute load
+24.97 after the fix round. It ended `EXIT-ALL 1` with 624 rows and 27
+FAIL rows. Every FAIL row is the timing leg or an aggregate row that
+carries that leg. The timing row is `FAIL M0-TIME median_ms=212.303
+bound_ms=150` at the load row `LOAD 0:28  up 29 days,  3:03, 29 users,
+load averages: 20.15 22.53 42.17`. The aggregate FAIL names are MEASURE
+1, STAGE-F 2, M1-DO 2, M1-READONLY 2, M1-STRINGS 2, M1-HASHES 2,
+M1-SETS 2, M1-LISTS 2, M1-LIST-ACCESS 2, M1-LIST-RANGE 2,
+M1-SET-MEMBERS 2, M1-HASH-ENTRIES 2, M1-HASH-PROJECTIONS 2 and
+M1-SET-ALGEBRA 1. The functional rows are present in both logs:
+`PASS SET-ALGEBRA-MUTATIONS killed=17 survived=0 restored=6`,
+`PASS HASH-PROJECTIONS-MUTATIONS killed=16 survived=0 restored=6`,
+`PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1`, the five set
+algebra legs `PASS SET-ALGEBRA-BUILD`, `PASS SET-ALGEBRA-UNIT-EXE`,
+`PASS SET-ALGEBRA-TESTS-RUN`, `PASS SET-ALGEBRA-MUTATIONS-RUN` and
+`PASS SET-ALGEBRA-COUNTS`, the 14 full `TRUSTED-LINES ... bin=404/450
+OK` rows and `EXIT-MUT 0`. The row `PASS M1-SET-ALGEBRA` is in
+`gates-gates-1.log` only, because the red timing leg turns the ladder
+aggregate row of `gates-close.log` into `FAIL M1-SET-ALGEBRA`.
+`gates-gates-1.log` stays the green closing proof at one-minute load
+17.49. The nested projection ladder holds
+`killed=16` and the trusted-line groups hold `lua=320/320 sh=227/240
+store=200/200`, each unchanged by this review.
+
+Review pass 1 (2026-09-14) fixed 6 findings.
+
+Fix rounds: 1.

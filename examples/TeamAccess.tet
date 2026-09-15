@@ -1,0 +1,56 @@
+module TeamAccess
+
+schema teams : String -> Key Set tag b"access"
+
+def seed : Script Reply (tag b"access") := do {
+  _ <- sadd Reply (tag b"access") (teams b"editors") b"alice";
+  _ <- sadd Reply (tag b"access") (teams b"editors") b"bob";
+  _ <- sadd Reply (tag b"access") (teams b"reviewers") b"bob";
+  _ <- sadd Reply (tag b"access") (teams b"reviewers") b"carol";
+  pure Reply (tag b"access") nil
+}
+
+def everyone : Script Reply (tag b"access") := do {
+  r <- sunion Reply (tag b"access") (teams b"editors") (teams b"reviewers");
+  pure Reply (tag b"access") r
+}
+
+def both : Script Reply (tag b"access") := do {
+  r <- sinter Reply (tag b"access") (teams b"editors") (teams b"reviewers");
+  pure Reply (tag b"access") r
+}
+
+def editorsOnly : Script Reply (tag b"access") := do {
+  r <- sdiff Reply (tag b"access") (teams b"editors") (teams b"reviewers");
+  pure Reply (tag b"access") r
+}
+
+def remove : Script Reply (tag b"access") := do {
+  _ <- del Reply Set (tag b"access") (teams b"reviewers");
+  pure Reply (tag b"access") nil
+}
+
+def main : Client Reply := do {
+  _ <- inv Reply (tag b"access") seed;
+  r <- inv Reply (tag b"access") everyone;
+  done Reply r
+}
+
+def common : Client Reply := do {
+  _ <- inv Reply (tag b"access") seed;
+  r <- inv Reply (tag b"access") both;
+  done Reply r
+}
+
+def exclusive : Client Reply := do {
+  _ <- inv Reply (tag b"access") seed;
+  r <- inv Reply (tag b"access") editorsOnly;
+  done Reply r
+}
+
+def retained : Client Reply := do {
+  _ <- inv Reply (tag b"access") seed;
+  r <- inv Reply (tag b"access") both;
+  _ <- inv Reply (tag b"access") remove;
+  done Reply r
+}

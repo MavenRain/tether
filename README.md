@@ -4,6 +4,12 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports typed SUNION, SINTER and SDIFF for two Set keys, with
+unique members sorted by bytes. `./tether exec examples/TeamAccess.tet --host node`
+prints `["alice","bob","carol"]`; `common`, `exclusive` and `retained`
+demonstrate intersection, difference and retained replies. See
+`dev/SET-ALGEBRA.md` for semantics and validation.
+
 M1 now supports typed HKEYS and HVALS on Hash keys. Both return arrays
 sorted by bytes, and HVALS retains duplicate values.
 `./tether exec examples/HashCatalog.tet --host node` prints

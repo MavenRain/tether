@@ -716,3 +716,35 @@ The existing LRANGE typed-error mutation anchor tracks the expanded array
 branch (tags 27 through 31); its assertion and required failure are
 unchanged. The previous Set and Hash enumeration mutation anchors remain
 intact.
+
+### 2026-09-14: M1 Set algebra
+
+`dev/set-algebra-mutations.py` compiled and killed 17 mutants in a
+disposable copy, then rebuilt and passed all six controls. It checks
+each intended assertion and exit status, so a build failure or unrelated
+error cannot score a kill. Capture:
+`tether-m1-set-algebra/.kanon-exec/run-DQA2xc`.
+
+| Mutant | Required detection |
+| --- | --- |
+| STORE-UNION | Left-only union members |
+| STORE-INTER | Left-only intersection is empty |
+| STORE-DIFF | Right-only difference is empty |
+| STORE-SECOND-KEY | Right input is read independently |
+| STORE-ORDER | Ordered complete reply |
+| STORE-STATE | Missing-key read preserves the sentinel |
+| STORE-KEY-OPERAND | A key operand retains its distinct shape |
+| LUA-SECOND-KEY | Difference receives the declared second key |
+| LUA-UNION | Union command selection |
+| LUA-INTER | Intersection command selection |
+| LUA-DIFF | Difference command selection |
+| UNION-WRITE | Union is classified read-only |
+| INTER-WRITE | Intersection is classified read-only |
+| DIFF-WRITE | Difference is classified read-only |
+| BRANCH-WRITE | A reachable delete removes read-only classification |
+| LUA-ORDER | Reverse twin output is sorted |
+| LUA-BULK | Head projection retains the bulk reply variant |
+
+Result: `PASS SET-ALGEBRA-MUTATIONS killed=17 survived=0 restored=6`.
+The earlier LRANGE error-tag anchor now spans array tags 27 through 34;
+its expected assertion and required failure are unchanged.
