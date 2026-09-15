@@ -13,8 +13,8 @@ let message = function
   | Overflow -> "ERR increment or decrement would overflow"
   | Missing_key -> "ERR no such key"
   | Index_range -> "ERR index out of range"
-let get key store = Keys.find_opt key store |> Option.fold ~none:(Ok None) ~some:(function
-  | Str value -> Ok (Some value) | Hash _ | List _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
+let read empty project key store = Keys.find_opt key store |> Option.fold ~none:(Ok empty) ~some:project
+let get = read None (function Str value -> Ok (Some value) | Hash _ | List _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
 let integer text = Result.bind (Int64.of_string_opt text |> Option.to_result ~none:Not_integer)
   (fun value -> if Int64.to_string value = text then Ok value else Error Not_integer)
 let set key value store = "OK", put key (Str value) store
@@ -30,8 +30,7 @@ let incrby key amount store =
   let* value = integer (Option.value ~default:"0" value) in
   let* text = add value amount in Ok (text, put key (Str text) store)
 let incr key store = incrby key "1" store let decr key store = incrby key "-1" store
-let hash key store = Keys.find_opt key store |> Option.fold ~none:(Ok Keys.empty) ~some:(function
-  | Hash fields -> Ok (Keys.of_seq (List.to_seq fields)) | Str _ | List _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
+let hash = read Keys.empty (function Hash fields -> Ok (Keys.of_seq (List.to_seq fields)) | Str _ | List _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
 let save_hash key fields store = save key (Hash (Keys.bindings fields)) ~empty:(Keys.is_empty fields) store
 let hget key field store = let* fields = hash key store in Ok (Keys.find_opt field fields)
 let hexists key field store = let* fields = hash key store in Ok (if Keys.mem field fields then "1" else "0")
@@ -47,8 +46,7 @@ let hincrby key field amount store =
   let* amount = integer amount in let* old = hget key field store in
   let* value = integer (Option.value ~default:"0" old) |> Result.map_error (fun _ -> Hash_not_integer) in
   let* text = add value amount in let* _count, after = hset key field text store in Ok (text, after)
-let members key store = Keys.find_opt key store |> Option.fold ~none:(Ok Members.empty) ~some:(function
-  | Set values -> Ok (Members.of_list values) | Str _ | Hash _ | List _ | ZSet _ | Stream _ -> Error Wrong_type)
+let members = read Members.empty (function Set values -> Ok (Members.of_list values) | Str _ | Hash _ | List _ | ZSet _ | Stream _ -> Error Wrong_type)
 let save_set key values store = save key (Set (Members.elements values)) ~empty:(Members.is_empty values) store
 let sismember key member store = Result.map (fun values -> if Members.mem member values then "1" else "0") (members key store)
 let scard key store = let* values = members key store in Ok (string_of_int (Members.cardinal values))
@@ -59,8 +57,10 @@ let sstore op destination key other store = let* values = scombine op key other 
 let change_set update key member store = let* values = members key store in let next = update member values in
   if Members.equal values next then Ok ("0", store) else Ok ("1", save_set key next store)
 let sadd = change_set Members.add let srem = change_set Members.remove
-let list key store = Keys.find_opt key store |> Option.fold ~none:(Ok []) ~some:(function
-  | List values -> Ok values | Str _ | Hash _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
+let smove key other member store = let* present = sismember key member store in
+  let* _ = if Keys.mem key store then members other store else Ok Members.empty in
+  if present = "0" || key = other then Ok (present, store) else let* _, next = srem key member store in Result.map (fun (_, after) -> "1", after) (sadd other member next)
+let list = read [] (function List values -> Ok values | Str _ | Hash _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
 type side = Left | Right
 let orient = function Left -> Fun.id | Right -> List.rev
 let llen key store = let* values = list key store in Ok (string_of_int (List.length values))

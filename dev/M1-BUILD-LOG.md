@@ -3113,3 +3113,180 @@ no RED-LOAD waiver is claimed.
 Review pass 1 (2026-09-15) fixed 3 findings.
 
 Fix rounds: 1.
+
+### 2026-09-15: M1 Set move
+
+Continues `41684fa10b11941eed470e44a12f256b2e14e729` with typed `smove`,
+Script tag 38. Both key operands require `Key Set g` with the same tag;
+the member requires `Bytes`. The Wasm and Bash bodies share the writer
+dispatch and return an integer membership result. The interpreter and
+independent LuaJIT twin implement missing-source precedence, atomic wrong
+types, no-op membership, existing destination members, same-key transfers
+and removal of the last source member. `TeamTransfer.tet` demonstrates a
+transfer, a retained reply and a same-key invocation.
+
+The store shares its typed lookup/default handling across Strings, Hashes,
+Sets and Lists. All eight trusted bounds remain unchanged: kernel
+3997/4000, encoder 246/600, lua 320/320, sh 227/240, store 200/200,
+host-node 196/300, host-rest 156/300 and bin 404/450. The two separately
+reported preludes total 145 lines. `PRELUDES.sha256` pins redis.kan to
+`06e7a84dc3234c620c5a61182e8454339ab583f46a33bec8e1e7915790291330`.
+
+The new inventory covers 304 store/interpreter cases, 12 artifact pairs,
+14 type refusals with atomic output, three interpreter example entries,
+113 LuaJIT cases, 179 live Redis cases with 360 host executions including
+two uncaught errors, nine example executions and 15 compiling mutations.
+The live matrix includes all five wrong types in both operand positions,
+both directions, aliases, binary members, exact expiry deadlines and
+complete values. Read-only EVAL variants are denied by Redis ACLs during
+the live checks, so a writer-classification regression cannot pass them.
+
+The pure store and LuaJIT twin do not model time. Expiry parity is asserted
+against Redis through PEXPIRETIME. Expected member bytes are compared in
+hexadecimal, without relying on Redis enumeration order or UTF-8 decoding.
+The resulting command reply can be retained within a script or across a
+later invocation that deletes the destination.
+
+A disposable instrumented `sh_emit` measured checker/erasure at 30471
+polls and completion of the static walk at 30483. The existing Stage D
+refusal grants six walk polls, at fuel 30477, and still requires
+`SH-BUDGET`. Its refusal and output-preservation checks passed in the full
+ladder. Legacy Set algebra and Set store mutations retain the same wrong
+operand changes with unique anchors. The unknown-command probe uses 39
+after SMOVE took 38. A static comparison inspected 129 mutation anchors
+across the existing suites, the total of every tracked
+`dev/*mutations*.py` inventory without Set move.
+
+The focused build reported zero errors and warnings, the house gate
+reported no findings across 39 OCaml files, all 304 unit cases passed,
+and the offline inventory passed. The mutation run killed all 15 changes
+and restored five positive controls. Its complete capture is
+`/Users/oobi/Documents/gpt18/tether-m1-set-move/.kanon-exec/run-WFxoQR`.
+The offline capture is
+`/Users/oobi/Documents/gpt18/tether-m1-set-move/.kanon-exec/run-aMErt6`.
+
+The focused live run also passed every row, including
+`PASS SET-MOVE-E2E cases=179 hosts=360 errors=2` and
+`PASS SET-MOVE-EXAMPLE exec=9`. Its complete capture is
+`/Users/oobi/Documents/gpt18/tether-m1-set-move/.kanon-exec/run-7FFWuz`.
+
+TTL commands, variadic Set operands, other bulk operations, ZSet commands
+and the remaining M1 examples and gates remain pending.
+
+The complete `sh dev/m1-set-move.sh` ladder exited 0 with 647 stdout
+rows, no FAIL rows and empty stderr. It includes the entire Set store
+ladder and ends with `PASS M1-SET-MOVE`. The timing row is
+`PASS M0-TIME median_ms=108.848 bound_ms=150`, with the unchanged strict
+150 ms bound and passing 149/150 boundary controls. The final rows include
+`PASS SET-MOVE-TESTS`,
+`PASS SET-MOVE-MUTATIONS killed=15 survived=0 restored=5`,
+`PASS SET-MOVE-COUNTS`, HOUSE, TRUSTED-LINES and PRELUDES.
+
+Full capture:
+`/Users/oobi/Documents/gpt18/tether-m1-set-move/.kanon-exec/run-kSWHFI`.
+The stdout SHA-256 is
+`49ba86bd1484c5aab9a17516298a728eb315858ef474d80e2487bc62a2966f7f`.
+All earlier M1 aggregate rows pass, including Set algebra and Set store.
+No timing waiver or bound change is needed.
+
+### Review round 2026-09-15 (M1 Set move)
+
+Six low findings were kept and all six are fixed in this round. Four
+finder items were refuted, and five items are merged or dropped.
+
+| id | severity | file | fix or ruling |
+| --- | --- | --- | --- |
+| B-1 | low | `print/lua.ml` | Line 107: the non-integer diagnostic word selector now reads `(s.tag == 17 or s.tag == 38) and 'membership'`, so SMOVE reports a membership reply, not a member count. The edit replaces one line and adds none, so the Lua trusted group stays at 320/320. |
+| A-3 | low | `dev/set_move_tests.ml` | Line 69: the malformed operand list gains `[key "destination"; signed]`, the signed member shape that `dev/set_store_tests.ml` already covers. The shape rows move from five to six and the unit row moves to `cases=304`. |
+| A-1 | low | `dev/set_move_tests.ml` | Line 35: the two tautological requires `persistent input` and `error preserves input` are removed. `before` is an immutable map, so both held for every implementation. The complete-state requires keep the atomicity signal and the case count is unchanged by this edit. |
+| C-1 | low | `dev/set-move-mutations.py` | Line 21: STORE-MISSING-SOURCE now pins `FAIL SET-MOVE-UNIT missing source`, backed by the new named check `missing source precedence` of `dev/set_move_tests.ml`. LUA-COMMAND, LUA-DIRECTION and LUA-MEMBER now pin `TWIN stored value mismatch` instead of the bare `TWIN`, in the style of `dev/set-store-mutations.py`. |
+| D-1 | low | `dev/SET-MOVE.md` | Line 64: the closing section states `SPEC records the current prelude count.`, as the recent sibling documents do. |
+| D-2 | low | `dev/M1-BUILD-LOG.md` | Line 3156: the static comparison row reads a mutation-anchor total that no inventory produced, and now names its counted basis. |
+
+Refuted: 4 findings. A-2, because the deleted independence comment at
+`store/interp.ml:32` is not the only in-tree record: `README.md:81`
+and six lines of `dev/M1-BUILD-LOG.md` already read "the independent
+store interpreter", `dev/SET-MOVE.md:30,33` name it, and the store
+group stays 200/200 (`store/store.ml`=85 plus `store/interp.ml`=115 at
+HEAD and staged). C-2, because `dev/set-move-tests.py:125` prints
+`atomic_output=len(invalid)` only after `support.require` at line 123
+already raised on the first bad case, so the number is true, not
+padding; seven suites, including both immediate predecessors
+`set-store-tests.py:134` and `set-algebra-tests.py:159`, share the
+same form. C-4, because `dev/set-move-tests.py` builds outputs for
+every entry, including `raw`, before the `--static` branch, so the raw
+artifact runs its three assertions under `--offline` and `--static`
+even though `cases()` emits no row for it; `pairs=12` counts emitted
+pairs, not oracle coverage, and `luajit=113` is the separately
+reported twin count. D-3, a duplicate of A-2: the comment deleted at
+`store/interp.ml:35` is not the sole record either, `dev/STAGE-E.md:4`
+and 22 lines of `dev/M1-BUILD-LOG.md` already state the three-way
+independence, and neither `store.ml` nor `interp.ml` carried another
+comment line at HEAD.
+
+Merged and dropped: 5 items. C-3 was merged into C-1, same file
+`dev/set-move-mutations.py`, same defect: a kill marker naming no
+SET-MOVE assertion (`STORE-MISSING-SOURCE`, and the bare `TWIN`
+markers `LUA-COMMAND`, `LUA-DIRECTION`, `LUA-MEMBER`), now covered by
+C-1's fix. A-2, C-2, C-4 and D-3 were refuted by the verifier and not
+revived, for the reasons stated above; D-3 is additionally a duplicate
+of A-2.
+
+Counts that moved: `PASS SET-MOVE-UNIT cases=303` becomes
+`cases=304` in `dev/m1-set-move.sh`, in the positive control of
+`dev/set-move-mutations.py`, in `dev/SET-MOVE.md`, in the Set move
+mutation table of `dev/MUTATION-LOG.md` and in the two rows of this
+section. No bound moved: `TRUSTED-LINES kernel=3997/4000
+encoder=246/600 lua=320/320 sh=227/240 store=200/200 host-node=196/300
+host-rest=156/300 bin=404/450 OK`.
+
+Measured controls, all from ROOT after the edits:
+`dune build bin/tether.exe dev/store_run.exe dev/set_move_tests.exe`
+exit 0; `PASS SET-MOVE-UNIT cases=304`; `PASS SET-MOVE-ARTIFACTS
+pairs=12`, `PASS SET-MOVE-REFUSALS cases=14 atomic_output=14`,
+`PASS SET-MOVE-STORE-EXAMPLE cases=3`, `PASS SET-MOVE-ORACLES
+luajit=113` and `PASS SET-MOVE-TESTS mode=offline`; `PASS HOUSE`;
+`PASS CHECK definitions=69` and `PASS EMIT` on
+`examples/TeamTransfer.tet`. The emitted `body-0.lua` selector, driven
+under `luajit -joff` with tag 38, prints
+`ERR membership reply is not an integer`.
+
+Gates, from the closing ladder log `gates-gates-1.log` (root mode, 705
+rows, 0 FAIL rows, last row `EXIT-ALL 0`), one row per leg of
+`dev/m1-set-move.sh`:
+
+| leg | verbatim row |
+| --- | --- |
+| M1-SET-STORE | `PASS M1-SET-STORE` |
+| SET-MOVE-BUILD | `PASS SET-MOVE-BUILD` |
+| SET-MOVE-UNIT-EXE | `PASS SET-MOVE-UNIT-EXE` |
+| SET-MOVE-TESTS-RUN | `PASS SET-MOVE-TESTS-RUN` |
+| SET-MOVE-MUTATIONS-RUN | `PASS SET-MOVE-MUTATIONS-RUN` |
+| SET-MOVE-COUNTS | `PASS SET-MOVE-COUNTS` |
+| HOUSE | `PASS HOUSE` |
+| TRUSTED-LINES | `PASS TRUSTED-LINES` |
+| PRELUDES | `PASS PRELUDES` |
+| ladder | `PASS M1-SET-MOVE` |
+| queue | `EXIT 0`, `EXIT-MUT 0`, `EXIT-ALL 0` |
+
+The mutation summary is `PASS SET-MOVE-MUTATIONS killed=15 survived=0
+restored=5`. The counts row is `PASS SET-MOVE-UNIT cases=304`, `PASS
+SET-MOVE-ARTIFACTS pairs=12`, `PASS SET-MOVE-REFUSALS cases=14
+atomic_output=14`, `PASS SET-MOVE-STORE-EXAMPLE cases=3`, `PASS
+SET-MOVE-ORACLES luajit=113`, `PASS SET-MOVE-E2E cases=179 hosts=360
+errors=2`, `PASS SET-MOVE-EXAMPLE exec=9` and `TRUSTED-LINES
+kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240 store=200/200
+host-node=196/300 host-rest=156/300 bin=404/450 OK`.
+
+The one-minute load was 17.59 at the start row `14:08 up 29 days,
+16:43, 29 users, load averages: 17.59 17.02 15.25` and 24.58 at the
+end row `14:34 up 29 days, 17:09, 29 users, load averages: 24.58
+24.82 23.64`. Pin and carry rows: `PIN 2c2e6e6 unlisted=0` and
+`CARRY files=36 diff=0 vendor=32 copies=4`. The whole ladder went
+green throughout, including the timing leg `PASS M0-TIME
+median_ms=107.586 bound_ms=150`. The 150 ms bound is unchanged and no
+RED-LOAD waiver is claimed.
+
+Review pass 1 (2026-09-15) fixed 6 findings.
+
+Fix rounds: 1.

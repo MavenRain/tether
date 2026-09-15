@@ -24,7 +24,7 @@ MUTANTS = [
      UNIT, b'FAIL SET-ALGEBRA-UNIT left only'),
     ('STORE-DIFF', 'store/interp.ml', b'else Store.Members.diff) key other store', b'else Store.Members.union) key other store',
      UNIT, b'FAIL SET-ALGEBRA-UNIT right only'),
-    ('STORE-SECOND-KEY', 'store/store.ml', b'members other store', b'members key store',
+    ('STORE-SECOND-KEY', 'store/store.ml', b'let* right = members other store', b'let* right = members key store',
      UNIT, b'FAIL SET-ALGEBRA-UNIT right only'),
     ('STORE-ORDER', 'store/store.ml', b'Members.elements (op left right)', b'List.rev (Members.elements (op left right))',
      UNIT, b'FAIL SET-ALGEBRA-UNIT left only'),

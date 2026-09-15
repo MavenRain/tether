@@ -1,0 +1,43 @@
+module TeamTransfer
+schema teams : String -> Key Set tag b"transfer"
+
+def moveAlice : Script Reply (tag b"transfer") := do {
+  _ <- sadd Reply (tag b"transfer") (teams b"blue") b"alice";
+  _ <- sadd Reply (tag b"transfer") (teams b"blue") b"bob";
+  _ <- sadd Reply (tag b"transfer") (teams b"green") b"carol";
+  moved <- smove Reply (tag b"transfer") (teams b"blue") (teams b"green") b"alice";
+  pure Reply (tag b"transfer") moved
+}
+
+def members : Script Reply (tag b"transfer") := do {
+  r <- smembers Reply (tag b"transfer") (teams b"green");
+  pure Reply (tag b"transfer") r
+}
+
+def remove : Script Reply (tag b"transfer") := do {
+  r <- del Reply Set (tag b"transfer") (teams b"green");
+  pure Reply (tag b"transfer") r
+}
+
+def same : Script Reply (tag b"transfer") := do {
+  _ <- sadd Reply (tag b"transfer") (teams b"blue") b"alice";
+  r <- smove Reply (tag b"transfer") (teams b"blue") (teams b"blue") b"alice";
+  pure Reply (tag b"transfer") r
+}
+
+def main : Client Reply := do {
+  _ <- inv Reply (tag b"transfer") moveAlice;
+  r <- inv Reply (tag b"transfer") members;
+  done Reply r
+}
+
+def retained : Client Reply := do {
+  r <- inv Reply (tag b"transfer") moveAlice;
+  _ <- inv Reply (tag b"transfer") remove;
+  done Reply r
+}
+
+def unchanged : Client Reply := do {
+  r <- inv Reply (tag b"transfer") same;
+  done Reply r
+}

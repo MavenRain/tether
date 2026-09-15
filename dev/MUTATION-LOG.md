@@ -793,3 +793,41 @@ both the Set and List empty-result expressions. Its anchor now selects
 12-mutant requirement. The scoped recovery capture `run-hI6Pny`
 reports `PASS LIST-ACCESS-MUTATIONS killed=12 survived=0 restored=6`.
 The build log records the full ladder's timing failure and this recovery.
+
+### 2026-09-15: M1 Set move mutation checks
+
+`dev/set-move-mutations.py` runs mutants in a disposable copy, compiles
+each changed tree and requires the expected semantic failure. It restores
+the affected file in a finally block and reruns five positive controls
+after all mutants. A wrong exit status, missing diagnostic, build error,
+missing anchor, changed inventory or survivor fails the run.
+
+| Mutants | Detector |
+| --- | --- |
+| STORE-DIRECTION, STORE-MEMBER | Interpreter reply and complete-state checks. |
+| STORE-MISSING-SOURCE | Named `missing source precedence` check: a missing source answers before the destination type. |
+| STORE-DESTINATION-TYPE | Existing source must check a wrong destination even for an absent member. |
+| STORE-NO-OP, STORE-ALIAS | Literal zero/one replies for absent members and same-key transfers. |
+| STORE-REMOVAL | Complete source and destination values after a transfer. |
+| STORE-EXISTING-MEMBER | A transfer still returns one when the destination already has the member. |
+| LUA-COMMAND, LUA-DIRECTION, LUA-MEMBER | Independent LuaJIT complete-state checks, pinned on `TWIN stored value mismatch`. |
+| LUA-REPLY-TAG | A typed continuation distinguishes integer from bulk replies. |
+| WRITE-FLAG | Writer header assertion before running the artifact. |
+| TWIN-MISSING-SOURCE, TWIN-ALIAS | Literal replies in the parity fixtures. |
+
+The positive controls are the 304-case unit suite and the move, same-key,
+typed-reply and binary-member artifact probes. The focused capture
+`/Users/oobi/Documents/gpt18/tether-m1-set-move/.kanon-exec/run-WFxoQR`
+reports `PASS SET-MOVE-MUTATIONS killed=15 survived=0 restored=5`.
+The new ladder requires this exact inventory row.
+
+Existing Set algebra and Set store mutations keep their original semantic
+changes after the new shared lookup and Lua argument selection. Their
+operand anchors are made unique; neither mutant nor positive-control
+inventory is reduced. The old unknown-tag test advances from 38 to 39.
+
+The full Set move ladder independently repeats the green mutation row at
+stdout line 636 of `run-kSWHFI`, followed by `PASS SET-MOVE-COUNTS` and
+`PASS M1-SET-MOVE`. All preceding mutation suites pass in that run,
+including the unchanged 17-mutant Set algebra and 18-mutant Set store
+inventories. The build log records the full capture and green timing gate.

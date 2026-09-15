@@ -76,7 +76,7 @@ let run () =
       [[]; [key "left"]; [bytes "left"; key "right"]; [key "left"; bytes "right"];
        [signed; key "right"]; [key "left"; signed]; [key "left"; key "right"; key "other"]] in
     Ok (total + values + replaced + errors + identical + shapes)) (Ok 0) [35; 36; 37] in
-  let* () = require (execute 38 [key "left"; key "right"] initial = Error "STORE-SCRIPT-COMMAND") "unknown command" in
+  let* () = require (execute 39 [key "left"; key "right"] initial = Error "STORE-SCRIPT-COMMAND") "unknown command" in
   let total = total + 1 in
   let* () = require (total = 322) (Printf.sprintf "expected 322 cases, counted %d" total) in Ok total
 let () = run () |> Result.fold

@@ -182,6 +182,22 @@ local function list_call(command, key, value, extra)
   return popped
 end
 local function call(command, key, amount, value)
+  if command == 'SMOVE' then
+    local source, target = values[key], values[amount]
+    if source == nil then return 0 end
+    if type(source) ~= 'table' or source[set_kind] == nil
+      or (target ~= nil and (type(target) ~= 'table' or target[set_kind] == nil)) then
+      return {err='WRONGTYPE Operation against a key holding the wrong kind of value'}
+    end
+    local members = source[set_kind]
+    if not members[value] then return 0 end
+    if key == amount then return 1 end
+    local destination = target and target[set_kind] or {}
+    members[value], destination[value] = nil, true
+    if next(members) == nil then values[key] = nil end
+    values[amount] = {[set_kind]=destination}
+    return 1
+  end
   if command == 'SUNIONSTORE' or command == 'SINTERSTORE' or command == 'SDIFFSTORE' then
     local result = set_call(command:sub(1, -6), amount, value)
     if result.err then return result end

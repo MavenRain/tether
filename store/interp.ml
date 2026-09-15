@@ -32,7 +32,6 @@ and replies = function
   | Data (E.Tid "mu<Replies>", 0, []) -> Ok []
   | Data (E.Tid "mu<Replies>", 1, [r; rs]) -> let* r = reply r in let* rs = replies rs in Ok (r :: rs)
   | Data _ | Fields _ | Literal _ | Closure _ | Erased -> Error "STORE-REPLIES"
-(* Evaluate the erased term itself, independently of both printers. *)
 let run ~budget rows ~entry store =
   let functions = List.concat_map (fun (_name, entry) -> match entry with
     | Kanon_kernel.Erase.Dropped | Kanon_kernel.Erase.Postulate _ -> []
@@ -101,6 +100,7 @@ let run ~budget rows ~entry store =
           | (30 | 31), [] -> array (keep (Store.hproject (if tag = 30 then fst else snd) key store))
           | (32 | 33 | 34), [KeyName other] -> array (keep (Store.scombine (if tag = 32 then Store.Members.union else if tag = 33 then Store.Members.inter else Store.Members.diff) key other store))
           | (35 | 36 | 37), [KeyName left; KeyName right] -> integer (Store.sstore (if tag = 35 then Store.Members.union else if tag = 36 then Store.Members.inter else Store.Members.diff) key left right store)
+          | 38, [KeyName other; Octets member] -> integer (Store.smove key other member store)
           | _, _ -> Error "STORE-SCRIPT-COMMAND" in
         let* next = apply k [answer] in script store next
     | Data _ | Fields _ | Literal _ | Closure _ | Erased -> Error "STORE-SCRIPT" in

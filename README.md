@@ -4,6 +4,13 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports typed SMOVE between two Set keys. Transfers preserve
+existing expiries and return whether the member was present in the source.
+`./tether exec examples/TeamTransfer.tet --host node` prints
+`["alice","carol"]`; `retained` keeps the transfer reply after deleting
+the destination, and `unchanged` moves within one Set. See
+`dev/SET-MOVE.md` for semantics and validation.
+
 M1 now supports typed SUNIONSTORE, SINTERSTORE and SDIFFSTORE with a
 destination and two Set inputs. `./tether exec examples/TeamCache.tet --host node`
 prints `["alice","bob","carol"]` after caching a union. `exclusive`
