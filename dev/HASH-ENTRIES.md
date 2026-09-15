@@ -46,7 +46,7 @@ Both example entries print `["name","Alice","visits","9007199254740993"]`.
 then returns the original array. Each execution owns an empty temporary
 store. This example does not implement the remaining session-store application.
 
-The gate runs the complete Set enumeration ladder, then requires 15 unit
+The gate runs the complete Set enumeration ladder, then requires 16 unit
 cases, seven artifact pairs with identical Lua bodies, six type refusals
 with no published output, 19 store and 19 LuaJIT comparisons, 44 live host
 runs, and six example executions. Of the live runs, 38 deny write-capable
@@ -69,6 +69,7 @@ and cannot satisfy the complete ladder.
 Lua remains at 320/320 lines and the store at 200/200. The shared array
 adapter sorts element or pair indices, then preserves the elements within
 each pair. LRANGE retains its sequence order. Shared Hash update handling
-preserves HSET and HDEL counts. The two pinned preludes total 136 lines.
+preserves HSET and HDEL counts. `SPEC.md` records the current prelude count.
+HKEYS and HVALS follow this slice; see `dev/HASH-PROJECTIONS.md`.
 Multi-field writes, other Hash bulk commands, field expiry and key TTL
 remain future work. Measured validation is in `dev/M1-BUILD-LOG.md`.

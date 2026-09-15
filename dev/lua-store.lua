@@ -45,12 +45,13 @@ local function hash_call(command, key, field, value)
     return {err='WRONGTYPE Operation against a key holding the wrong kind of value'}
   end
   local fields = values[key] or {}
-  if command == 'HGETALL' then
+  if command == 'HGETALL' or command == 'HKEYS' or command == 'HVALS' then
     local keys, out = {}, {}
     for field in pairs(fields) do keys[#keys+1] = field end
     table.sort(keys)
     for i = #keys, 1, -1 do
-      out[#out+1], out[#out+2] = keys[i], fields[keys[i]]
+      if command == 'HGETALL' then out[#out+1], out[#out+2] = keys[i], fields[keys[i]]
+      else out[#out+1] = command == 'HKEYS' and keys[i] or fields[keys[i]] end
     end
     return out
   end

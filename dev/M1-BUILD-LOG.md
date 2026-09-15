@@ -2445,3 +2445,214 @@ is recorded above; the completed log `gates-gates-1.log` ends with `EXIT-ALL
 --entry maximum` at one-minute load 587, the STAGE-F and 19 M1 aggregate
 FAIL rows are propagation, M0-TIME 96.249 ms passed, every hash-entries row
 passed and `EXIT-MUT 0` (G0).
+
+### 2026-09-14: M1 Hash projections
+
+Added typed `hkeys` and `hvals` on `Key Hash g`, with Script tags 30 and
+31. Both return arrays sorted by unsigned bytes. HVALS retains duplicate
+values and sorts independently of field order. The emitted Lua invokes
+the corresponding Redis command and shares the existing array adapter.
+The independent store projects Hash bindings; the LuaJIT twin returns
+fresh arrays in reverse field order. Read-only dispatch includes both
+commands and still detects writes reachable in continuations and cases.
+`HashCatalog.tet` demonstrates field enumeration and values retained
+after deleting the Hash.
+
+The store's reply helpers use compact layout to accommodate the shared
+projection helper and dispatch branch. Trusted counts remain Lua
+320/320 and store 200/200. The prelude manifest records 138 lines across
+its two files. The LRANGE error-tag mutation anchor follows the extended
+array branch and keeps the same required failure. Earlier enumeration
+documents now point to SPEC for the current prelude count. The HGETALL
+unit count in its guide is corrected from 15 to the existing 16.
+
+A disposable instrumented emitter measured 20936 front-end polls and
+20948 after the unchanged 12-poll static walk. The Stage D printer case
+now uses 20942. Boundary probes at 20935 and 20948 report `CHECK budget`;
+20936, 20942 and 20947 report `SH-BUDGET`. Every refusal leaves no output.
+Removing the printer guard makes 20942 report `CHECK budget`, so the
+recalibrated test still detects the missing guard. Measurement is in
+`.kanon-exec/run-livTGl`; boundary and negative controls are in
+`.kanon-exec/run-4L2NFP` under the validation checkout.
+
+An early integration run (`run-uIbjoJ`) caught an incorrect numeric Lua
+table initializer. Explicit indices corrected the command lookup before
+the complete ladder. The first ladder (`run-gCeAjn`) omitted the Codex
+`rg` directory from PATH and failed its foundation audit; it was stopped
+with exit 137. The corrected environment includes that directory and the
+zxcaml-p1 OCaml switch. Neither failure changed a gate requirement.
+
+Validation used `/Users/oobi/Documents/gpt18/tether-m1-hash-projections`
+at base 582aa66, the zxcaml-p1 switch, and temporary loopback Redis and
+REST servers. The complete `sh dev/m1-hash-projections.sh` attempt
+(`run-QH1wql`) passed foundation and Stage B, then hit the unchanged
+120-second Stage C deadline while emitting the existing M0 counter.
+Its separate M0 timing leg measured 462.716 ms against the strict 150 ms
+bound. The run was stopped with exit 137 after those failures were
+established. It did not complete the full ladder.
+
+The affected array commands were then checked directly with
+`/Users/oobi/Documents/gpt18/tether-projections-scoped.sh`. Capture
+`run-ASfVMg` completed with exit 0 and `PASS HASH-PROJECTIONS-SCOPED`.
+It includes full HKEYS/HVALS, LRANGE, SMEMBERS and HGETALL tests, their
+unit suites, the new projection mutations, the adjusted LRANGE mutations,
+HOUSE, trusted-line bounds, prelude hashes and the diff check.
+
+```text
+PASS HASH-PROJECTIONS-UNIT cases=36
+PASS HASH-PROJECTIONS-ARTIFACTS pairs=12
+PASS HASH-PROJECTIONS-REFUSALS cases=12 atomic_output=12
+PASS HASH-PROJECTIONS-ORACLES store=38 luajit=38
+PASS HASH-PROJECTIONS-E2E cases=42 hosts=88 readonly=76 utf8_refusals=6 errors=4
+PASS HASH-PROJECTIONS-EXAMPLE exec=6
+PASS HASH-PROJECTIONS-MUTATIONS killed=16 survived=0 restored=6
+```
+
+A final standalone `python3 -P dev/m0-bench.py` run (`run-8bzYse`) returned
+1: median 314.555 ms, minimum 273.440 ms, maximum 2606.471 ms, five samples,
+at one-minute load 61.75. M0-TIME remains red; its 150 ms bound is unchanged.
+The green scoped result does not certify the complete ladder or M0-EXIT.
+
+The initial scoped attempt (`run-AkfVNw`) was stopped while emitting
+artifacts. The new harness now includes only the selected interpreter
+case's seed program in each compiler input; artifact and LuaJIT probes
+contain no unused seeds. This reduces repeated checking of unrelated
+fixtures. The case inventory and all expected replies remain unchanged.
+
+A follow-up of the inherited counter-emitter timeout completed on both
+the unchanged baseline (17.969 seconds) and the changed source (22.539
+seconds), each with `PASS LUA-EMIT entry=counter keys=1`. This comparison
+is captured in `run-8WamIX`. It checks the development Lua carrier path;
+the M0 timing gate measures the executable Client artifact pair.
+
+The new fixtures cover missing keys, all five wrong Redis types, malformed
+operands, empty bytes, prefix and decimal ordering, all 256 byte values,
+duplicate values, complete 129-field arrays and replies retained across
+Script and Client writes. Live tests compare complete stored values with
+DUMP and preserve unrelated keys. Invalid UTF-8 in returned bytes is
+refused by the text hosts; bytes omitted by a projection do not affect
+that projection. All artifact pairs have identical Lua bodies.
+
+TTL, other bulk Hash operations and the remaining M1 milestones remain
+listed in `SPEC.md`.
+
+### Review round 2026-09-14 (M1 Hash projections)
+
+Four review items were fixed on the staged tree. No bound moved, no frozen
+record was edited, and no implementation file changed. One item stayed
+carried for a user ruling.
+
+A-2. The store sort in `hproject` is unobservable for HKEYS, because Keys
+is a String map and its bindings are already key ordered; the sort is
+load bearing for HVALS only. `dev/HASH-PROJECTIONS.md` now states the
+order source. A new mutant KEYS-ORDER in
+`dev/hash-projections-mutations.py` reverses the field projection and is
+killed by `FAIL HASH-PROJECTIONS-UNIT projection`. The killed count rises
+from 15 to 16 at every claim site: `dev/m1-hash-projections.sh`,
+`dev/MUTATION-LOG.md:712`, `dev/M1-BUILD-LOG.md:2508` and the kit
+`verify-final.sh` and `regex-proof.mjs`.
+
+D-2. `dev/HASH-PROJECTIONS.md:73` restated the literal prelude count. The
+guide now says `SPEC.md` records the current prelude count, and
+`SPEC.md:122` stays the single literal site.
+
+D-1. `dev/stage-d-tests.py:213` kept the previous slice's poll count in
+its Stage D fuel comment. The comment now reads: the M1 Hash projections
+prelude consumes 20936 polls before the static walk.
+
+D-4. `dev/HASH-PROJECTIONS.md:52` named a Redis command in the gate
+paragraph instead of the nested ladder. The sentence now names the
+complete Hash enumeration ladder.
+
+A-1 low, `store/interp.ml:76`. The store bound 200/200 is held by joined
+long lines. Carried for a user ruling, the third carry, no edit.
+
+Findings of this round:
+
+| id | severity | file | fix or ruling |
+|----|----------|------|---------------|
+| A-2 | low | store/store.ml:40 | Order source stated in `dev/HASH-PROJECTIONS.md`; new mutant KEYS-ORDER killed, killed count 15 to 16 at every claim site. |
+| D-2 | low | dev/HASH-PROJECTIONS.md:73 | The guide now says `SPEC.md` records the current prelude count; `SPEC.md:122` stays the single literal site. |
+| D-1 | low | dev/stage-d-tests.py:213 | Fuel comment now names the current slice's poll count, 20936 polls before the static walk. |
+| D-4 | low | dev/HASH-PROJECTIONS.md:52 | The gate paragraph now names the complete Hash enumeration ladder instead of a Redis command. |
+| A-1 | low | store/interp.ml:76 | Carried for a user ruling, third carry, no edit. |
+
+Refuted: 8 items, A-3, B-1, B-2, C-1, C-2, C-3, D-3 and D-5. Each was
+refuted at verification with a probe and not revived. Merged and dropped:
+0 merged and 8 dropped. The five kept items sit in five files and name
+five defects. No kept item was cut for the seven finding cap.
+
+Gates. The baseline ladder at 15:59 PDT gave `EXIT-ALL 1`, 27 timing FAIL
+rows at one-minute load 118 to 286, the STAGE-E build hit its deadline so
+the STAGE-E rows were unproven, every functional row green, `EXIT-MUT 0`.
+G0 RED-LOAD. Log `gates-baseline.log`. The baseline-2 ladder at 16:54 PDT
+gave `EXIT-ALL 1`, 26 FAIL rows at one-minute load 93 to 175, including
+`M0-TIME median_ms=211.572` and the M1 aggregates, plus a VOID
+`FAIL HASH-PROJECTIONS-COUNTS` row: the Workflow fix stage edited ROOT
+during the run, so the mutation runner reported killed=16 against the
+claimed 15. STAGE-E rows passed (STAGE-E-TESTS cases=10,
+STAGE-E-INTEGRITY killed=14 restored=1, STAGE-E-MUTATIONS killed=15
+restored=1). `EXIT-MUT 0`. G0 RED-LOAD. Log `gates-baseline-2.log`. The
+gates-1 ladder at 17:33 PDT, after the fix round, gave `EXIT-ALL 1`, 25
+FAIL rows, all of them timing rows or M1 aggregates that nest M0:
+`FAIL M0-TIME median_ms=255.696 bound_ms=150`, MEASURE, STAGE-F (2 rows)
+and the M1 aggregates, each at a one-minute load far above 40, which the
+LOAD RULE names RED-LOAD. No functional FAIL row. The 15 minute load
+average was 47.72 at 17:34. Log `gates-gates-1.log`.
+
+| leg | verbatim line |
+|-----|---------------|
+| M0-TIME | `FAIL M0-TIME median_ms=255.696 bound_ms=150` |
+| MEASURE | `FAIL MEASURE` |
+| HASH-PROJECTIONS-BUILD | `PASS HASH-PROJECTIONS-BUILD` |
+| HASH-PROJECTIONS-UNIT | `PASS HASH-PROJECTIONS-UNIT cases=36` |
+| HASH-PROJECTIONS-UNIT-EXE | `PASS HASH-PROJECTIONS-UNIT-EXE` |
+| HASH-PROJECTIONS-ARTIFACTS | `PASS HASH-PROJECTIONS-ARTIFACTS pairs=12` |
+| HASH-PROJECTIONS-REFUSALS | `PASS HASH-PROJECTIONS-REFUSALS cases=12 atomic_output=12` |
+| HASH-PROJECTIONS-ORACLES | `PASS HASH-PROJECTIONS-ORACLES store=38 luajit=38` |
+| HASH-PROJECTIONS-E2E | `PASS HASH-PROJECTIONS-E2E cases=42 hosts=88 readonly=76 utf8_refusals=6 errors=4` |
+| HASH-PROJECTIONS-EXAMPLE | `PASS HASH-PROJECTIONS-EXAMPLE exec=6` |
+| HASH-PROJECTIONS-TESTS | `PASS HASH-PROJECTIONS-TESTS` |
+| HASH-PROJECTIONS-TESTS-RUN | `PASS HASH-PROJECTIONS-TESTS-RUN` |
+| HASH-PROJECTIONS-MUTATIONS | `PASS HASH-PROJECTIONS-MUTATIONS killed=16 survived=0 restored=6` |
+| HASH-PROJECTIONS-MUTATIONS-RUN | `PASS HASH-PROJECTIONS-MUTATIONS-RUN` |
+| HASH-PROJECTIONS-COUNTS | `PASS HASH-PROJECTIONS-COUNTS` |
+| HOUSE | `PASS HOUSE` |
+| TRUSTED-LINES | `TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240 store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK` |
+| M1-HASH-PROJECTIONS | `FAIL M1-HASH-PROJECTIONS` |
+
+The mutation summary of the hash projections leg at gates-1 is killed=16,
+survived=0 and restored=6, with KEYS-ORDER as the new mutant, killed by
+`FAIL HASH-PROJECTIONS-UNIT projection`.
+
+Close ladder: not yet run when this block was written. The close ladder
+was queued after this block was written, and its verdict follows below,
+the same way the previous review round recorded its close ladder.
+
+Close ladder verdict: the ladder with the tag close ran through the
+daemon on 2026-09-14, from about 17:40 to 17:52 PDT, at a one-minute
+load of about 45. It gave `EXIT-ALL 0` with zero FAIL rows. `PASS
+M0-TIME median_ms=92.094 bound_ms=150`. `PASS STAGE-A-MUTATIONS
+killed=37 survived=0 restored=1`. `PASS HASH-PROJECTIONS-MUTATIONS
+killed=16 survived=0 restored=6` with `PASS HASH-PROJECTIONS-COUNTS`.
+The nested log holds 21 `PASS HOUSE` rows and 13 full `TRUSTED-LINES`
+rows. Verdict GREEN-FULL. The porcelain count was 24 and the unstaged
+diff was empty after the run. The regex proof matched 184 of 185 rows,
+and the one miss is the pre-fix `killed=15` row in the frozen Workflow
+script text, superseded by the fix round.
+
+Review pass 1 (2026-09-14) fixed 4 findings and carried 1.
+
+Fix rounds: 1.
+
+Disclosure: the baseline ladder gave `EXIT-ALL 1` with 27 timing FAIL
+rows at one-minute load 118 to 286 and the STAGE-E rows unproven (G0).
+The baseline-2 ladder gave `EXIT-ALL 1` with 26 FAIL rows at one-minute
+load 93 to 175, including one VOID row caused by a mid-run ROOT edit from
+the halted Workflow fix stage, with STAGE-E rows passing (G0). The
+gates-1 ladder gave `EXIT-ALL 1` with 25 timing and aggregate FAIL rows
+at one-minute load averaging 47.72, every functional row PASS (G0).
+Tier rulings: finder, builder and closer stayed unmet this round, opus
+pinned with the tier markers even though the Fable probe was alive at
+14:20, per the closer fallback ruling. The verifier ruling stayed met,
+opus at high effort.

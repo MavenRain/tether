@@ -37,6 +37,7 @@ let hget key field store = let* fields = hash key store in Ok (Keys.find_opt fie
 let hexists key field store = let* fields = hash key store in Ok (if Keys.mem field fields then "1" else "0")
 let hlen key store = let* fields = hash key store in Ok (string_of_int (Keys.cardinal fields))
 let hgetall key store = Result.map (fun fields -> List.concat_map (fun (f, v) -> [f; v]) (Keys.bindings fields)) (hash key store)
+let hproject project key store = Result.map (fun fs -> List.sort String.compare (List.map project (Keys.bindings fs))) (hash key store)
 let change_hash ~adding update key field store = let* fields = hash key store in
   let count = if Keys.mem field fields = adding then "0" else "1" in
   Ok (count, save_hash key (update fields) store)

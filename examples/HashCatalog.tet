@@ -1,0 +1,38 @@
+module HashCatalog
+
+schema profile : String -> Key Hash tag b"people"
+
+def seed : Script Reply (tag b"people") := do {
+  _ <- hset Reply (tag b"people") (profile b"alice") b"role" b"member";
+  _ <- hset Reply (tag b"people") (profile b"alice") b"plan" b"member";
+  r <- hset Reply (tag b"people") (profile b"alice") b"name" b"Alice";
+  pure Reply (tag b"people") r
+}
+
+def fields : Script Reply (tag b"people") := do {
+  r <- hkeys Reply (tag b"people") (profile b"alice");
+  pure Reply (tag b"people") r
+}
+
+def values : Script Reply (tag b"people") := do {
+  r <- hvals Reply (tag b"people") (profile b"alice");
+  pure Reply (tag b"people") r
+}
+
+def remove : Script Reply (tag b"people") := do {
+  r <- del Reply Hash (tag b"people") (profile b"alice");
+  pure Reply (tag b"people") r
+}
+
+def main : Client Reply := do {
+  _ <- inv Reply (tag b"people") seed;
+  r <- inv Reply (tag b"people") fields;
+  done Reply r
+}
+
+def retained : Client Reply := do {
+  _ <- inv Reply (tag b"people") seed;
+  r <- inv Reply (tag b"people") values;
+  _ <- inv Reply (tag b"people") remove;
+  done Reply r
+}

@@ -4,6 +4,13 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports typed HKEYS and HVALS on Hash keys. Both return arrays
+sorted by bytes, and HVALS retains duplicate values.
+`./tether exec examples/HashCatalog.tet --host node` prints
+`["name","plan","role"]`. The `retained` entry returns
+`["Alice","member","member"]` after deleting the Hash. See
+`dev/HASH-PROJECTIONS.md` for ordering and validation.
+
 M1 now supports typed HGETALL on Hash keys, with field/value pairs sorted
 by field bytes. `./tether exec examples/HashSnapshot.tet --host node`
 prints `["name","Alice","visits","9007199254740993"]`. See

@@ -681,3 +681,38 @@ state/order mutation anchors follow the shared implementation. Their
 required assertions and inventories remain unchanged. The revised Hash
 count mutant preserves HDEL behavior and reaches the original HSET
 overwrite-count assertion.
+
+### 2026-09-14: M1 Hash projections
+
+`dev/hash-projections-mutations.py` builds each mutant in a disposable
+copy. A kill requires compilation to pass and the selected test to fail
+with its intended assertion. Unit, keys, values, both write-branch probes
+and the value-head probe run as controls before and after mutation.
+
+| Mutant | Required detection |
+| --- | --- |
+| PROJECTION-TAGS | Unit projection contents |
+| PROJECTION-ORDER | Unit value order |
+| KEYS-ORDER | Unit field order |
+| PROJECTION-DUPLICATES | Unit duplicate preservation |
+| PROJECTION-STATE | Unit missing-key state preservation |
+| KEYS-WRITE | HKEYS read-only classification |
+| VALS-WRITE | HVALS read-only classification |
+| KEYS-BRANCH | Reachable write after HKEYS |
+| VALS-BRANCH | Reachable write after HVALS |
+| LUA-KEYS | HKEYS LuaJIT projection contents |
+| LUA-VALS | HVALS LuaJIT projection contents |
+| LUA-PROJECTION-SORT | HVALS LuaJIT order |
+| LUA-PROJECTION-BYTES | HKEYS LuaJIT unsigned byte order |
+| LUA-PROJECTION-PREFIX | HKEYS LuaJIT prefix order |
+| LUA-PROJECTION-ARRAY | Missing-key array reply kind |
+| LUA-PROJECTION-BULK | Value-head bulk reply kind |
+
+Validation in `tether-m1-hash-projections/.kanon-exec/run-ASfVMg` completed
+with `PASS HASH-PROJECTIONS-MUTATIONS killed=16 survived=0 restored=6`.
+The surrounding scoped array-command validation also completed with exit 0.
+
+The existing LRANGE typed-error mutation anchor tracks the expanded array
+branch (tags 27 through 31); its assertion and required failure are
+unchanged. The previous Set and Hash enumeration mutation anchors remain
+intact.

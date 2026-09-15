@@ -77,3 +77,8 @@
  (name hash_entries_tests)
  (modules hash_entries_tests)
  (libraries tether_store kanon_kernel))
+
+(executable
+ (name hash_projections_tests)
+ (modules hash_projections_tests)
+ (libraries tether_store kanon_kernel))
