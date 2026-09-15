@@ -25,7 +25,7 @@ MUTANTS = [
      UNIT, b'FAIL LIST-ACCESS-UNIT set first'),
     ('LTRIM-END', 'store/store.ml', b'i >= first && i <= last', b'i >= first && i < last',
      UNIT, b'FAIL LIST-ACCESS-UNIT trim inclusive'),
-    ('LTRIM-EMPTY-KEY', 'store/store.ml', b'~empty:(values = [])', b'~empty:false',
+    ('LTRIM-EMPTY-KEY', 'store/store.ml', b'(List values) ~empty:(values = [])', b'(List values) ~empty:false',
      UNIT, b'FAIL LIST-ACCESS-UNIT trim reversed deletes key'),
     ('LIST-ACCESS-ERR-TAG', 'store/interp.ml', b'data "Reply" 4 [bytes (Store.message e)]',
      b'data "Reply" 2 [bytes (Store.message e)]', UNIT, b'FAIL LIST-ACCESS-UNIT set missing stops client'),

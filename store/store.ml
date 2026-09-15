@@ -54,6 +54,8 @@ let sismember key member store = Result.map (fun values -> if Members.mem member
 let scard key store = let* values = members key store in Ok (string_of_int (Members.cardinal values))
 let smembers key store = Result.map Members.elements (members key store)
 let scombine op key other store = let* left = members key store in let* right = members other store in Ok (Members.elements (op left right))
+let sstore op destination key other store = let* values = scombine op key other store in
+  Ok (string_of_int (List.length values), save destination (Set values) ~empty:(values = []) store)
 let change_set update key member store = let* values = members key store in let next = update member values in
   if Members.equal values next then Ok ("0", store) else Ok ("1", save_set key next store)
 let sadd = change_set Members.add let srem = change_set Members.remove
@@ -80,5 +82,4 @@ let lset key index value store = let* values = list key store in
 let lrange key first last store = let* first = integer first in let* last = integer last in
   let* values = list key store in let first, last = position values first, position values last in
   Ok (List.filter_map (fun (i, v) -> if i >= first && i <= last then Some v else None) (indexed values))
-let ltrim key first last store = let* values = lrange key first last store in
-  Ok ("OK", save key (List values) ~empty:(values = []) store)
+let ltrim key first last store = let* values = lrange key first last store in Ok ("OK", save key (List values) ~empty:(values = []) store)

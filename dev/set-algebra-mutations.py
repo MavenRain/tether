@@ -22,7 +22,7 @@ MUTANTS = [
      UNIT, b'FAIL SET-ALGEBRA-UNIT left only'),
     ('STORE-INTER', 'store/interp.ml', b'if tag = 33 then Store.Members.inter', b'if tag = 33 then Store.Members.diff',
      UNIT, b'FAIL SET-ALGEBRA-UNIT left only'),
-    ('STORE-DIFF', 'store/interp.ml', b'else Store.Members.diff', b'else Store.Members.union',
+    ('STORE-DIFF', 'store/interp.ml', b'else Store.Members.diff) key other store', b'else Store.Members.union) key other store',
      UNIT, b'FAIL SET-ALGEBRA-UNIT right only'),
     ('STORE-SECOND-KEY', 'store/store.ml', b'members other store', b'members key store',
      UNIT, b'FAIL SET-ALGEBRA-UNIT right only'),

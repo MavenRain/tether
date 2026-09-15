@@ -4,6 +4,13 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports typed SUNIONSTORE, SINTERSTORE and SDIFFSTORE with a
+destination and two Set inputs. `./tether exec examples/TeamCache.tet --host node`
+prints `["alice","bob","carol"]` after caching a union. `exclusive`
+replaces an input with its difference, and `retained` keeps the returned
+count after deleting the destination. See `dev/SET-STORE.md` for semantics
+and validation.
+
 M1 now supports typed SUNION, SINTER and SDIFF for two Set keys, with
 unique members sorted by bytes. `./tether exec examples/TeamAccess.tet --host node`
 prints `["alice","bob","carol"]`; `common`, `exclusive` and `retained`

@@ -81,6 +81,9 @@ mu Script (0 A : Type 0) : (0 g : Tag) -> Type 0 :=
 | sunion : (0 g : Tag) -> Key Set g -> Key Set g -> (Reply -> Script A g) -> Script A g
 | sinter : (0 g : Tag) -> Key Set g -> Key Set g -> (Reply -> Script A g) -> Script A g
 | sdiff : (0 g : Tag) -> Key Set g -> Key Set g -> (Reply -> Script A g) -> Script A g
+| sunionstore : (0 g : Tag) -> Key Set g -> Key Set g -> Key Set g -> (Reply -> Script A g) -> Script A g
+| sinterstore : (0 g : Tag) -> Key Set g -> Key Set g -> Key Set g -> (Reply -> Script A g) -> Script A g
+| sdiffstore : (0 g : Tag) -> Key Set g -> Key Set g -> Key Set g -> (Reply -> Script A g) -> Script A g
 
 mu Client (0 A : Type 0) : Type 0 :=
 | done : A -> Client A

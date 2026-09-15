@@ -182,6 +182,14 @@ local function list_call(command, key, value, extra)
   return popped
 end
 local function call(command, key, amount, value)
+  if command == 'SUNIONSTORE' or command == 'SINTERSTORE' or command == 'SDIFFSTORE' then
+    local result = set_call(command:sub(1, -6), amount, value)
+    if result.err then return result end
+    local members = {}
+    for _, member in ipairs(result) do members[member] = true end
+    values[key] = #result > 0 and {[set_kind]=members} or nil
+    return #result
+  end
   if command:sub(1,1) == 'H' then return hash_call(command, key, amount, value) end
   if command == 'SADD' or command == 'SREM' or command == 'SISMEMBER' or command == 'SCARD' or command == 'SMEMBERS'
     or command == 'SUNION' or command == 'SINTER' or command == 'SDIFF' then

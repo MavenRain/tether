@@ -103,13 +103,13 @@ def emit(work, entry):
     return output
 
 
-def twin(work, output, before, expected, after, kind):
+def twin(work, output, before, expected, after, kind, keys=KEYS, reason='SET-ALGEBRA LuaJIT reply'):
     scripts = {s['entry']: s for s in json.loads((output / 'scripts.json').read_text())}
     plan = json.loads((output / 'client.json').read_text())
     calls = ['{path=' + literal(output / (scripts[name]['stem'] + '.lua')) + ',keys={' +
              ','.join(literal(k) for k in scripts[name]['keys']) + '}}' for name in plan['invokes']]
     values, sets, lists, checks = ['other="kept"'], [], [], ['{key="other",value="kept"}']
-    for key, initial, final in zip(KEYS, before, after):
+    for key, initial, final in zip(keys, before, after):
         binding = '[' + literal(key) + ']='
         if isinstance(initial, set):
             sets.append(binding + support.lua_members(initial))
@@ -131,7 +131,7 @@ def twin(work, output, before, expected, after, kind):
         ',kind="' + reply_kind + '",reply=true,checks={' + ','.join(checks) + '}}\n')
     encoded = (arrays.wire(expected, kind) if kind == 'array' else b'null' if kind == 'null'
                else kind.encode() + b':' + expected.hex().encode())
-    require(run(['luajit', '-joff', 'dev/lua-store.lua', str(config)]) == encoded + b'\n', 'SET-ALGEBRA LuaJIT reply')
+    require(run(['luajit', '-joff', 'dev/lua-store.lua', str(config)]) == encoded + b'\n', reason)
 
 
 def refusals(work):

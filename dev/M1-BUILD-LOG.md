@@ -2882,3 +2882,234 @@ store=200/200`, each unchanged by this review.
 Review pass 1 (2026-09-14) fixed 6 findings.
 
 Fix rounds: 1.
+
+### 2026-09-15: M1 Set store
+
+Added `sunionstore`, `sinterstore` and `sdiffstore` as Script tags 35,
+36 and 37. Each takes a Set destination and two Set sources with the
+same tag, writes the result and returns an integer cardinality. Sources
+are checked before replacing the destination. Empty results remove the
+destination, aliases read their old values, and source errors preserve
+the store. Redis replacement clears expiry; the store has no expiry
+model. The live host checks cover that Redis behavior explicitly.
+
+The OCaml store reuses its normalized Set operations. The Lua printer
+uses `pcall` and the existing integer adapter. The LuaJIT twin computes
+the Set result before replacement. Key collection already covers all
+three operands and deduplicates aliases; the conservative flags walk
+already classifies the three new tags as writes. `TeamCache.tet`
+demonstrates cached union members, a retained intersection count and
+an in-place difference. The new command contract is `dev/SET-STORE.md`.
+
+The Lua and store groups remain 320/320 and 200/200. Local byte helpers
+and the List trim helper were compacted, reply adapters share their
+local helpers, and HDEL/HEXISTS share integer dispatch. The other counts
+remain sh 227/240, host-node 196/300, host-rest 156/300 and bin 404/450.
+The two pinned preludes now total 144 lines. The foundation pin,
+carried files and all trusted bounds are unchanged.
+
+The Set algebra LuaJIT fixture helper accepts an optional key list;
+its default remains the two original operands. Its difference mutation
+now selects only the original branch, keeping the anchor unique after
+adding the destination-writing branch. Both mutation inventories and
+all anchors pass the static check in `gpt18/.kanon-exec/run-QrNiNn`.
+
+Offline validation in `tether-m1-set-store/.kanon-exec/run-ZnKdJt` passed
+33 identical Wasm/Bash artifact pairs, 54 type/tag refusals without
+output, three interpreter examples and 201 LuaJIT cases. The separate
+unit runs passed 322 Set store cases and the existing 106 Set algebra
+cases. The house check found no prohibited OCaml patterns.
+
+The disposable fuel probe in `gpt18/.kanon-exec/run-b3Abg9` measured
+`FUEL before=29033 after=29045`. The Stage D planner refusal now uses
+29039 fuel, retaining six polls of the same 12-poll static walk.
+Fuel zero still pins the checker refusal. No execution ceiling or
+timing bound was raised.
+
+The first complete-ladder attempt, `run-UDFMME` in the slice capture
+directory, was stopped with exit 137 after environment failures: the
+literal PATH omitted `rg` and `panicscan`, and the sandbox refused
+loopback listeners. Its M0 timing median was 384.182 ms. The corrected
+run uses the OCaml 5.2.1 switch, the installed tools and localhost access.
+
+Interleaved timing samples in `gpt18/.kanon-exec/run-uk100U` compared
+a clean build of committed `667fabd` with this slice. After one warmup
+per build, five samples each measured baseline median 580.091 ms
+(460.320 to 1148.870) and Set store median 602.343 ms (422.047 to
+1335.976). One-minute load went from 50.99 to 48.47. These contended
+samples show both builds above 150 ms; they do not establish a speed
+ratio or satisfy M0-EXIT.
+
+The completed ladder capture `tether-m1-set-store/.kanon-exec/run-IKgU4u`
+has 601 stdout rows, empty stderr and exit 1. Its Set store rows are:
+
+```text
+PASS SET-STORE-UNIT cases=322
+PASS SET-STORE-ARTIFACTS pairs=33
+PASS SET-STORE-REFUSALS cases=54 atomic_output=54
+PASS SET-STORE-STORE-EXAMPLE cases=3
+PASS SET-STORE-ORACLES luajit=201
+PASS SET-STORE-E2E cases=279 hosts=564 errors=6
+PASS SET-STORE-EXAMPLE exec=9
+PASS SET-STORE-TESTS
+PASS SET-STORE-MUTATIONS killed=18 survived=0 restored=6
+PASS SET-STORE-COUNTS
+```
+
+The full run recorded 32 FAIL rows. Three direct List access rows came
+from the `LTRIM-EMPTY-KEY` mutation anchor: its generic empty-value
+expression occurred in both the new Set helper and List trim. The
+anchor now includes `(List values)`, preserving its expected failure
+and the 12-mutant inventory. Its rerun in `run-hI6Pny` exited zero with
+`PASS LIST-ACCESS-MUTATIONS killed=12 survived=0 restored=6`. The
+83 List access unit cases, 19 artifact pairs, 28 refusals, 49 store
+and LuaJIT cases, 98 host runs and six example executions had already
+passed in the full run.
+
+The other 29 FAIL rows are `M0-TIME median_ms=292.506 bound_ms=150`,
+MEASURE and the Stage F/M1 aggregates that include the timing leg.
+The completed-capture audit, `gpt18/.kanon-exec/run-NGVVdT`, checked
+all 601 rows, required 21 exact validation rows and verified the List
+access recovery. The earlier Set algebra and Hash projection mutation
+summaries remained 17/0/6 and 16/0/6. CARRY remained
+`files=36 diff=0 vendor=32 copies=4` at pin `2c2e6e6`.
+
+The canonical ladder was not rerun after the mutation-anchor repair.
+The implementation and examples are unchanged from the full run;
+the follow-up edits affect the test anchor and documentation. The
+timing gate remains unresolved. Neither PASS M1-SET-STORE nor M0-EXIT
+is claimed.
+
+TTL commands, variadic Set operands, other bulk operations, ZSet
+commands and the remaining M1 examples and milestones remain open.
+
+### Review round 2026-09-15 (M1 Set store)
+
+The review of the Set store slice kept three low findings. Two are in
+the test harness and one is in a slice document. No product file, no
+frozen bound and no measured timing number moves.
+
+C-1: the shared LuaJIT oracle helper `twin` of `dev/set-algebra-tests.py`
+held one failure reason, `SET-ALGEBRA LuaJIT reply`. The Set store
+suite delegates all 201 oracle comparisons to that helper, so a Set
+store reply defect reported a Set algebra reason, and
+`dev/set-store-mutations.py` required that text for the mutants
+`LUA-COUNT` and `LUA-REPLY-TAG`. The helper now takes a `reason`
+argument whose default keeps the Set algebra text, the Set store suite
+passes `SET-STORE LuaJIT reply`, and the two mutant rows require the
+new text. Control on a copy: with `string.format('%d',got)` changed to
+`got+1` in `print/lua.ml`, `python3 -P dev/set-store-tests.py --probe
+union` prints `FAIL SET-STORE-TESTS SET-STORE LuaJIT reply`; after the
+restore the same command prints `PASS SET-STORE-PROBE entry=union
+cases=26`.
+
+C-2: the live assertion `SET-STORE preserved expiry` asked the server
+only for a seeded key. For a key that the fixture leaves absent it
+compared two fixture constants that are equal by construction, so that
+branch tested nothing. The assertion now reads `TTL` from the server in
+both branches and requires `-2` for an absent key. Control through the
+ladder queue: the copy `fix-1-m1`, with the expected `-2` changed to
+`-1`, reports `FAIL SET-STORE-TESTS SET-STORE preserved expiry`; the
+clean copy `fix-1-c1` passes the same leg.
+
+M-1: `dev/SET-STORE.md` closed with `The foundation pin and trusted
+line bounds are unchanged.` and gave no pointer to where the prelude
+count is recorded, while every sibling slice document, for example
+`dev/SET-ALGEBRA.md` lines 64 and 65, carries `SPEC records the
+current prelude count.` after that sentence. The sentence is added.
+The kit check `set-store-md-points-at-spec` of `verify-final.sh`
+found it after the Workflow closed, so no Workflow lens reported it.
+The edit is prose only and was staged after the closing ladder.
+
+The counts of the slice do not move. The socket-free legs on ROOT
+report `PASS SET-STORE-UNIT cases=322`, `PASS SET-STORE-ARTIFACTS
+pairs=33`, `PASS SET-STORE-REFUSALS cases=54 atomic_output=54`,
+`PASS SET-STORE-STORE-EXAMPLE cases=3`, `PASS SET-STORE-ORACLES
+luajit=201`, `PASS SET-ALGEBRA-ORACLES luajit=90`, `PASS HOUSE` and
+`TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240
+store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK`.
+
+Findings table:
+
+| id | severity | file | fix or ruling |
+| --- | --- | --- | --- |
+| C-1 | low | `dev/set-algebra-tests.py` | The oracle helper `twin` takes a `reason` argument, default `SET-ALGEBRA LuaJIT reply`; `dev/set-store-tests.py:109` passes `reason='SET-STORE LuaJIT reply'` and `dev/set-store-mutations.py:32,33` require the new text for `LUA-COUNT` and `LUA-REPLY-TAG`. |
+| C-2 | low | `dev/set-store-tests.py` | The `SET-STORE preserved expiry` assertion now reads `TTL` from the server in both branches and requires `-2` for an absent key, so the absent-key branch is no longer a comparison of two equal fixture constants. |
+| M-1 | low | `dev/SET-STORE.md` | The closing paragraph now carries `SPEC records the current prelude count.` as every sibling slice document does; found by the kit check `set-store-md-points-at-spec`, prose only, staged after the closing ladder. |
+
+Refuted: 3 findings. B-2, because the cited `print/lua.ml:108` hunk is a
+modified line, not an added one, so the arm spends no line of the
+saturated lua group; the arm is unreachable since `dev/lua-store.lua`
+lines 184 to 191 and a real Redis store command answer only an integer
+or an error; and the text "member count" is the cardinality naming the
+earlier review already fixed into this expression, so the slice
+introduces no new gap class. C-3, because `dev/set-store-tests.py`
+lines 204 to 206 already validate `sys.argv` against the exact set
+`[]`, `['--static']`, `['--offline']` or the `--probe ENTRY` pair; a
+fresh copy run of `python3 -P dev/set-store-tests.py --ofline` printed
+`FAIL SET-STORE-TESTS Usage: set-store-tests.py
+[--static|--offline|--probe ENTRY]` and exited 1, never a silent green
+PASS row. D-3, because a copy build of `dev/sh_emit.exe` measured the
+documented fuel range 29033 through 29044 exact at both endpoints, and
+`dev/stage-d-tests.py` lines 216 to 218 together with the `PRELUDES`
+leg's checksum gate make any prelude drift RED instead of silent.
+
+Merged and dropped: 3 items. B-1 was merged into C-1, same defect
+reached from `dev/set-store-tests.py:109`, because C-1 names the root
+string at `dev/set-algebra-tests.py:134` and B-1's leg that
+`dev/MUTATION-LOG.md` records a different reason is false: the table
+at line 758 is two columns and holds no marker text. D-1 was merged
+into C-1, same two markers at `dev/set-store-mutations.py:32-33`, for
+the same reason; its leg that every other set-store mutant reports a
+SET-STORE or TWIN label is beside the point, since cross-slice labels
+are the shipped convention (`dev/list-range-mutations.py:33,35`
+require `b'LISTS LuaJIT reply'`). D-2 was merged into C-2, same line
+`dev/set-store-tests.py:168`, same tautology; D-2 is subsumed because
+C-2 states the enumeration and the residual coverage correctly, and
+D-2's claim that a host creating the key would pass unnoticed is
+wrong, since the `DUMP` assertion at line 167 fires on the same key in
+the same iteration.
+
+Gates, from the closing ladder log `gates-close.log` (root mode, 666
+rows, 0 FAIL rows, last row `EXIT-ALL 0`), queued at one-minute load
+14.33 after the fix round, one row per leg of `dev/m1-set-store.sh`:
+
+| leg | verbatim row |
+| --- | --- |
+| M1-SET-ALGEBRA | `PASS M1-SET-ALGEBRA` |
+| SET-STORE-BUILD | `PASS SET-STORE-BUILD` |
+| SET-STORE-UNIT-EXE | `PASS SET-STORE-UNIT-EXE` |
+| SET-STORE-TESTS-RUN | `PASS SET-STORE-TESTS-RUN` |
+| SET-STORE-MUTATIONS-RUN | `PASS SET-STORE-MUTATIONS-RUN` |
+| SET-STORE-COUNTS | `PASS SET-STORE-COUNTS` |
+| HOUSE | `PASS HOUSE` |
+| TRUSTED-LINES | `PASS TRUSTED-LINES` |
+| PRELUDES | `PASS PRELUDES` |
+| ladder | `PASS M1-SET-STORE` |
+| queue | `EXIT 0`, `EXIT-MUT 0`, `EXIT-ALL 0` |
+
+The mutation summary is `PASS SET-STORE-MUTATIONS killed=18 survived=0
+restored=6`. The counts row is `PASS SET-STORE-UNIT cases=322`, `PASS
+SET-STORE-ARTIFACTS pairs=33`, `PASS SET-STORE-REFUSALS cases=54
+atomic_output=54`, `PASS SET-STORE-STORE-EXAMPLE cases=3`, `PASS SET-
+STORE-ORACLES luajit=201`, `PASS SET-STORE-E2E cases=279 hosts=564
+errors=6`, `PASS SET-STORE-EXAMPLE exec=9` and `TRUSTED-LINES
+kernel=3997/4000 encoder=246/600 OK`.
+
+The one-minute load was 14.33 at the start row ` 9:24 up 29 days, 11:59,
+29 users, load averages: 14.33 13.66 15.60`, 14.07 at the timing leg row
+`LOAD 9:30 up 29 days, 12:05, 29 users, load averages: 14.07 15.07
+15.72`, and 13.00 at the ladder end row ` 9:59 up 29 days, 12:34, 29
+users, load averages: 13.00 33.22 39.85`. The timing leg is green at
+that load: `PASS M0-TIME median_ms=142.540 bound_ms=150` and `PASS
+M0-TIME-BOUNDARY below=149 at=150`. The earlier full ladder `gates-
+gates-1.log` (root mode, 666 rows, last row `EXIT-ALL 1`) went red on
+the timing leg only: its 29 FAIL rows are the baseline FAIL set exactly
+(`M0-TIME`, `MEASURE`, `STAGE-F` and the M1 aggregate rows that carry
+that leg), `median_ms=233.734` against `bound_ms=150` at one-minute load
+27.75, and no non-timing row failed. The 150 ms bound is unchanged and
+no RED-LOAD waiver is claimed.
+
+Review pass 1 (2026-09-15) fixed 3 findings.
+
+Fix rounds: 1.

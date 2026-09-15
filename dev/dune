@@ -87,3 +87,8 @@
  (name set_algebra_tests)
  (modules set_algebra_tests)
  (libraries tether_store kanon_kernel))
+
+(executable
+ (name set_store_tests)
+ (modules set_store_tests)
+ (libraries tether_store kanon_kernel))

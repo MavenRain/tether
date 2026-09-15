@@ -1,0 +1,41 @@
+module TeamCache
+schema teams : String -> Key Set tag b"cache"
+
+def seed : Script Reply (tag b"cache") := do {
+  _ <- sadd Reply (tag b"cache") (teams b"editors") b"alice";
+  _ <- sadd Reply (tag b"cache") (teams b"editors") b"bob";
+  _ <- sadd Reply (tag b"cache") (teams b"reviewers") b"bob";
+  _ <- sadd Reply (tag b"cache") (teams b"reviewers") b"carol";
+  pure Reply (tag b"cache") nil
+}
+
+def unionScript : Script Reply (tag b"cache") := do {
+  _ <- sunionstore Reply (tag b"cache") (teams b"access") (teams b"editors") (teams b"reviewers");
+  members <- smembers Reply (tag b"cache") (teams b"access");
+  pure Reply (tag b"cache") members
+}
+def commonScript : Script Reply (tag b"cache") := do {
+  count <- sinterstore Reply (tag b"cache") (teams b"access") (teams b"editors") (teams b"reviewers");
+  _ <- del Reply Set (tag b"cache") (teams b"access");
+  pure Reply (tag b"cache") count
+}
+def exclusiveScript : Script Reply (tag b"cache") := do {
+  _ <- sdiffstore Reply (tag b"cache") (teams b"editors") (teams b"editors") (teams b"reviewers");
+  members <- smembers Reply (tag b"cache") (teams b"editors");
+  pure Reply (tag b"cache") members
+}
+def main : Client Reply := do {
+  _ <- inv Reply (tag b"cache") seed;
+  members <- inv Reply (tag b"cache") unionScript;
+  done Reply members
+}
+def retained : Client Reply := do {
+  _ <- inv Reply (tag b"cache") seed;
+  count <- inv Reply (tag b"cache") commonScript;
+  done Reply count
+}
+def exclusive : Client Reply := do {
+  _ <- inv Reply (tag b"cache") seed;
+  members <- inv Reply (tag b"cache") exclusiveScript;
+  done Reply members
+}

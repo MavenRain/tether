@@ -17,9 +17,9 @@ An uncaught error stops the Client and both hosts.
 
 These are the two-key forms of Redis [SUNION](https://redis.io/docs/latest/commands/sunion/),
 [SINTER](https://redis.io/docs/latest/commands/sinter/) and
-[SDIFF](https://redis.io/docs/latest/commands/sdiff/). Variadic operands and
-the destination-writing forms remain future command work. This slice
-does not impose a new member-count bound.
+[SDIFF](https://redis.io/docs/latest/commands/sdiff/). Variadic operands
+remain future command work. The destination-writing forms are described
+in `dev/SET-STORE.md`. This slice does not impose a new member-count bound.
 
 The printer includes both keys in the artifact's declared key list and
 deduplicates an identical pair. It calls Redis through `pcall` and uses

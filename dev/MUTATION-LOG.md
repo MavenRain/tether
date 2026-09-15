@@ -748,3 +748,48 @@ error cannot score a kill. Capture:
 Result: `PASS SET-ALGEBRA-MUTATIONS killed=17 survived=0 restored=6`.
 The earlier LRANGE error-tag anchor now spans array tags 27 through 34;
 its expected assertion and required failure are unchanged.
+
+### 2026-09-15: M1 Set store mutations
+
+`python3 -P dev/set-store-mutations.py` works in a disposable copy.
+Each mutant must compile, exit with the intended assertion failure,
+and restore before the next mutation. The six controls pass before
+mutation and after restoration.
+
+| Mutant | Required observation |
+| --- | --- |
+| STORE-UNION | A source present only on the left contributes to union. |
+| STORE-INTER | A missing right input makes the intersection empty. |
+| STORE-DIFF | A source present only on the right contributes no difference. |
+| STORE-DESTINATION | The destination receives or removes the result. |
+| STORE-EMPTY | An empty result deletes the destination key. |
+| STORE-COUNT | The reply contains the result cardinality. |
+| STORE-ALIAS | Input values are read before replacing an aliased destination. |
+| STORE-SECOND-SOURCE | The second source is read independently. |
+| LUA-UNION | Emitted union stores the union members. |
+| LUA-INTER | Emitted intersection removes an empty destination. |
+| LUA-DIFF | Emitted difference retains operand order. |
+| LUA-DESTINATION | Emitted writes target the destination. |
+| LUA-SECOND-SOURCE | Emitted code reads the second source. |
+| LUA-COUNT | Emitted code returns the stored cardinality. |
+| LUA-REPLY-TAG | A case expression observes the integer reply constructor. |
+| UNION-READONLY | Union store has write classification. |
+| INTER-READONLY | Intersection store has write classification. |
+| DIFF-READONLY | Difference store has write classification. |
+
+The shared LuaJIT oracle helper takes the reason of the calling slice.
+`LUA-COUNT` and `LUA-REPLY-TAG` therefore require the observation
+`SET-STORE LuaJIT reply`, not the Set algebra text. The mutations and
+the controls are unchanged.
+
+The completed `run-IKgU4u` ladder capture reports
+`PASS SET-STORE-MUTATIONS killed=18 survived=0 restored=6`.
+The unchanged assertion of the earlier Set algebra difference mutant
+uses a narrower branch anchor and still passes in that capture.
+
+The full run found that the earlier `LTRIM-EMPTY-KEY` anchor matched
+both the Set and List empty-result expressions. Its anchor now selects
+`(List values)` explicitly, keeping the same failure assertion and
+12-mutant requirement. The scoped recovery capture `run-hI6Pny`
+reports `PASS LIST-ACCESS-MUTATIONS killed=12 survived=0 restored=6`.
+The build log records the full ladder's timing failure and this recovery.

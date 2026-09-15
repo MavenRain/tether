@@ -73,11 +73,10 @@ let run ~budget rows ~entry store =
         let* args, k = match List.rev args with [] -> Error "STORE-SCRIPT-COMMAND"
           | k :: vs -> let* vs = all (List.rev_map operand vs) in Ok (vs, k) in
         let finish encode result = Ok (Result.fold ~ok:(fun (s, st) -> encode s, st) ~error:(fun e -> data "Reply" 4 [bytes (Store.message e)], store) result) in
-        let scalar tag s = data "Reply" tag [bytes s] in
+        let scalar tag s = data "Reply" tag [bytes s] in let keep r = Result.map (fun s -> s, store) r in
         let integer = finish (fun s -> data "Reply" 1 [data "Signed64" 0 [bytes s]]) in
-        let bulk = finish (Option.fold ~none:(data "Reply" 0 []) ~some:(scalar 2)) in
+        let bulk = finish (Option.fold ~none:(data "Reply" 0 []) ~some:(scalar 2)) in let status = finish (scalar 3) in
         let array = finish (fun ss -> data "Reply" 5 [List.fold_right (fun s rs -> data "Replies" 1 [scalar 2 s; rs]) ss (data "Replies" 0 [])]) in
-        let status = finish (scalar 3) in let keep r = Result.map (fun s -> s, store) r in
         let* answer, store = match tag, args with
           | (1 | 6), [] -> integer (Store.incrby key (if tag = 1 then "1" else "-1") store)
           | 2, [] -> bulk (keep (Store.get key store))
@@ -87,8 +86,7 @@ let run ~budget rows ~entry store =
           | (7 | 8), [] -> integer (Ok (if tag = 7 then Store.del key store else (Store.exists key store, store)))
           | 9, [Octets f; Octets v] -> integer (Store.hset key f v store)
           | 10, [Octets f] -> bulk (keep (Store.hget key f store))
-          | 11, [Octets f] -> integer (Store.hdel key f store)
-          | 12, [Octets f] -> integer (keep (Store.hexists key f store))
+          | (11 | 12), [Octets f] -> integer (if tag = 11 then Store.hdel key f store else keep (Store.hexists key f store))
           | (13 | 18 | 23), [] -> integer (keep ((if tag = 13 then Store.hlen else if tag = 18 then Store.scard else Store.llen) key store))
           | 14, [Octets f; Signed v] -> integer (Store.hincrby key f v store)
           | (15 | 16), [Octets m] -> integer ((if tag = 15 then Store.sadd else Store.srem) key m store)
@@ -102,6 +100,7 @@ let run ~budget rows ~entry store =
           | (28 | 29), [] -> array (keep ((if tag = 28 then Store.smembers else Store.hgetall) key store))
           | (30 | 31), [] -> array (keep (Store.hproject (if tag = 30 then fst else snd) key store))
           | (32 | 33 | 34), [KeyName other] -> array (keep (Store.scombine (if tag = 32 then Store.Members.union else if tag = 33 then Store.Members.inter else Store.Members.diff) key other store))
+          | (35 | 36 | 37), [KeyName left; KeyName right] -> integer (Store.sstore (if tag = 35 then Store.Members.union else if tag = 36 then Store.Members.inter else Store.Members.diff) key left right store)
           | _, _ -> Error "STORE-SCRIPT-COMMAND" in
         let* next = apply k [answer] in script store next
     | Data _ | Fields _ | Literal _ | Closure _ | Erased -> Error "STORE-SCRIPT" in
