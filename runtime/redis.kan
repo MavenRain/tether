@@ -85,6 +85,11 @@ mu Script (0 A : Type 0) : (0 g : Tag) -> Type 0 :=
 | sinterstore : (0 g : Tag) -> Key Set g -> Key Set g -> Key Set g -> (Reply -> Script A g) -> Script A g
 | sdiffstore : (0 g : Tag) -> Key Set g -> Key Set g -> Key Set g -> (Reply -> Script A g) -> Script A g
 | smove : (0 g : Tag) -> Key Set g -> Key Set g -> Bytes -> (Reply -> Script A g) -> Script A g
+| expire : (0 t : RedisType) -> (0 g : Tag) -> Key t g -> Signed64 -> (Reply -> Script A g) -> Script A g
+| pexpire : (0 t : RedisType) -> (0 g : Tag) -> Key t g -> Signed64 -> (Reply -> Script A g) -> Script A g
+| ttl : (0 t : RedisType) -> (0 g : Tag) -> Key t g -> (Reply -> Script A g) -> Script A g
+| pttl : (0 t : RedisType) -> (0 g : Tag) -> Key t g -> (Reply -> Script A g) -> Script A g
+| persist : (0 t : RedisType) -> (0 g : Tag) -> Key t g -> (Reply -> Script A g) -> Script A g
 
 mu Client (0 A : Type 0) : Type 0 :=
 | done : A -> Client A

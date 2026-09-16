@@ -5,7 +5,7 @@ let ( let* ) = Result.bind
 let require condition reason = if condition then Ok () else Error ("LIST-RANGE-UNIT " ^ reason)
 let fold f xs = List.fold_left (fun acc x -> let* n = acc in let* () = f x in Ok (n + 1)) (Ok 0) xs
 let list values = S.put "k" (S.List values) S.empty
-let same a b = S.Keys.bindings a = S.Keys.bindings b
+let same a b = S.bindings a = S.bindings b
 let rec term = function
   | I.Data (tid, tag, xs) -> E.KTag (tid, tag, List.map term xs)
   | I.Literal l -> E.KLit l

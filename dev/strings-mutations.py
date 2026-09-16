@@ -18,7 +18,7 @@ MUTANTS = [
      OFFLINE, b'STRINGS LuaJIT reply'),
     ('NEGATIVE-OVERFLOW', 'store/store.ml', b'amount < 0L', b'false',
      UNIT, b'FAIL STRINGS-UNIT overflow'),
-    ('DEL-KEEPS-KEY', 'store/store.ml', b'exists key store, Keys.remove key store', b'exists key store, store',
+    ('DEL-KEEPS-KEY', 'store/store.ml', b'exists key store, remove key store', b'exists key store, store',
      UNIT, b'FAIL STRINGS-UNIT delete'),
 ]
 

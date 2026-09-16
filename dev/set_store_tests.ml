@@ -4,7 +4,7 @@ module E = Kanon_kernel.Eterm
 let ( let* ) = Result.bind
 let require condition reason = if condition then Ok () else Error ("SET-STORE-UNIT " ^ reason)
 let fold f xs = List.fold_left (fun acc x -> let* n = acc in let* () = f x in Ok (n + 1)) (Ok 0) xs
-let same a b = S.Keys.bindings a = S.Keys.bindings b
+let same a b = S.bindings a = S.bindings b
 let rec term = function
   | I.Data (tid, tag, xs) -> E.KTag (tid, tag, List.map term xs)
   | I.Literal l -> E.KLit l
@@ -44,7 +44,7 @@ let run () =
   let* total = List.fold_left (fun acc tag -> let* total = acc in
     let check destination args before expected name =
       let* answer, after = execute ~destination tag args before in
-      let wanted = if expected = [] then S.Keys.remove destination before else S.put destination (S.Set expected) before in
+      let wanted = if expected = [] then S.remove destination before else S.put destination (S.Set expected) before in
       require (answer = I.Int (string_of_int (List.length expected)) && same after wanted) name in
     let fixtures = List.concat_map (fun row -> List.map (fun d -> d, row) destinations) cases in
     let* values = fold (fun (destination, (left, right, union, inter, diff, name)) ->
@@ -53,7 +53,7 @@ let run () =
       check destination [key "left"; key "right"] before
         (if tag = 35 then union else if tag = 36 then inter else diff) name) fixtures in
     let* replaced = fold (fun old ->
-      let before = Option.fold ~none:(S.Keys.remove "destination" initial) ~some:(fun d -> S.put "destination" d initial) old
+      let before = Option.fold ~none:(S.remove "destination" initial) ~some:(fun d -> S.put "destination" d initial) old
         |> S.put "left" (S.Set ["a"; "b"]) |> S.put "right" (S.Set ["b"; "c"]) in
       check "destination" [key "left"; key "right"] before
         (if tag = 35 then ["a"; "b"; "c"] else if tag = 36 then ["b"] else ["a"]) "overwrite destination")

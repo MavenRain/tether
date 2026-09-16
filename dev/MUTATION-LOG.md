@@ -831,3 +831,47 @@ stdout line 636 of `run-kSWHFI`, followed by `PASS SET-MOVE-COUNTS` and
 `PASS M1-SET-MOVE`. All preceding mutation suites pass in that run,
 including the unchanged 17-mutant Set algebra and 18-mutant Set store
 inventories. The build log records the full capture and green timing gate.
+
+### 2026-09-15: M1 TTL mutation checks
+
+`python3 -P dev/ttl-mutations.py` copies the source into a disposable
+tree, builds every mutant, and requires its intended assertion to fail
+with exit 1. A compiler failure, unexpected diagnostic or surviving
+mutant fails the runner. The source is restored after each attempt.
+
+| Mutation | Required failure |
+| --- | --- |
+| CLOCK-BOUNDARY | PTTL returns zero at the deadline before the key expires. |
+| EXPIRE-SCALE | EXPIRE seconds must convert to milliseconds. |
+| TTL-ROUNDING | Half-second TTL results round up. |
+| TTL-MISSING | Expired keys return the missing sentinel. |
+| SET-EXPIRY | Replacing a value clears the deadline. |
+| PERSIST-EXPIRY | PERSIST removes metadata and changes only once. |
+| STORE-REPLY-RANGE | The store rejects an inexact expiry reply. |
+| INTERPRETER-UNIT | The erased EXPIRE tag selects seconds. |
+| LUA-UNIT | Printed EXPIRE selects seconds in the independent twin. |
+| LUA-REPLY-RANGE | An inexact TTL becomes an error reply. |
+| READ-FLAG | TTL receives read-only dispatch. |
+| WRITE-FLAG | EXPIRE remains writing, including for missing keys. |
+| TWIN-SCALE | The twin preserves seconds-to-milliseconds conversion. |
+
+Five controls, the store unit suite plus the seconds, inexact-reply,
+missing-TTL and missing-EXPIRE probes, pass before mutation and again
+after restoration. The store unit control requires the counted row
+`PASS TTL-UNIT cases=146`, so a deleted store check breaks the control.
+Final result:
+
+```text
+PASS TTL-MUTATIONS killed=13 survived=0 restored=5
+```
+
+The inherited DEL, Hash deletion, Set store alias and SMOVE mutation
+anchors now use the explicit store value-map accessors. The Set error-tag
+anchor follows the added expiry guard. STORE-DESTINATION now redirects
+both the destination write and expiry cleanup to the wrong source key,
+preserving the original defect and missing-destination assertion. The
+full ladder initially caught that mutant at a different assertion; the
+corrected full Set store mutation suite passed with 18 kills and six
+restored controls in `.kanon-exec/run-i6Bsnz`. Their behavior checks and
+expected diagnostics are retained. The current Stage D static-walk
+negative control still grants six polls and requires `SH-BUDGET`.

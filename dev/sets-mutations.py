@@ -28,9 +28,9 @@ MUTANTS = [
      b'data "Reply" 2 [bytes (Store.message e)]', UNIT, b'FAIL SETS-UNIT sadd wrong type stops client'),
     ('SET-LUA-ERR-TAG', 'print/lua.ml',
      b"if type(got) == 'table' and got.err then r = {tag=4,bytes(got.err)}\n"
-     b"      elseif type(got) ~= 'number' then",
+     b"      elseif s.tag >= 39",
      b"if type(got) == 'table' and got.err then r = {tag=2,bytes(got.err)}\n"
-     b"      elseif type(got) ~= 'number' then",
+     b"      elseif s.tag >= 39",
      OFFLINE, b'TWIN reply kind string wanted status'),
 ]
 

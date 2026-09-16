@@ -76,7 +76,7 @@ let run () =
       hash ["f", "9007199254740993"], "interpreter increment"] in
   let* interpreted = fold (fun (tag, args, before, expected, after, name) ->
     let* reply, actual = execute tag args before in
-    require (reply = expected && S.Keys.bindings actual = S.Keys.bindings after) name) samples in
+    require (reply = expected && S.bindings actual = S.bindings after) name) samples in
   (* Every fault leaves the interpreter as an err reply that stops the Client. *)
   let faults = [
     9, [bytes "f"; bytes "v"], S.put "k" (S.Str "old") S.empty, S.Wrong_type, "hset wrong type stops client";

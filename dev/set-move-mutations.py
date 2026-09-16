@@ -18,8 +18,8 @@ def probe(entry):
 MUTANTS = [
     ('STORE-DIRECTION', 'store/interp.ml', b'Store.smove key other member store', b'Store.smove other key member store', UNIT, b'FAIL SET-MOVE-UNIT interpreter'),
     ('STORE-MEMBER', 'store/interp.ml', b'Store.smove key other member store', b'Store.smove key other (member ^ "x") store', UNIT, b'FAIL SET-MOVE-UNIT interpreter'),
-    ('STORE-MISSING-SOURCE', 'store/store.ml', b'if Keys.mem key store then members other store', b'if true then members other store', UNIT, b'FAIL SET-MOVE-UNIT missing source'),
-    ('STORE-DESTINATION-TYPE', 'store/store.ml', b'if Keys.mem key store then members other store', b'if false then members other store', UNIT, b'FAIL SET-MOVE-UNIT wrong type'),
+    ('STORE-MISSING-SOURCE', 'store/store.ml', b'if Keys.mem key store.values then members other store', b'if true then members other store', UNIT, b'FAIL SET-MOVE-UNIT missing source'),
+    ('STORE-DESTINATION-TYPE', 'store/store.ml', b'if Keys.mem key store.values then members other store', b'if false then members other store', UNIT, b'FAIL SET-MOVE-UNIT wrong type'),
     ('STORE-NO-OP', 'store/store.ml', b'then Ok (present, store) else let* _, next', b'then Ok ("1", store) else let* _, next', UNIT, b'FAIL SET-MOVE-UNIT store'),
     ('STORE-ALIAS', 'store/store.ml', b'then Ok (present, store)', b'then Ok ((if key = other then "0" else present), store)', UNIT, b'FAIL SET-MOVE-UNIT store'),
     ('STORE-REMOVAL', 'store/store.ml', b'let* _, next = srem key member store', b'let* _, next = sadd key member store', UNIT, b'FAIL SET-MOVE-UNIT store'),

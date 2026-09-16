@@ -181,7 +181,7 @@ local function list_call(command, key, value, extra)
   if #items == 0 then values[key] = nil end
   return popped
 end
-local function call(command, key, amount, value)
+local function data_call(command, key, amount, value)
   if command == 'SMOVE' then
     local source, target = values[key], values[amount]
     if source == nil then return 0 end
@@ -235,6 +235,54 @@ local function call(command, key, amount, value)
   -- The printed body discards this potentially rounded integer and does GET.
   return 0
 end
+local deadlines, now = config.deadlines or {}, config.now or '0'
+local function before(a, b) return #a < #b or (#a == #b and a < b) end
+local function advance(delta)
+  if not canonical(delta) or delta:sub(1,1) == '-' then error('TWIN invalid clock step') end
+  local next_time = add(now, delta)
+  if not next_time then error('TWIN clock overflow') end
+  now = next_time
+  for key, deadline in pairs(deadlines) do
+    if not canonical(deadline) or deadline:sub(1,1) == '-' then error('TWIN invalid deadline') end
+    if before(deadline, now) then values[key], deadlines[key] = nil, nil end
+  end
+end
+if not canonical(now) or now:sub(1,1) == '-' then error('TWIN invalid clock') end
+local function call(command, key, amount, value)
+  if command == 'EXPIRE' or command == 'PEXPIRE' then
+    if not canonical(amount) then return {err='ERR value is not an integer or out of range'} end
+    local duration = command == 'EXPIRE' and amount ~= '0' and amount .. '000' or amount
+    local deadline = canonical(duration) and add(now, duration)
+    if not deadline then return {err="ERR invalid expire time in '" .. command:lower() .. "' command"} end
+    if values[key] == nil then return 0 end
+    if duration == '0' or duration:sub(1,1) == '-' then values[key], deadlines[key] = nil, nil
+    else deadlines[key] = deadline end
+    return 1
+  end
+  if command == 'TTL' or command == 'PTTL' then
+    if values[key] == nil then return -2 end
+    if deadlines[key] == nil then return -1 end
+    local remaining = add(deadlines[key], now == '0' and '0' or '-' .. now)
+    if command == 'TTL' then
+      local whole = #remaining > 3 and remaining:sub(1,-4) or '0'
+      remaining = add(whole, tonumber(remaining:sub(-3)) >= 500 and '1' or '0')
+    end
+    if not before(remaining, '9007199254740992') then return 9007199254740992 end
+    return tonumber(remaining)
+  end
+  if command == 'PERSIST' then
+    local changed = deadlines[key] ~= nil and 1 or 0
+    deadlines[key] = nil
+    return changed
+  end
+  local result = data_call(command, key, amount, value)
+  if not (type(result) == 'table' and result.err) and
+    (command == 'SET' or command == 'SUNIONSTORE' or command == 'SINTERSTORE' or command == 'SDIFFSTORE') then
+    deadlines[key] = nil
+  end
+  for expired in pairs(deadlines) do if values[expired] == nil then deadlines[expired] = nil end end
+  return result
+end
 local function frozen(members)
   return setmetatable({}, {__index=function(_, key)
     local value = members[key]
@@ -244,6 +292,7 @@ local function frozen(members)
 end
 local answers = {}
 for i, invocation in ipairs(config.invokes) do
+  advance(invocation.advance or '0')
   local chunk, reason = loadfile(invocation.path)
   if not chunk then error(reason) end
   setfenv(chunk, frozen({KEYS=invocation.keys, ARGV={}, string=string, table=table,
@@ -256,6 +305,9 @@ for i, invocation in ipairs(config.invokes) do
   local result = chunk()
   if type(result) == 'table' and result.err then error(result.err) end
   answers[i] = result
+end
+for key, expected in pairs(config.expiries or {}) do
+  if (deadlines[key] or false) ~= expected then error('TWIN expiry mismatch: ' .. key) end
 end
 for _, check in ipairs(config.checks or {}) do
   local actual = values[check.key]

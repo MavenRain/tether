@@ -17,7 +17,7 @@ MUTANTS = [
      b'if adding || Keys.mem field fields then "1" else "0"',
      UNIT, b'FAIL HASHES-UNIT overwrite count'),
     ('HDEL-EMPTY-KEY', 'store/store.ml', b'~empty:(Keys.is_empty fields)',
-     b'~empty:(Keys.is_empty fields && not (Keys.mem key store))',
+     b'~empty:(Keys.is_empty fields && not (Keys.mem key store.values))',
      UNIT, b'FAIL HASHES-UNIT delete last field'),
     ('HINCRBY-ROUND', 'print/lua.ml', b"if s.tag == 14 then read = redis.pcall('HGET',k,text(s[2]))",
      b"if s.tag == 14 then read = string.format('%.0f',redis.pcall('HGET',k,text(s[2])) + 0)",

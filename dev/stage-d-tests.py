@@ -210,11 +210,11 @@ def main():
         # The checker exhausts the shared budget before the static walk, so pin its own message.
         emit(directory, "budget", source="M0Spine.tet", code=2,
              diagnostic=b"CHECK budget", fuel="0")
-        # The M1 Set move prelude consumes 30471 polls before the static walk.
+        # The M1 TTL prelude consumes 37788 polls before the static walk.
         # Leave six polls for that walk, preserving the printer's own refusal.
         walk = directory / "budget-walk"
         run([sys.executable, "-P", "dev/emit-sh.py", "--root", "examples", "M0Spine.tet",
-             "--entry", "main", "-o", str(walk), "--fuel", "30477"],
+             "--entry", "main", "-o", str(walk), "--fuel", "37794"],
             code=2, diagnostic=b"SH-BUDGET")
         require(not walk.exists(), "refusal wrote output budget-walk")
         before = (outputs["main"] / "prog.sh").read_bytes()

@@ -1,0 +1,15 @@
+module SessionLease
+
+schema sessions : String -> Key (Str Binary) tag b"session"
+
+def lease : Script Reply (tag b"session") := do {
+  _ <- set Reply (tag b"session") (sessions b"alice") b"active";
+  _ <- expire Reply (Str Binary) (tag b"session") (sessions b"alice") (int64 b"300");
+  r <- ttl Reply (Str Binary) (tag b"session") (sessions b"alice");
+  pure Reply (tag b"session") r
+}
+
+def main : Client Reply := do {
+  r <- inv Reply (tag b"session") lease;
+  done Reply r
+}

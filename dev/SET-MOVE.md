@@ -62,9 +62,10 @@ must pass. The added inventory is:
 - 15 compiling mutations, zero survivors and five restored controls.
 
 The prelude pin is updated. SPEC records the current prelude count.
-The measured Stage D checker/erasure cost is
-30471 polls, followed by 12 static-walk polls. Its refusal still gives the
-walk six polls and requires `SH-BUDGET`, at fuel 30477. Legacy Set algebra
+This slice measured a Stage D checker/erasure cost of
+30471 polls, followed by 12 static-walk polls. Its refusal gave the
+walk six polls and required `SH-BUDGET`, at fuel 30477. The TTL slice
+recalibrates this fixture in `dev/TTL.md`. Legacy Set algebra
 and Set store mutation anchors retain their original semantic changes
 after the shared lookup and Lua dispatch edits. The unknown-tag probe now
 uses 39, after SMOVE claimed 38.

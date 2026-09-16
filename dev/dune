@@ -1,4 +1,9 @@
 (executable
+ (name ttl_tests)
+ (modules ttl_tests)
+ (libraries tether_store))
+
+(executable
  (name surface_check)
  (modules surface_check)
  (libraries tether_surface kanon_kernel))

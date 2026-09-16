@@ -4,6 +4,12 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports typed EXPIRE, PEXPIRE, TTL, PTTL and PERSIST on all key
+types. Expiry replies are checked for exact integer representation.
+`./tether exec examples/SessionLease.tet --host node` creates a five-minute
+lease and prints `300`. See `dev/TTL.md`; run `sh dev/m1-ttl.sh` for its
+full validation ladder.
+
 M1 now supports typed SMOVE between two Set keys. Transfers preserve
 existing expiries and return whether the member was present in the source.
 `./tether exec examples/TeamTransfer.tet --host node` prints

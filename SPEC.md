@@ -1,6 +1,6 @@
 # tether specification
 
-M1 Set move slice, 2026-09-15. The driver emits the executable Wasm
+M1 TTL slice, 2026-09-15. The driver emits the executable Wasm
 Client and Bash pair. The foundation, counter surface, printers, store and
 local hosts are implemented. See `dev/STAGE-B.md` through `dev/STAGE-F.md`
 for syntax and limits. The latest build-log entry records whether the
@@ -37,6 +37,8 @@ for aliasing, empty results and error handling.
 SMOVE transfers a member between two Set keys, preserves existing expiries
 and returns an integer membership result. See `dev/SET-MOVE.md` for
 missing-source precedence, same-key transfers and atomic errors.
+EXPIRE, PEXPIRE, TTL, PTTL and PERSIST operate on any indexed key type.
+See `dev/TTL.md` for the explicit store clock, deadlines and exact reply limits.
 
 ## Foundation (inherited)
 
@@ -127,7 +129,7 @@ implementation measures lua 320/320, including flags, SHA-1 and byte lowering; s
 including the shared Client plan and reactor printer; store 200/200;
 host-node 196/300; host-rest 156/300; and bin 404/450, covering the command
 host, the driver and the local process owner. Both trusted preludes are pinned by
-`dev/PRELUDES.sha256`; their 145 lines are reported separately without
+`dev/PRELUDES.sha256`; their 150 lines are reported separately without
 adding or changing a ruled bound.
 The store and printers live outside `lib`.
 OCaml uses explicit Result/Option errors, exhaustive sum matches and total
@@ -146,10 +148,11 @@ compile-time median exceeds its bound, even when all functional gates pass.
 M1 do-notation, EVALSHA_RO dispatch, basic String/key commands and
 single-field Hash commands, basic Set and List commands, indexed List
 access, trimming and range replies, Set and Hash enumeration and Hash
-projections, two-key Set algebra, destination writes and member transfers, and the FIFO job
+projections, two-key Set algebra, destination writes and member transfers,
+relative expiry and persistence, and the FIFO job
 queue, preview, team roster, Hash snapshot, Hash catalog, team access and
-team cache and team transfer examples are implemented.
-TTL, other bulk Hash operations,
+team cache, team transfer and session lease examples are implemented.
+Conditional and absolute expiry, other bulk Hash operations,
 List bulk operations, ZSet commands, other Set bulk operations, the rate limiter,
 leaderboard and session-store examples, the counted Lean 4 exporter,
 and the M1 ratio and traversal gates remain

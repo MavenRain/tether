@@ -3290,3 +3290,182 @@ RED-LOAD waiver is claimed.
 Review pass 1 (2026-09-15) fixed 6 findings.
 
 Fix rounds: 1.
+
+### 2026-09-15: M1 TTL and persistence
+
+Baseline: committed `c227f2bf5b3e5601229c701ac5ef51d4eee0dd72`, the Set
+move slice and its review fixes. Implementation and validation used
+`/Users/oobi/Documents/gpt18/tether-m1-ttl` before publication to tether.
+
+Added typed EXPIRE, PEXPIRE, TTL, PTTL and PERSIST as Script tags 39 through
+43, with erased Redis type and key tag arguments. TTL and PTTL select
+read-only dispatch; the other commands remain writing. The Wasm and Bash
+artifacts carry identical Lua and include their declared key.
+
+The store now carries persistent value and deadline maps plus an explicit
+millisecond clock. Existing key edits preserve expiry, replacement and
+deletion clear it, and `Store.advance` expires keys after the deadline.
+SET, collection updates, Set destination writes and SMOVE retain their
+previous value semantics. Existing store tests use the new value-map
+accessors. The LuaJIT twin independently implements decimal-string
+deadlines and explicit per-invocation clock steps.
+
+Expiry arguments retain the full Signed64 decimal representation. Lua
+expiry replies at or above 2^53 are rejected with a catchable error, so
+large TTL replies cannot silently round. The interpreter enforces the
+same reply limit. Redis 8.10.1's lookup boundary was checked directly:
+PTTL can return zero at the deadline, while a zero-duration expiry command
+deletes immediately. Both clock models and their boundary tests follow
+that distinction. `examples/SessionLease.tet` creates a five-minute lease
+and returns `300`. The precise scope and clock model are in `dev/TTL.md`.
+
+Validation:
+
+- The 146 store unit checks passed: all seven key types, sentinel results,
+  rounding, nonpositive deadlines, integer and deadline overflow,
+  persistence, immutable clock steps, deadline preservation, replacement,
+  deletion, recreation and the exact reply boundary.
+- The expiry runner passed 35 scenarios on 34 interpreter and 35 LuaJIT
+  oracles, three clock-step cases and five refusals that preserve the
+  output directory. Three refusals are typed and two are literal-form.
+  It checks store reply
+  constructors and LuaJIT reply shapes, including retained replies and
+  uncaught errors. The store runner omits the uncaught-error scenario.
+- All 70 live Wasm/Bash executions passed. The lease example also passed
+  through Node, Bash and LuaJIT. Local Redis and HTTP fixture processes
+  required execution outside the filesystem sandbox's socket restriction.
+- Thirteen expiry mutations were killed by their intended assertions,
+  with five green controls repeated after restoration. Details are in
+  `dev/MUTATION-LOG.md`.
+- The inherited ladder completed in `.kanon-exec/run-hkBI2w`. Stages A
+  through E and all functional suites passed, including 564 Set store and
+  360 SMOVE live host runs. The ladder exited 1: M0 timing measured
+  210.667 ms against 150 ms, and the inherited STORE-DESTINATION mutant
+  reached a different assertion after destination expiry cleanup was added.
+  The mutant now redirects both the value write and cleanup to the wrong
+  key. Its original assertion and all 18 Set store mutations passed on
+  rerun, with six restored controls (`.kanon-exec/run-i6Bsnz`). No production
+  code changed for that recovery.
+- The bounded capture audit checked all 683 ladder rows and the 19-row
+  Set store recovery, with no stderr. Its result was `FUNCTIONAL-OK` with
+  `full_ladder=FAIL timing_failures=1` (`.kanon-exec/run-qJbTQv`).
+- A final alternating baseline/TTL timing comparison used one warm-up and
+  five measured runs per checkout. The committed baseline measured
+  140.488 ms and TTL measured 155.040 ms, a ratio of 1.104. The artifact is
+  `/Users/oobi/Documents/gpt18/.kanon-exec/run-FYJa0C`. TTL still exceeds
+  the unchanged 150 ms bound. This slice has passing functional checks
+  and an unresolved performance gate; the complete ladder is not green.
+- House, both prelude hashes and all eight trusted-line checks passed.
+
+The new prelude measures 37788 checker/erasure polls and 12 static-walk
+polls for M0Spine. The Stage D refusal now uses fuel 37794, retaining six
+polls for the walk and requiring `SH-BUDGET`. The zero-fuel checker
+refusal is unchanged. Legacy mutation anchors were updated for the
+store's value-map accessors and the expiry reply guard; their intended
+defects and asserted failure messages remain unchanged.
+
+Trusted counts remain kernel 3997/4000, encoder 246/600, Lua 320/320,
+Bash/client 227/240, store/interpreter 200/200, Node host 196/300, REST
+host 156/300 and bin 404/450. Related declarations and clauses were
+compacted within the existing counted files. No bound or counted file
+inventory changed. The two pinned preludes total 150 lines; the reactor
+and vendored Kanon remain unchanged.
+
+Conditional and absolute expiry, atomic SET-with-expiry options, the full
+session store, rate limiter, leaderboard, remaining command families,
+Lean exporter and M1 ratio/traversal milestones remain pending. This
+slice does not declare M1 complete or ratify M0-EXIT.
+
+### Review round 2026-09-15 (M1 TTL)
+
+Seven findings were kept by the judge and all seven are fixed here. No
+bound moved, no pinned file changed and no new measurement was invented.
+One gate needed a calm rerun: GATE-1, the M1 TTL timing leg. The closing
+ladder cleared it at 125.431 ms against the 150 ms bound.
+
+| id | severity | file:line | title | fix |
+| --- | --- | --- | --- | --- |
+| D-1 | medium | `dev/ttl_tests.ml:79` | TTL-UNIT printed no case count, so TTL-COUNTS could not see a deleted store check | The suite counts its checks and prints `PASS TTL-UNIT cases=146`. The ladder row, the mutation control and the documents pin that count, so a deleted store check now reddens TTL-COUNTS. |
+| D-2 | medium | `dev/ttl-tests.py:158` | TTL-CLOCK cases=3 and TTL-EXAMPLE hosts=3 were hardcoded literals, not pinned to an inventory | The clock and example rows print measured lengths instead of the literals 3 and 3, and the suite requires its own inventory: 35 scenarios, five refusals and 70 live host runs. |
+| A-2 | low | `dev/ttl-tests.py:221` | TTL-ORACLES reported one count for two oracles that ran different numbers of cases | The two oracles are counted apart and the row reads `PASS TTL-ORACLES store=34 luajit=35`, because the raw reply-range scenario has no interpreter assertion. |
+| C-2 | low | `dev/ttl-tests.py:174` | TTL-REFUSALS accepted any nonzero exit and a bare substring for three of five cases | Each refusal carries its own diagnostic and the exit code must be 2, so the three typed refusals are no longer interchangeable. |
+| D-5 | low | `dev/TTL.md:86` | TTL.md called all five refusal cases type refusals, but two are literal-form | The validation paragraph now reads five atomic refusals: three typed and two literal-form. |
+| D-6 | low | `print/lua.ml:105` | the emitted expiry guard's `-2` and non-number arms were undocumented | FIXED in `dev/TTL.md`, code unchanged. The exact-reply section states the `-2` lower bound and the non-number shape arm, and says the interpreter holds the upper limit only. |
+| D-4 | low | `dev/TTL.md:93` | dev/TTL.md carried the prelude accounting but never named SPEC | The prelude paragraph now names SPEC as the record of the current prelude count. |
+| GATE-1 | high | `dev/m1-ttl.sh` (ladder) | the M1 TTL ladder exits 1 on M0-TIME alone; every functional and mutation row passes | CLOSED green. The closing ladder `gates-close.log` measured `PASS M0-TIME median_ms=125.431 bound_ms=150` at 1-min load 19.02 and ended `EXIT-ALL 0` with 364 PASS rows and no FAIL row. The loaded runs above the bound stay on the record. |
+
+Evidence per fix (from the check stage, both polarities re-run on a fresh
+copy):
+
+- D-1: `dev/ttl_tests.ml:3-4` `let checked = ref 0` and `incr checked`
+  inside require, `:80` prints `PASS TTL-UNIT cases=146`. A copy with one
+  deleted `expect` prints `cases=145` and misses the pin
+  (`W/probes/check-3-D-1.txt`, `check-3-mutated.txt`).
+- D-2: `dev/ttl-tests.py:161` prints `cases={len(steps)}`, `:239`
+  `hosts={len(hosts)}`. One clock tuple removed prints `cases=2`, which
+  the pin no longer matches.
+- A-2: `dev/ttl-tests.py:231` prints `PASS TTL-ORACLES
+  store={stores} luajit={twins}`. A widened store skip prints
+  `store=33` and reddens TTL-COUNTS.
+- C-2: `dev/ttl-tests.py:168-173` gives each of the five changes its own
+  diagnostic. An unrelated corruption now fails with rc 1 instead of
+  passing.
+- D-5: `dev/TTL.md:90` `five atomic refusals: three typed and two
+  literal-form, 70 live Wasm/Bash`.
+- D-6: `dev/TTL.md:41-44` names all four guard arms; `print/lua.ml:105`
+  unchanged, lua 320/320.
+- D-4: `dev/TTL.md:100` `SPEC records the current prelude count.`
+
+Ladder rows, verified on disk from the logs in
+`/Users/oobi/Documents/tether-m1-ttl-review`:
+
+| log | tag | EXIT-ALL | PASS | FAIL | M0-TIME ms (min..max) | 1-min load |
+| --- | --- | --- | --- | --- | --- | --- |
+| gates-baseline.log | baseline, full slice ladder | 1 | 331 | 33 | 163.705 | 38 (queued at 49) |
+| gates-red-load.log | red-load, m0-time leg only, cold | 1 | | | 414.805 | 37.6 |
+| gates-fix-1.log | fix-1, TTL legs only | 0 | 9 | 0 | not run | |
+| gates-gates-1.log | gates-1, full ladder after fix round 1 | 1 | 331 | 33 | 162.370 (161.755..166.193) | 13.07 |
+| gates-fix-2.log | fix-2, TTL legs only | 0 | 9 | 0 | not run | |
+| gates-gates-2.log | gates-2, full ladder after fix round 2 | 1 | 327 | 36 | 270.111 (242.346..475.094) | 14.70 |
+| gates-fix-3.log | fix-3, full ladder on the final tree | 1 | 330 | 33 | 328.111 (298.315..379.587) | 13.93 (5-min 21.00, 15-min 31.61) |
+| gates-close.log | close, queued after fix-3 at load < 30 | 0 | 364 | 0 | 125.431 (124.441..127.505) | 19.02 (5-min 16.14, 15-min 18.62) |
+
+Every PASS and FAIL cell in this table is one recipe on the log named in
+its first column: `rg -c '^PASS ' LOG` and `rg -c '^FAIL ' LOG`.
+
+The closing ladder's mutation and trusted-line rows, verbatim:
+`PASS TTL-MUTATIONS killed=13 survived=0 restored=5` and
+`TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240
+store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK`.
+
+The Workflow's gates-3 request was withdrawn by main: fix-3 on the same
+final tree, and the close ladder queued after it, supersede gates-3.
+
+gates-2 carried three FAIL rows the baseline and gates-1 ladders did not:
+`FAIL LISTS-COUNTS`, `FAIL LISTS-TESTS` and `FAIL LISTS-TESTS-RUN`.
+gates-fix-3.log's FAIL set is identical to gates-gates-1.log's FAIL set,
+so fix round 3 cleared all three.
+
+GATE-1, the timing item. The frozen M0-TIME bound is 150 ms and never
+moves. Under load the leg measured above it: the author's own five-run
+calm A/B 155.040 ms (staged build log, prelude 30471 -> 37788 polls);
+review baseline 163.705 ms (queued at 1-min load 49, run at 38); the
+isolated cold rerun of the leg 414.805 ms (load 37.6); the gates-1
+ladder 162.370 ms at load 13.07; the fix-3 ladder 328.111 ms at load
+13.93. The closing ladder ran on a calmer machine and cleared the
+bound: `PASS M0-TIME median_ms=125.431 bound_ms=150`, five runs
+124.441..127.505 at 1-min load 19.02, with `EXIT 0`, `EXIT-MUT 0` and
+`EXIT-ALL 0`, 364 PASS rows and zero FAIL rows. Every functional,
+mutation, HOUSE, TRUSTED-LINES and PRELUDES row passes. No bound moved
+and the prelude count 30471 -> 37788 polls is unchanged; the loaded
+measurements above the bound stay on this record. The gates-2 ladder
+measured 270.111 ms at 1-min load 14.70, on the same final tree. The
+MUTANT-BENCH control moved the same way: 204.482 ms gates-1, 205.312
+ms gates-2, 246.646 ms fix-3, 150.828 ms close; the 1-min load does
+not capture this spread. GATE-1 is closed by the pre-registered rule:
+the close ladder at 1-min load below 30 decides. This verdict follows
+that rule and moves no bound.
+
+Review pass 1 (2026-09-15) fixed 7 findings.
+
+Fix rounds: 3.
