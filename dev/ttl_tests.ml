@@ -39,14 +39,14 @@ let run () =
   let* _, timed = S.expire ~seconds:true "key" "10" base in
   let* () = expect "10000" (remaining "key" timed) "seconds scale" in
   let* () = all (fun initial ->
-    let* () = require (S.expire ~seconds:true "key" "9223372036854776" initial = Error (S.Expire_range true)) "seconds overflow" in
-    let* () = require (S.expire ~seconds:true "key" "-9223372036854776" initial = Error (S.Expire_range true)) "negative seconds overflow" in
+    let* () = require (S.expire ~seconds:true "key" "9223372036854776" initial = Error (S.Expire_range "expire")) "seconds overflow" in
+    let* () = require (S.expire ~seconds:true "key" "-9223372036854776" initial = Error (S.Expire_range "expire")) "negative seconds overflow" in
     all (fun amount -> require (duration "key" amount initial = Error S.Not_integer) "invalid duration")
       ["01"; "+1"; "-0"; "1.5"; "9223372036854775808"]) [S.empty; timed] in
   let* () = expect ("0", S.empty) (duration "absent" "1" S.empty) "missing expiry" in
   let* () = require (S.persist "absent" S.empty = ("0", S.empty)) "missing persist" in
   let* advanced = S.advance "1000" timed in
-  let* () = require (duration "key" "9223372036854775807" advanced = Error (S.Expire_range false)) "absolute overflow" in
+  let* () = require (duration "key" "9223372036854775807" advanced = Error (S.Expire_range "pexpire")) "absolute overflow" in
   let* () = require (S.advance "-1" timed = Error S.Not_integer && S.advance "9223372036854775807" advanced = Error S.Overflow) "invalid clock" in
   let* _, large = duration "key" "9007199254740991" base in
   let* () = expect "9007199254740991" (remaining "key" large) "largest exact reply" in

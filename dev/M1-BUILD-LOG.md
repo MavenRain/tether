@@ -3469,3 +3469,227 @@ that rule and moves no bound.
 Review pass 1 (2026-09-15) fixed 7 findings.
 
 Fix rounds: 3.
+
+## 2026-09-16 M1 absolute expiry
+
+Base: `cc630981094e1f71432e49ba2219507e55efa488`. Work and complete
+captures: `/Users/oobi/Documents/gpt18/tether-m1-absolute-expiry`.
+
+Added typed EXPIREAT, PEXPIREAT, EXPIRETIME and PEXPIRETIME as Script
+tags 44 through 47. The store shares its deadline map and checked
+arithmetic with relative expiry. Timestamp readers retain exact replies,
+use read-only dispatch, and survive later mutations and invocations.
+The independent decimal-string Lua twin supports the same absolute
+clock semantics. `SessionDeadline.tet` schedules a session for 2100 and
+returns `4102444800` on Node, Bash and LuaJIT.
+
+Focused validation completed with exit 0:
+
+```text
+PASS ABSOLUTE-UNIT cases=162
+PASS ABSOLUTE-ORACLES store=37 luajit=38
+PASS ABSOLUTE-CLOCK cases=6 store=3
+PASS ABSOLUTE-REFUSALS cases=6
+PASS ABSOLUTE-E2E cases=38 hosts=76
+PASS ABSOLUTE-EXAMPLE hosts=3
+PASS ABSOLUTE-TESTS
+PASS ABSOLUTE-MUTATIONS killed=14 survived=0 restored=8
+```
+
+Unit capture: `.kanon-exec/run-BFmiRl`. Full focused host capture:
+`.kanon-exec/run-k7gpQD`. Mutation capture: `.kanon-exec/run-bwmd4V`.
+The raw-error scenario runs on LuaJIT and both live hosts; the other
+37 scenarios also run through the interpreter. Three additional
+interpreter checks use a nonzero initial clock. Positive past deadlines
+and the exact expiry boundary are tested without wall-clock sleeps.
+
+The prelude is 154 lines. Fuel measurement in `.kanon-exec/run-w1o0x0`
+reported `before=44256 after=44268`. Stage D keeps six walk polls by
+moving its fuel fixture to 44262; its required `SH-BUDGET` diagnostic,
+zero-fuel checker refusal and output-atomicity checks are unchanged.
+Lua remains 320/320 and store 200/200. No trusted-line or timing limit
+was raised, and the vendored foundation remains unchanged.
+
+The first full ladder, `.kanon-exec/run-yE9ogl`, was stopped after an
+incomplete explicit PATH omitted rg and panicscan. It also measured
+M0-TIME at 216.164 ms against 150 ms. That interrupted run is not a
+passing validation. The complete rerun uses the recorded OCaml switch
+with both tool directories restored.
+
+The corrected full run, `.kanon-exec/run-zV7SCv`, hit the existing
+120-second Stage D timeout while emitting `ShCases.capturedReply`.
+A nearby one-minute load sample was 93.95. A prelude-only comparison
+using the same emitter and fixture passed with both the committed and
+new preludes, at 34.311 and 34.732 seconds respectively
+(`.kanon-exec/run-vYCjwJ`). This comparison does not replace a timing gate.
+
+Scoped recovery retained the completed Stage A through C checks and
+reran every remaining command from Stage D and Stage E. It passed with
+exit 0 in `.kanon-exec/run-2C6HHY`, including 11 Bash refusals, five
+Bash mutations, 25 store checks, host tests and the unchanged trusted
+bounds. No timeout or assertion was relaxed. The raw full-run timeout
+remains recorded, even though its affected functional legs recovered.
+
+The corrected full run also measured `FAIL M0-TIME median_ms=646.660
+bound_ms=150`. Its raw full-ladder result cannot be green. Final functional
+inventory and the separate closing timing measurement follow below.
+
+The completed full capture exited 1. An audit of all 663 stdout rows and
+29 stderr rows, combined with the scoped host recovery, found 348 passing
+rows and no unaccounted functional failure. All 28 required completion
+markers were present, including the TTL and absolute-expiry count gates.
+The only stderr was the recorded `capturedReply` timeout. Absolute expiry
+repeated every focused count above, including 14 killed mutations and
+eight restored controls. TTL also passed all 13 mutations and restored
+five controls. Housekeeping, prelude integrity and trusted bounds passed.
+
+After the full run completed, one separate closing timing run exited 1
+in `.kanon-exec/run-UXCV2J`:
+
+```text
+LOAD 9:23  29 users, load averages: 34.37 32.87 31.45
+BENCH m0-time median_ms=391.813 min_ms=335.715 max_ms=662.690 runs=5
+FAIL M0-TIME median_ms=391.813 bound_ms=150
+```
+
+The functional checks passed with the scoped host recovery, but the
+150 ms performance gate remains unresolved. Machine load is recorded as
+context, not proof that the change has no performance effect. The full
+ladder is not claimed as passing, and no timing bound was relaxed.
+
+### Review round 2026-09-16 (M1 absolute expiry)
+
+Three findings were kept by the judge and all three are fixed here. No
+bound moved, no pinned file changed and no measurement was invented. The
+fixes touch two test scripts only: `dev/absolute-expiry-tests.py` and
+`dev/ttl-tests.py`. Every printed gate row keeps its exact text at HEAD,
+so `dev/m1-absolute-expiry.sh` and `dev/m1-ttl.sh` need no change.
+
+| id | severity | file:line | title | fix |
+| --- | --- | --- | --- | --- |
+| C-1 | medium | `dev/absolute-expiry-tests.py:87` | ABSOLUTE-CLOCK counted nothing, so ABSOLUTE-COUNTS could not see a lost clock scenario | `clocks()` counts its scenarios and its interpreter checks and prints `PASS ABSOLUTE-CLOCK cases={scenarios} store={stores}`. The row still reads `cases=6 store=3`, and a deleted scenario now reddens ABSOLUTE-COUNTS. |
+| C-2 | medium | `dev/absolute-expiry-tests.py:140` | ABSOLUTE-EXAMPLE hosts=3 was a literal over an inline tuple | The three hosts are bound as `hosts` and the row prints `hosts={len(hosts)}`, as `dev/ttl-tests.py:239` already did. A dropped host now changes the row. |
+| D-1 | low | `dev/ttl-tests.py:212` | the absolute suite printed a second, TTL-labelled E2E row holding the absolute inventory | `live()` takes a `label` parameter with the default `TTL`, used in the printed row and in both require messages. The absolute suite passes `label='ABSOLUTE'` and no longer prints its own literal row, so the combined log holds one `PASS ABSOLUTE-E2E` row and one `PASS TTL-E2E` row. |
+
+Evidence, both polarities on copies under `$TMPDIR`:
+
+- C-1 clean: ROOT `python3 -P dev/absolute-expiry-tests.py --offline`
+  printed `PASS ABSOLUTE-CLOCK cases=6 store=3`, byte identical to the
+  gate literal at `dev/m1-absolute-expiry.sh:32`.
+- C-1 mutant: a copy with one clock tuple removed printed
+  `PASS ABSOLUTE-CLOCK cases=5 store=3`, and the gate literals read out
+  of `dev/m1-absolute-expiry.sh` report `MISSING ROW` for that capture.
+  Before the fix the same mutant left the row unchanged.
+- C-2 and D-1: the live rows need loopback servers, so they were run
+  through the ladder queue in copy mode, clean and mutated.
+
+No mutant was added to `dev/absolute-expiry-mutations.py` and
+`dev/MUTATION-LOG.md` is unchanged: the runner kills a defect by a red
+test command, and a dropped count scenario keeps the suite green, so the
+COUNTS gate, not a mutant row, is the instrument for these two rows.
+The documented counts stay `PASS ABSOLUTE-MUTATIONS killed=14 survived=0
+restored=8`.
+
+Fix-round smoke, copy mode, selector `abs-only`, tag `fix-1`, start load
+41.56: `PASS-LEG ABS-BUILD`, `PASS ABSOLUTE-UNIT cases=162`,
+`PASS-LEG ABS-UNIT`, `PASS ABSOLUTE-ORACLES store=37 luajit=38`,
+`PASS ABSOLUTE-CLOCK cases=6 store=3`, `PASS ABSOLUTE-REFUSALS cases=6`,
+`PASS ABSOLUTE-E2E cases=38 hosts=76`, `PASS ABSOLUTE-EXAMPLE hosts=3`,
+`PASS ABSOLUTE-TESTS`, `PASS-LEG ABS-TESTS`,
+`PASS ABSOLUTE-MUTATIONS killed=14 survived=0 restored=8`,
+`PASS-LEG ABS-MUTATIONS`, `PASS HOUSE`, `PASS-LEG HOUSE`,
+`TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240
+store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK`,
+`PASS-LEG TRUSTED-LINES`, `PASS-LEG PRELUDES`, `EXIT 0`, `EXIT-ALL 0`.
+The `abs-only` selector runs no timing leg, so M0-TIME, MEASURE, STAGE-F
+and the nested M1-TTL ladder stay with the closing run on ROOT.
+
+Two findings were refuted and dropped. B-1 claimed no case reads a
+relative TTL/PTTL after an absolute EXPIREAT/PEXPIREAT; the verifier's
+probe MUT-A killed the mutant with `FAIL ABSOLUTE-UNIT relative
+interoperability`, so the claim is false and the finding is dropped,
+never revived. D-2 claimed the Required witness column of the staged
+mutation table names no witness the runner prints; staged
+`dev/MUTATION-LOG.md:886` names `ABSOLUTE-UNIT absolute milliseconds`,
+printed verbatim at `gates-baseline.log:706`, so the claim is false and
+the finding is dropped, never revived. C-3 was merged into D-1 as the
+same defect: C-3 cited the call site, D-1 the printing line and the
+safer fix hint; nothing is lost.
+
+Gate check, closing ladder tag `close`, mode `root`, leg `full`, queued by
+close-wait.sh at 16:35:54 at a one-minute load of 32.75, done at 17:46:47: 778
+rows, 35 FAIL rows, last row `EXIT-ALL 1`, `EXIT 1` and `EXIT-MUT 0`. Uptime at
+the start row `16:36  up 30 days, 19:11, 29 users, load averages: 41.41 30.55
+33.47`, at the timing leg `LOAD 16:49  up 30 days, 19:23, 29 users, load
+averages: 20.76 27.98 30.96`, at the end row `17:46  up 30 days, 20:21, 29
+users, load averages: 15.02 18.95 29.02`. The timing leg is red at that load:
+`BENCH m0-time median_ms=185.786 min_ms=171.516 max_ms=285.569 runs=5` and
+`FAIL M0-TIME median_ms=185.786 bound_ms=150`, while the boundary control
+`PASS M0-TIME-BOUNDARY below=149 at=150` holds. Every FAIL row of this log
+carries one of the 19 names of the M0-TIME cascade (M0-TIME, M1-ABSOLUTE-EXPIRY,
+M1-DO, M1-HASH-ENTRIES, M1-HASH-PROJECTIONS, M1-HASHES, M1-LIST-ACCESS,
+M1-LIST-RANGE, M1-LISTS, M1-READONLY, M1-SET-ALGEBRA, M1-SET-MEMBERS,
+M1-SET-MOVE, M1-SET-STORE, M1-SETS, M1-STRINGS, M1-TTL, MEASURE, STAGE-F); the
+cascade runs through MEASURE, STAGE-F and the nested M1 chain and has that one
+root cause. Every functional leg is green in this log:
+`PASS ABSOLUTE-MUTATIONS killed=14 survived=0 restored=8`, `PASS
+ABSOLUTE-MUTATIONS-RUN`, `PASS SETS-TESTS`,
+`PASS DO-MUTATIONS killed=4 survived=0 restored=1`,
+`PASS HASH-ENTRIES-MUTATIONS killed=11 survived=0 restored=4`,
+`PASS HASH-PROJECTIONS-MUTATIONS killed=16 survived=0 restored=6`,
+`PASS HASHES-MUTATIONS killed=6 survived=0 restored=2`,
+`PASS LIST-ACCESS-MUTATIONS killed=12 survived=0 restored=6`,
+`PASS LIST-RANGE-MUTATIONS killed=11 survived=0 restored=5`,
+`PASS LISTS-MUTATIONS killed=9 survived=0 restored=2`,
+`PASS RO-MUTATIONS killed=4 survived=0 restored=2`,
+`PASS SET-ALGEBRA-MUTATIONS killed=17 survived=0 restored=6`,
+`PASS SET-MEMBERS-MUTATIONS killed=9 survived=0 restored=4`,
+`PASS SET-MOVE-MUTATIONS killed=15 survived=0 restored=5`,
+`PASS SET-STORE-MUTATIONS killed=18 survived=0 restored=6`,
+`PASS SETS-MUTATIONS killed=8 survived=0 restored=2`,
+`PASS STAGE-F-MUTATIONS killed=3 survived=0 restored=2`,
+`PASS STRINGS-MUTATIONS killed=4 survived=0 restored=2`,
+`PASS TTL-MUTATIONS killed=13 survived=0 restored=5`,
+`PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1` and `TRUSTED-LINES
+kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240 store=200/200
+host-node=196/300 host-rest=156/300 bin=404/450 OK`. The ABSOLUTE-MUTATIONS
+killed count and the trusted-line triple cited in this block are read from this
+log; nothing is carried from the fix-round smoke `gates-fix-1.log` any more.
+
+The fix-round ladder `gates-gates-1.log` (tag `gates-1`, mode `root`, leg
+`full`, 15:12:47 to 16:34:52, 776 rows) is the red ladder of this round:
+`FAIL M0-TIME median_ms=854.061 bound_ms=150` under `LOAD 15:23  up 30 days,
+17:58, 29 users, load averages: 17.80 22.99 27.17`, bench
+`BENCH m0-time median_ms=854.061 min_ms=349.939 max_ms=1014.719 runs=5`, then
+`FAIL SETS-TESTS` on a 120 s bash timeout of the SETS suite and the nested
+cascade, 37 FAIL rows, last row `EXIT-ALL 1`. The one-minute load was 15.83 at
+the start row `15:12  up 30 days, 17:47, 29 users, load averages: 15.83 27.19
+31.68` and 30.26 at the end row `16:34  up 30 days, 19:09, 29 users, load
+averages: 30.26 26.94 32.68`; the review's load watch read 88.95 (five-minute
+208.11) at 15:41 while other sessions ran their ladders. `PASS SETS-TESTS` is
+green in `gates-close.log`, so the 120 s timeout was a load artifact, and the
+other FAIL names of that log are the same M0-TIME cascade that the close ladder
+repeats, so the red ladder adds no finding of its own; the fixes of this round
+touched no runtime file.
+
+GATE-1 verdict by the pre-registered rule of the M1 TTL round: the closing
+ladder on ROOT, queued at a one-minute load of 32.75 and at 20.76 at the timing
+leg, under 30, measured `FAIL M0-TIME median_ms=185.786 bound_ms=150` (minimum
+171.516 ms over 5 runs) against the unmovable 150 ms bound, so GATE-1 is OPEN:
+the timing hypothesis of the review kit, the author's admitted M0-TIME risk
+after the prelude grew from 150 to 154 lines and the checker polls from 37788 to
+44256, stands. The same runtime tree measured
+`PASS M0-TIME median_ms=140.096 bound_ms=150` in the baseline ladder of this
+round at `LOAD 11:55  up 30 days, 14:30, 29 users, load averages: 15.38 16.63
+18.69`, and the M1 TTL tree closed at 125.431 ms, so the two calm measurements
+of this tree disagree and the review draws no ruling from either. The gate
+closes only by one of: a calm rerun of the timing leg (selector `m0-time`,
+one-minute load under 30) under 150 ms, an operator ruling on the baseline row
+as in the TTL round, or a runtime change before commit. No bound moved this
+round: the 150 ms M0-TIME bound, the eight trusted-line bounds and the 120 s
+deadlines are unchanged, and lua=320/320 and store=200/200 sit exactly at their
+bounds as before.
+
+Review pass 1 (2026-09-16) fixed 3 findings.
+
+Fix rounds: 1.

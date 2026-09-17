@@ -17,7 +17,7 @@ let rec encode = function
   | I.Status s -> "status:" ^ hex s
   | I.Err s -> "error:" ^ hex s
   | I.Array rs -> "array:[" ^ String.concat "," (List.map encode rs) ^ "]"
-let run path entry key initial fuel =
+let run ?(now="0") path entry key initial fuel =
   let* fuel = int_of_string_opt fuel |> Option.to_result ~none:(D.Syntax "STORE-FUEL") in
   if fuel < 0 then Error (D.Syntax "STORE-FUEL") else
   let remaining = ref fuel in
@@ -40,9 +40,11 @@ let run path entry key initial fuel =
     | _ ->
       if String.starts_with ~prefix:"@" initial then Error (D.Syntax "STORE-SEED")
       else seeded (Tether_store.Store.Str initial) in
+  let* store = Tether_store.Store.advance now store |> Result.map_error (fun e -> D.Syntax (Tether_store.Store.message e)) in
   let* answer, _store = I.run ~budget rows ~entry store |> Result.map_error (fun e -> D.Syntax e) in
   print_endline ("REPLY " ^ encode answer); Ok ()
 let () = (match Array.to_list Sys.argv with
   | [_program; path; entry; key; initial; fuel] -> run path entry key initial fuel
-  | [] | _ :: _ -> Error (D.Syntax "expected path, entry, key, initial and fuel"))
+  | [_program; path; entry; key; initial; fuel; now] -> run ~now path entry key initial fuel
+  | [] | _ :: _ -> Error (D.Syntax "expected path, entry, key, initial, fuel and optional clock"))
   |> Result.fold ~ok:Fun.id ~error:(fun e -> prerr_endline (D.to_string e); exit 4)

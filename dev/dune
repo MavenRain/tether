@@ -1,4 +1,9 @@
 (executable
+ (name absolute_expiry_tests)
+ (modules absolute_expiry_tests)
+ (libraries tether_store))
+
+(executable
  (name ttl_tests)
  (modules ttl_tests)
  (libraries tether_store))

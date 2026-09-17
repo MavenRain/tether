@@ -875,3 +875,30 @@ corrected full Set store mutation suite passed with 18 kills and six
 restored controls in `.kanon-exec/run-i6Bsnz`. Their behavior checks and
 expected diagnostics are retained. The current Stage D static-walk
 negative control still grants six polls and requires `SH-BUDGET`.
+
+## 2026-09-16 M1 absolute expiry
+
+`python3 -P dev/absolute-expiry-mutations.py` compiled each changed tree
+before requiring its intended runtime assertion. The 14 cases cover:
+
+| Cases | Fault inserted | Required witness |
+| --- | --- | --- |
+| STORE-AT-BASE, STORE-TIME-BASE | Add or subtract the clock for an absolute timestamp | ABSOLUTE-UNIT absolute milliseconds |
+| INTERPRETER-AT, INTERPRETER-TIME | Dispatch an absolute command as relative | Nonzero-clock interpreter reply |
+| LUA-AT, LUA-PAT | Swap seconds and milliseconds in deadline setters | Twin expiry mismatch |
+| LUA-TIME, LUA-PTIME | Swap units in timestamp readers | LuaJIT reply mismatch |
+| READ-TIME-FLAG, READ-PTIME-FLAG | Mark a timestamp reader as writing | Write classification |
+| WRITE-AT-FLAG, WRITE-PAT-FLAG | Mark a deadline setter as read-only | Write classification |
+| TWIN-AT-BASE, TWIN-TIME-BASE | Apply relative arithmetic in the independent twin | Twin expiry or reply mismatch |
+
+Eight controls run before mutation and after restoration. The focused
+run in `.kanon-exec/run-bwmd4V` completed with exit 0:
+
+```text
+PASS ABSOLUTE-MUTATIONS killed=14 survived=0 restored=8
+```
+
+The inherited TTL interpreter-unit anchor now follows the shared
+relative/absolute dispatcher and still swaps only the relative units.
+The Stage D negative control remains a six-poll static walk at fuel
+44262, after measuring 44256 checker/erasure polls and 12 walk polls.

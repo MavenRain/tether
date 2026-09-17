@@ -249,21 +249,23 @@ local function advance(delta)
 end
 if not canonical(now) or now:sub(1,1) == '-' then error('TWIN invalid clock') end
 local function call(command, key, amount, value)
-  if command == 'EXPIRE' or command == 'PEXPIRE' then
+  if command == 'EXPIRE' or command == 'PEXPIRE' or command == 'EXPIREAT' or command == 'PEXPIREAT' then
     if not canonical(amount) then return {err='ERR value is not an integer or out of range'} end
-    local duration = command == 'EXPIRE' and amount ~= '0' and amount .. '000' or amount
-    local deadline = canonical(duration) and add(now, duration)
+    local duration = (command == 'EXPIRE' or command == 'EXPIREAT') and amount ~= '0' and amount .. '000' or amount
+    local absolute = command == 'EXPIREAT' or command == 'PEXPIREAT'
+    local deadline = canonical(duration) and add(absolute and '0' or now, duration)
     if not deadline then return {err="ERR invalid expire time in '" .. command:lower() .. "' command"} end
     if values[key] == nil then return 0 end
-    if duration == '0' or duration:sub(1,1) == '-' then values[key], deadlines[key] = nil, nil
+    if deadline:sub(1,1) == '-' or not before(now, deadline) then values[key], deadlines[key] = nil, nil
     else deadlines[key] = deadline end
     return 1
   end
-  if command == 'TTL' or command == 'PTTL' then
+  if command == 'TTL' or command == 'PTTL' or command == 'EXPIRETIME' or command == 'PEXPIRETIME' then
     if values[key] == nil then return -2 end
     if deadlines[key] == nil then return -1 end
-    local remaining = add(deadlines[key], now == '0' and '0' or '-' .. now)
-    if command == 'TTL' then
+    local absolute = command == 'EXPIRETIME' or command == 'PEXPIRETIME'
+    local remaining = absolute and deadlines[key] or add(deadlines[key], now == '0' and '0' or '-' .. now)
+    if command == 'TTL' or command == 'EXPIRETIME' then
       local whole = #remaining > 3 and remaining:sub(1,-4) or '0'
       remaining = add(whole, tonumber(remaining:sub(-3)) >= 500 and '1' or '0')
     end

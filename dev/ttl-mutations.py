@@ -23,7 +23,7 @@ MUTANTS = [
     ('SET-EXPIRY', 'store/store.ml', b'put key (Str value) (remove key store)', b'put key (Str value) store', UNIT, b'FAIL TTL-UNIT set clears expiry'),
     ('PERSIST-EXPIRY', 'store/store.ml', b'(if Keys.mem key store.deadlines then "1" else "0"), { store with deadlines = Keys.remove key store.deadlines }', b'(if Keys.mem key store.deadlines then "1" else "0"), store', UNIT, b'FAIL TTL-UNIT persist result'),
     ('STORE-REPLY-RANGE', 'store/store.ml', b'if value >= 9007199254740992L', b'if value > 9007199254740993L', UNIT, b'FAIL TTL-UNIT rounded reply refused'),
-    ('INTERPRETER-UNIT', 'store/interp.ml', b'Store.expire ~seconds:(tag = 39)', b'Store.expire ~seconds:(tag = 40)', probe('seconds'), b'TTL interpreter reply'),
+    ('INTERPRETER-UNIT', 'store/interp.ml', b'~seconds:(tag = 39 || tag = 44)', b'~seconds:(tag = 40 || tag = 44)', probe('seconds'), b'TTL interpreter reply'),
     ('LUA-UNIT', 'print/lua.ml', b"[39]='EXPIRE'", b"[39]='PEXPIRE'", probe('seconds'), b'TWIN expiry mismatch'),
     ('LUA-REPLY-RANGE', 'print/lua.ml', b'got >= 9007199254740992', b'got > 9007199254740992', probe('inexact'), b'TWIN reply kind string wanted status'),
     ('READ-FLAG', 'print/flags.ml', b' && tag <> 41', b'', probe('ttlMissing'), b'TTL write classification'),

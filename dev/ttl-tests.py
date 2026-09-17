@@ -95,7 +95,7 @@ def emit(work, name, row):
     path.write_text(source(row))
     run(['./tether', 'emit', str(path), '-o', str(output)])
     require(b'LUA-SAME ' in run(['node', 'dev/lua-same.mjs', str(output)]), 'TTL canonical bodies')
-    readonly = all(step.split()[0] in ('ttl', 'pttl') for step in row['steps'])
+    readonly = all(step.split()[0] in ('ttl', 'pttl', 'expiretime', 'pexpiretime') for step in row['steps'])
     for script in json.loads((output / 'scripts.json').read_text()):
         body = (output / (script['stem'] + '.lua')).read_bytes()
         require(script['keys'] == [KEY], 'TTL declared key')
@@ -104,12 +104,12 @@ def emit(work, name, row):
     return output
 
 
-def store(work, row):
+def store(work, row, *, now=None):
     if row.get('raw'):
         return 0
     replies = []
     code = support.checker.check(work, 'TtlCases.tet', command=[str(ROOT / '_build/default/dev/store_run.exe'),
-        'TtlCases.tet', 'main', KEY, row['seed'], '1000000'], receive=replies.append)
+        'TtlCases.tet', 'main', KEY, row['seed'], '1000000'] + ([] if now is None else [now]), receive=replies.append)
     kind = b'status' if row['reply'] == 'status' else b'int'
     require(code == 0 and replies == [b'REPLY ' + kind + b':' + row['expected'].hex().encode() + b'\n'],
             f'TTL interpreter reply {replies!r}')
@@ -187,7 +187,7 @@ def refusals(work):
     print(f'PASS TTL-REFUSALS cases={len(changes)}', flush=True)
 
 
-def live(work, outputs, rows):
+def live(work, outputs, rows, *, expected_hosts=70, label='TTL'):
     with support.local.hosts(work) as (port, env):
         redis = ['redis-cli', '-h', '127.0.0.1', '-p', str(port), '--raw']
         count = 0
@@ -206,10 +206,10 @@ def live(work, outputs, rows):
                     require(run(args, env=env, code=4) == b'', 'TTL uncaught error stops host')
                     require(run(redis + ['EXISTS', KEY]) == b'1\n', 'TTL error stops later invocation')
                 else:
-                    require(run(args, env=env) == row['expected'] + b'\n', f'TTL {host} reply {name}')
+                    require(run(args, env=env) == row['expected'] + b'\n', f'{label} {host} reply {name}')
                 count += 1
-        require(count == 70, f'TTL live inventory {count}')
-        print(f'PASS TTL-E2E cases={len(rows)} hosts={count}', flush=True)
+        require(count == expected_hosts, f'{label} live inventory {count}')
+        print(f'PASS {label}-E2E cases={len(rows)} hosts={count}', flush=True)
 
 
 def main():

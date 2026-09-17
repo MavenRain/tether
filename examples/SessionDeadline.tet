@@ -1,0 +1,15 @@
+module SessionDeadline
+
+schema sessions : String -> Key (Str Binary) tag b"session"
+
+def schedule : Script Reply (tag b"session") := do {
+  _ <- set Reply (tag b"session") (sessions b"alice") b"active";
+  _ <- expireat Reply (Str Binary) (tag b"session") (sessions b"alice") (int64 b"4102444800");
+  r <- expiretime Reply (Str Binary) (tag b"session") (sessions b"alice");
+  pure Reply (tag b"session") r
+}
+
+def main : Client Reply := do {
+  r <- inv Reply (tag b"session") schedule;
+  done Reply r
+}

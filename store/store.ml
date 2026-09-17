@@ -3,7 +3,7 @@ module Members = Set.Make (String)
 type data = Str of string | Hash of (string * string) list | List of string list
   | Set of string list | ZSet of (string * string) list | Stream of (string * string) list
 type t = { values : data Keys.t; deadlines : int64 Keys.t; now : int64 }
-type fault = Wrong_type | Not_integer | Hash_not_integer | Overflow | Missing_key | Index_range | Expire_range of bool | Expire_reply
+type fault = Wrong_type | Not_integer | Hash_not_integer | Overflow | Missing_key | Index_range | Expire_range of string | Expire_reply
 let empty = { values = Keys.empty; deadlines = Keys.empty; now = 0L } let put key value store = { store with values = Keys.add key value store.values }
 let remove key store = { store with values = Keys.remove key store.values; deadlines = Keys.remove key store.deadlines }
 let bindings store = Keys.bindings store.values
@@ -13,7 +13,7 @@ let message = function
   | Not_integer -> "ERR value is not an integer or out of range" | Hash_not_integer -> "ERR hash value is not an integer"
   | Overflow -> "ERR increment or decrement would overflow"
   | Missing_key -> "ERR no such key" | Index_range -> "ERR index out of range"
-  | Expire_range seconds -> "ERR invalid expire time in '" ^ (if seconds then "expire" else "pexpire") ^ "' command"
+  | Expire_range command -> "ERR invalid expire time in '" ^ command ^ "' command"
   | Expire_reply -> "ERR expiry reply is outside exact integer range"
 let read empty project key store = Keys.find_opt key store.values |> Option.fold ~none:(Ok empty) ~some:project
 let get = read None (function Str value -> Ok (Some value) | Hash _ | List _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
@@ -31,11 +31,11 @@ let incrby key amount store = let* amount = integer amount in let* value = get k
 let incr key store = incrby key "1" store let decr key store = incrby key "-1" store
 let advance milliseconds store = let* delta = integer milliseconds in if delta < 0L then Error Not_integer else let* now = add store.now delta in let* now = integer now in
   Ok (Keys.fold (fun key deadline next -> if deadline < now then remove key next else next) store.deadlines { store with now })
-let expire ~seconds key amount store = let* amount = integer amount in
-  if seconds && (amount > 9223372036854775L || amount < -9223372036854775L) then Error (Expire_range seconds) else
-  let* deadline = add store.now (if seconds then Int64.mul amount 1000L else amount) |> Result.map_error (fun _ -> Expire_range seconds) in
+let expire ?(absolute=false) ~seconds key amount store = let* amount = integer amount in let range = Expire_range ((if seconds then "expire" else "pexpire") ^ (if absolute then "at" else "")) in
+  if seconds && (amount > 9223372036854775L || amount < -9223372036854775L) then Error range else
+  let* deadline = add (if absolute then 0L else store.now) (if seconds then Int64.mul amount 1000L else amount) |> Result.map_error (fun _ -> range) in
   let* deadline = integer deadline in Ok (exists key store, if exists key store = "0" then store else if deadline <= store.now then remove key store else { store with deadlines = Keys.add key deadline store.deadlines })
-let ttl ~seconds key store = let remaining = Keys.find_opt key store.deadlines |> Option.map (fun t -> Int64.sub t store.now) in
+let ttl ?(absolute=false) ~seconds key store = let remaining = Keys.find_opt key store.deadlines |> Option.map (fun t -> if absolute then t else Int64.sub t store.now) in
   let value = if exists key store = "0" then -2L else Option.fold ~none:(-1L) ~some:(fun ms -> if seconds then Int64.add (Int64.div ms 1000L) (if Int64.rem ms 1000L >= 500L then 1L else 0L) else ms) remaining in
   if value >= 9007199254740992L then Error Expire_reply else Ok (Int64.to_string value)
 let persist key store = (if Keys.mem key store.deadlines then "1" else "0"), { store with deadlines = Keys.remove key store.deadlines }

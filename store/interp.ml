@@ -98,8 +98,8 @@ let run ~budget rows ~entry store =
           | (32 | 33 | 34), [KeyName other] -> array (keep (Store.scombine (if tag = 32 then Store.Members.union else if tag = 33 then Store.Members.inter else Store.Members.diff) key other store))
           | (35 | 36 | 37), [KeyName left; KeyName right] -> integer (Store.sstore (if tag = 35 then Store.Members.union else if tag = 36 then Store.Members.inter else Store.Members.diff) key left right store)
           | 38, [KeyName other; Octets member] -> integer (Store.smove key other member store)
-          | (39 | 40), [Signed duration] -> integer (Store.expire ~seconds:(tag = 39) key duration store)
-          | (41 | 42), [] -> integer (keep (Store.ttl ~seconds:(tag = 41) key store))
+          | (39 | 40 | 44 | 45), [Signed duration] -> integer (Store.expire ~absolute:(tag >= 44) ~seconds:(tag = 39 || tag = 44) key duration store)
+          | (41 | 42 | 46 | 47), [] -> integer (keep (Store.ttl ~absolute:(tag >= 46) ~seconds:(tag = 41 || tag = 46) key store))
           | 43, [] -> integer (Ok (Store.persist key store))
           | _, _ -> Error "STORE-SCRIPT-COMMAND" in
         let* next = apply k [answer] in script store next
