@@ -11,16 +11,14 @@ let save key value ~empty store = if empty then remove key store else put key va
 let message = function
   | Wrong_type -> "WRONGTYPE Operation against a key holding the wrong kind of value"
   | Not_integer -> "ERR value is not an integer or out of range" | Hash_not_integer -> "ERR hash value is not an integer"
-  | Overflow -> "ERR increment or decrement would overflow"
-  | Missing_key -> "ERR no such key" | Index_range -> "ERR index out of range"
+  | Overflow -> "ERR increment or decrement would overflow" | Missing_key -> "ERR no such key" | Index_range -> "ERR index out of range"
   | Expire_range command -> "ERR invalid expire time in '" ^ command ^ "' command"
   | Expire_reply -> "ERR expiry reply is outside exact integer range"
 let read empty project key store = Keys.find_opt key store.values |> Option.fold ~none:(Ok empty) ~some:project
 let get = read None (function Str value -> Ok (Some value) | Hash _ | List _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
 let integer text = Result.bind (Int64.of_string_opt text |> Option.to_result ~none:Not_integer) (fun value -> if Int64.to_string value = text then Ok value else Error Not_integer)
 let set key value store = "OK", put key (Str value) (remove key store)
-let exists key store = if Keys.mem key store.values then "1" else "0"
-let del key store = exists key store, remove key store
+let exists key store = if Keys.mem key store.values then "1" else "0" let del key store = exists key store, remove key store
 let ( let* ) = Result.bind
 let add value amount =
   if (amount > 0L && value > Int64.sub Int64.max_int amount) || (amount < 0L && value < Int64.sub Int64.min_int amount) then Error Overflow
@@ -31,10 +29,14 @@ let incrby key amount store = let* amount = integer amount in let* value = get k
 let incr key store = incrby key "1" store let decr key store = incrby key "-1" store
 let advance milliseconds store = let* delta = integer milliseconds in if delta < 0L then Error Not_integer else let* now = add store.now delta in let* now = integer now in
   Ok (Keys.fold (fun key deadline next -> if deadline < now then remove key next else next) store.deadlines { store with now })
-let expire ?(absolute=false) ~seconds key amount store = let* amount = integer amount in let range = Expire_range ((if seconds then "expire" else "pexpire") ^ (if absolute then "at" else "")) in
+type expiry_condition = NX | XX | GT | LT
+let expire ?condition ?(absolute=false) ~seconds key amount store = let* amount = integer amount in let range = Expire_range ((if seconds then "expire" else "pexpire") ^ (if absolute then "at" else "")) in
   if seconds && (amount > 9223372036854775L || amount < -9223372036854775L) then Error range else
   let* deadline = add (if absolute then 0L else store.now) (if seconds then Int64.mul amount 1000L else amount) |> Result.map_error (fun _ -> range) in
-  let* deadline = integer deadline in Ok (exists key store, if exists key store = "0" then store else if deadline <= store.now then remove key store else { store with deadlines = Keys.add key deadline store.deadlines })
+  let* deadline = integer deadline in let previous = Keys.find_opt key store.deadlines in
+  let allowed = Option.fold ~none:true ~some:(function NX -> Option.is_none previous | XX -> Option.is_some previous
+    | GT -> Option.fold ~none:false ~some:(fun old -> deadline > old) previous | LT -> Option.fold ~none:true ~some:(fun old -> deadline < old) previous) condition in
+  if exists key store = "0" || not allowed then Ok ("0", store) else Ok ("1", if deadline <= store.now then remove key store else { store with deadlines = Keys.add key deadline store.deadlines })
 let ttl ?(absolute=false) ~seconds key store = let remaining = Keys.find_opt key store.deadlines |> Option.map (fun t -> if absolute then t else Int64.sub t store.now) in
   let value = if exists key store = "0" then -2L else Option.fold ~none:(-1L) ~some:(fun ms -> if seconds then Int64.add (Int64.div ms 1000L) (if Int64.rem ms 1000L >= 500L then 1L else 0L) else ms) remaining in
   if value >= 9007199254740992L then Error Expire_reply else Ok (Int64.to_string value)
@@ -59,8 +61,7 @@ let sismember key member store = Result.map (fun values -> if Members.mem member
 let scard key store = let* values = members key store in Ok (string_of_int (Members.cardinal values))
 let smembers key store = Result.map Members.elements (members key store)
 let scombine op key other store = let* left = members key store in let* right = members other store in Ok (Members.elements (op left right))
-let sstore op destination key other store = let* values = scombine op key other store in
-  Ok (string_of_int (List.length values), save destination (Set values) ~empty:(values = []) (remove destination store))
+let sstore op destination key other store = let* values = scombine op key other store in Ok (string_of_int (List.length values), save destination (Set values) ~empty:(values = []) (remove destination store))
 let change_set update key member store = let* values = members key store in let next = update member values in
   if Members.equal values next then Ok ("0", store) else Ok ("1", save_set key next store)
 let sadd = change_set Members.add let srem = change_set Members.remove
@@ -75,8 +76,7 @@ let pop side key store = let* values = list key store in match orient side value
   | value :: rest -> Ok (Some value, save key (List (orient side rest)) ~empty:(rest = []) store)
 let position values index = if index < 0L then Int64.add (Int64.of_int (List.length values)) index else index
 let indexed values = List.mapi (fun i v -> Int64.of_int i, v) values
-let lindex key index store = let* values = list key store in if values = [] then Ok None else let* index = integer index in
-  Ok (List.assoc_opt (position values index) (indexed values))
+let lindex key index store = let* values = list key store in if values = [] then Ok None else let* index = integer index in Ok (List.assoc_opt (position values index) (indexed values))
 let lset key index value store = let* values = list key store in if values = [] then Error Missing_key else let* index = integer index in let index = position values index in
   if index < 0L || index >= Int64.of_int (List.length values) then Error Index_range else
   Ok ("OK", put key (List (List.mapi (fun i v -> if Int64.of_int i = index then value else v) values)) store)

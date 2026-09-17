@@ -1,4 +1,9 @@
 (executable
+ (name conditional_expiry_tests)
+ (modules conditional_expiry_tests)
+ (libraries tether_store))
+
+(executable
  (name absolute_expiry_tests)
  (modules absolute_expiry_tests)
  (libraries tether_store))

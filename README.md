@@ -4,6 +4,12 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports typed NX, XX, GT and LT conditions on relative and
+absolute expiry. `./tether exec examples/SessionRenewal.tet --host node`
+extends a session lease to ten minutes, rejects a shorter renewal and
+prints `600`. See `dev/CONDITIONAL-EXPIRY.md`; run
+`sh dev/m1-conditional-expiry.sh` for its full validation ladder.
+
 M1 now supports typed EXPIREAT, PEXPIREAT, EXPIRETIME and PEXPIRETIME
 on all key types. `./tether exec examples/SessionDeadline.tet --host node`
 sets an absolute session deadline and prints `4102444800`.

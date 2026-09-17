@@ -3693,3 +3693,164 @@ bounds as before.
 Review pass 1 (2026-09-16) fixed 3 findings.
 
 Fix rounds: 1.
+
+## 2026-09-16 M1 conditional expiry
+
+Base: `0240c33ce54a74964eaf39fe750e2ebfebfa254d`. Implementation and
+evidence: `/Users/oobi/Documents/gpt18/tether-m1-conditional-expiry`.
+
+This slice adds `ExpiryCondition` with `expiryNX`, `expiryXX`, `expiryGT`
+and `expiryLT`, plus `expireIf`, `pexpireIf`, `expireatIf` and
+`pexpireatIf` at Script tags 48 through 51. All indexed key types are
+accepted. Each call takes one condition, and the checker rejects byte
+strings or additional condition arguments before output publication.
+
+The store compares exact signed deadlines after unit conversion and
+relative clock addition. Rejected conditions preserve both the value
+and its deadline. Accepted past deadlines delete the key. Overflow
+keeps its existing precedence over missing-key and condition checks.
+The Lua printer sends the condition to Redis, and the independent twin
+compares decimal strings without converting deadlines to Lua numbers.
+`examples/SessionRenewal.tet` extends a lease, rejects a shorter renewal
+and prints `600` on Node/Wasm, Bash and LuaJIT.
+
+Scoped validation completed with these results:
+
+| Check | Result |
+| --- | --- |
+| New store assertions | `PASS CONDITIONAL-UNIT cases=878` |
+| Interpreter and twin | `PASS CONDITIONAL-ORACLES store=119 luajit=120` |
+| Nonzero clocks | `PASS CONDITIONAL-CLOCK cases=4 store=4` |
+| Atomic input refusals | `PASS CONDITIONAL-REFUSALS cases=8` |
+| Live hosts and stored effects | `PASS CONDITIONAL-E2E cases=120 hosts=240` |
+| Example | `PASS CONDITIONAL-EXAMPLE hosts=3` |
+| New mutations | `PASS CONDITIONAL-MUTATIONS killed=17 survived=0 restored=10` |
+| Existing store assertions | TTL 146, absolute expiry 162 |
+| Existing live hosts | TTL 70, absolute expiry 76, plus both examples on three hosts |
+| Existing mutations | TTL 13 killed and five restored controls; absolute expiry 14 killed and eight restored controls |
+| Source audit | `PASS HOUSE`, zero findings across 42 files |
+| Trusted lines | Lua 320/320, store 200/200, all eight bounds pass |
+| Prelude manifest | Both hashes pass, 164 lines total |
+
+Captures under the evidence checkout's `.kanon-exec/`: `run-nBRGCK`
+contains the complete conditional-expiry integration suite, `run-9ObNSX`
+contains its mutation suite, and `run-nH3wql` contains the existing TTL
+and absolute-expiry unit, interpreter, twin, live-host and mutation suites.
+All three captures exited 0. The last one ends `PASS EXPIRY-REGRESSIONS`.
+The new ladder also passes `sh -n`.
+
+The historical ladder in `run-YjlZjF` passed Stages A through D, including
+all 59 surface cases, the canonical Lua/Bash checks and their mutation
+controls. It was deliberately stopped during Stage E to scope the
+remaining work to expiry, and exited 137. This is partial ladder
+evidence, not a passing `M1-CONDITIONAL-EXPIRY` run. The checked-in
+`dev/m1-conditional-expiry.sh` retains the complete historical ladder.
+
+`run-xtgkLl` measured 51636 checker/erasure polls and 12 static-walk
+polls. Stage D's fixture now supplies fuel 51642, leaving the same six
+walk polls, and passed its `SH-BUDGET` refusal with no published output.
+The temporary measurement instrumentation was removed. Small formatting
+changes to existing store and interpreter expressions keep the trusted
+line counts within their existing bounds.
+
+M0-TIME remains open. The candidate in `run-AYO4Tr` measured median
+381.042 ms, minimum 332.578 ms, maximum 475.512 ms over five samples at
+one-minute load 29.47. A subsequent measurement of the clean committed
+checkout measured median 412.787 ms, minimum 390.579 ms, maximum 881.639 ms
+at load 28.94. Baseline evidence is
+`/Users/oobi/Documents/gpt18/tether-work-20260916/captures/run-rjXyXV`.
+Both runs failed the unchanged 150 ms bound. These observations do not
+establish a performance improvement or close the pre-existing timing item.
+
+Other bulk commands, ZSet support, remaining examples, the Lean exporter
+and M1 performance gates remain open. This slice does not stamp M0-EXIT.
+
+### Review round 2026-09-16 (M1 conditional expiry)
+
+Five findings of the judge pass are fixed in this round. No bound moves and
+no frozen record changes.
+
+| id | Severity | Path | Fix |
+| --- | --- | --- | --- |
+| D-1 | medium | `dev/conditional-expiry-tests.py` | `clocks()` counts its scenarios and sums the return of `ttl.store`, so `PASS CONDITIONAL-CLOCK cases=N store=N` is derived, not a literal |
+| D-2 | medium | `dev/conditional-expiry-tests.py` | The example row prints `hosts={len(hosts)}` over the bound host tuple, as `dev/absolute-expiry-tests.py` does |
+| D-3 | medium | `dev/STAGE-D.md` | The document records 51636 checker/erasure polls, the window 51636 through 51647 and gate fuel 51642, the numbers of the staged `dev/stage-d-tests.py` |
+| A-1 | low | `dev/conditional_expiry_tests.ml` | Three assertions run an accepted conditional install through the seconds path, relative and absolute, and pin the rejected state |
+| D-4 | low | `dev/TTL.md`, `dev/ABSOLUTE-EXPIRY.md` | TTL.md records the current 51636 polls and fuel 51642; ABSOLUTE-EXPIRY.md states its own numbers in the past tense |
+
+The unit count moves with the added assertions. `PASS CONDITIONAL-UNIT
+cases=875` becomes `PASS CONDITIONAL-UNIT cases=878` in the exe output, in
+the COUNTS row of `dev/m1-conditional-expiry.sh`, in the control of
+`dev/conditional-expiry-mutations.py` and in the scoped table of this file.
+`dev/MUTATION-LOG.md` records the same control change.
+
+Controls, each on a copy of the tree under `$TMPDIR/probe-fix1`:
+
+```text
+python3 -P dev/conditional-expiry-tests.py --probe clock
+  PASS CONDITIONAL-CLOCK cases=4 store=4
+one clock scenario removed, same command
+  PASS CONDITIONAL-CLOCK cases=3 store=3
+scenario restored, same command
+  PASS CONDITIONAL-CLOCK cases=4 store=4
+store/store.ml seconds scale 1000 to 100, unit exe
+  FAIL CONDITIONAL-UNIT relative seconds scale the deadline
+scale restored, unit exe
+  PASS CONDITIONAL-UNIT cases=878
+```
+
+M0-TIME stays open and reported. The baseline ladder of this round
+(`gates-baseline.log`, 818 rows) failed only `M0-TIME median_ms=186.833
+bound_ms=150` at one-minute load 20.62 and the aggregates above it.
+
+Refuted: 1 (A-2, `store/interp.ml:21`). The STORE-EXPIRY-CONDITION string is
+the mandatory none arm of a total `List.assoc_opt` lookup; twelve sibling
+refusal tags in the same file are equally unreachable and predate this
+slice, and the table itself is pinned by the mutant INTERPRETER-CONDITION.
+
+Merged and dropped: 2. C-1 merged into D-1 (same file, same line, same
+literal-row defect; D-1 carries the runtime probe). A-2 dropped as
+refuted and not revived.
+
+## Gate log after fix round 1
+
+Last ladder `gates-gates-1.log` (tag gates-1, root mode, leg full, start
+22:06:49, end 22:41:27, 818 rows), one-minute load 9.29 at start (22:06),
+16.31 at the M0-TIME leg (22:10), 34.88 at ladder end (22:41); the review
+pass records this ladder's load as 28.34.
+
+| leg | verbatim row |
+| --- | --- |
+| pin/carry | `PIN 2c2e6e6 unlisted=0`, `CARRY files=36 diff=0 vendor=32 copies=4` |
+| R0 | `R0-COUNT formers=2 schema=4 shapes=5 admitted=3`, `R0-AUDIT ok` |
+| M0-TIME | `PASS M0-TIME median_ms=142.250 bound_ms=150` |
+| MEASURE | `PASS MEASURE` |
+| CONDITIONAL-UNIT | `PASS CONDITIONAL-UNIT cases=878` |
+| CONDITIONAL-ORACLES | `PASS CONDITIONAL-ORACLES store=119 luajit=120` |
+| CONDITIONAL-CLOCK | `PASS CONDITIONAL-CLOCK cases=4 store=4` |
+| CONDITIONAL-REFUSALS | `PASS CONDITIONAL-REFUSALS cases=8` |
+| CONDITIONAL-E2E | `PASS CONDITIONAL-E2E cases=120 hosts=240` |
+| CONDITIONAL-EXAMPLE | `PASS CONDITIONAL-EXAMPLE hosts=3` |
+| CONDITIONAL-MUTATIONS | `PASS CONDITIONAL-MUTATIONS killed=17 survived=0 restored=10` |
+| TRUSTED-LINES | `TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240 store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK` |
+| M1-CONDITIONAL-EXPIRY | `PASS M1-CONDITIONAL-EXPIRY` |
+| STAGE-A-MUTATIONS | `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1` |
+| EXIT-ALL | `EXIT-ALL 0` |
+
+Mutation summary of this ladder: CONDITIONAL-MUTATIONS killed=17
+survived=0 restored=10; STAGE-A-MUTATIONS killed=37 survived=0
+restored=1. Every FAIL row of the baseline ladder is gone; this ladder
+carries no FAIL row and closes GATE-1: `EXIT-ALL 0`.
+
+An isolated m0-time confirmation leg queued after the ladder
+(`gates-confirm-m0-1.log`, root mode, 23:04:58, one-minute load 19.48)
+read `FAIL M0-TIME median_ms=155.960 bound_ms=150`. The four root
+readings of this round are 186.833 ms at load 20.62 (baseline),
+200.241 ms at load 15.51 (isolated rerun), 142.250 ms at load 16.31
+(the ladder above) and 155.960 ms at load 19.48: the timing row sits
+within noise of the bound. The root ladder row is the closing evidence
+under the rule set in the TTL round, and the bound stays at 150 ms.
+
+Review pass 1 (2026-09-16) fixed 5 findings.
+
+Fix rounds: 1.

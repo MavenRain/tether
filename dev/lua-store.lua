@@ -256,6 +256,11 @@ local function call(command, key, amount, value)
     local deadline = canonical(duration) and add(absolute and '0' or now, duration)
     if not deadline then return {err="ERR invalid expire time in '" .. command:lower() .. "' command"} end
     if values[key] == nil then return 0 end
+    local old = deadlines[key]
+    local earlier = old ~= nil and (deadline:sub(1,1) == '-' or before(deadline, old))
+    local later = old ~= nil and deadline:sub(1,1) ~= '-' and before(old, deadline)
+    if (value == 'NX' and old ~= nil) or (value == 'XX' and old == nil)
+      or (value == 'GT' and not later) or (value == 'LT' and old ~= nil and not earlier) then return 0 end
     if deadline:sub(1,1) == '-' or not before(now, deadline) then values[key], deadlines[key] = nil, nil
     else deadlines[key] = deadline end
     return 1

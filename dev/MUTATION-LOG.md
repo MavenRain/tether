@@ -902,3 +902,43 @@ The inherited TTL interpreter-unit anchor now follows the shared
 relative/absolute dispatcher and still swaps only the relative units.
 The Stage D negative control remains a six-poll static walk at fuel
 44262, after measuring 44256 checker/erasure polls and 12 walk polls.
+
+## 2026-09-16 M1 conditional expiry
+
+`python3 -P dev/conditional-expiry-mutations.py` checks 17 source changes
+in disposable trees. Every changed tree must build, then fail the
+assertion named by its mutation row.
+
+| Cases | Fault inserted | Required witness |
+| --- | --- | --- |
+| STORE-NX, STORE-XX | Reverse the expiry-presence condition | Store condition matrix reply |
+| STORE-GT-EQUAL, STORE-LT-EQUAL | Accept equal deadlines | Store condition matrix reply |
+| STORE-GT-INFINITY, STORE-LT-INFINITY | Reverse persistent-key comparison | Store condition matrix reply |
+| INTERPRETER-CONDITION | Decode NX as XX | Interpreter reply mismatch |
+| INTERPRETER-CLOCK | Treat absolute conditional expiry as relative | Nonzero-clock interpreter reply |
+| LUA-NX, LUA-GT | Emit a different condition | Twin expiry mismatch |
+| LUA-PAT | Emit seconds for a millisecond timestamp | Twin expiry mismatch |
+| TWIN-NX | Ignore NX on a volatile key | Twin expiry mismatch |
+| TWIN-PRECISION | Compare adjacent large deadlines through Lua numbers | Twin expiry mismatch |
+| WRITE-FLAG-48 through WRITE-FLAG-51 | Mark a conditional setter as read-only | Write classification |
+
+Ten controls run before the mutations and after restoration. The focused
+run in `/Users/oobi/Documents/gpt18/tether-m1-conditional-expiry/.kanon-exec/run-9ObNSX`
+completed with exit 0:
+
+```text
+PASS CONDITIONAL-MUTATIONS killed=17 survived=0 restored=10
+```
+
+The added prelude moves the checker/erasure cost to 51636 polls. A separate
+measurement recorded 12 static-walk polls. Stage D now grants six walk
+polls at fuel 51642 and still requires `SH-BUDGET` without output creation;
+its complete refusal and mutation suites passed in `run-YjlZjF` before
+the larger historical ladder was stopped for scoped expiry validation.
+
+Review round 2026-09-16 raises the unit control of the suite from
+`PASS CONDITIONAL-UNIT cases=875` to `PASS CONDITIONAL-UNIT cases=878`.
+The three added store assertions pin the seconds scale of a conditional
+install, relative and absolute, and the state after a rejected seconds
+install. No mutant row changes: the ten controls and the 17 mutants of the
+table above are unchanged.

@@ -73,9 +73,9 @@ scenario is tested in LuaJIT and both live hosts. Fourteen mutations must
 fail their intended assertions, followed by eight restored controls.
 
 The four constructors increase the trusted preludes to 154 lines.
-Checker/erasure cost for M0Spine is 44256 polls and its static walk is
-still 12 polls. Stage D supplies six walk polls at fuel 44262 to retain
-its printer-budget refusal. Lua remains 320/320 and store 200/200;
+Checker/erasure cost for M0Spine was 44256 polls at this slice and its
+static walk was 12 polls. Stage D supplied six walk polls at fuel 44262
+to retain its printer-budget refusal. Lua remains 320/320 and store 200/200;
 no trusted-line limit or timing bound changes.
 
 Conditional expiry, atomic SET-with-expiry options, the full session-store

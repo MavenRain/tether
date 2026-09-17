@@ -1,0 +1,17 @@
+module SessionRenewal
+
+schema sessions : String -> Key (Str Binary) tag b"session"
+
+def renew : Script Reply (tag b"session") := do {
+  _ <- set Reply (tag b"session") (sessions b"alice") b"active";
+  _ <- expireIf Reply (Str Binary) (tag b"session") (sessions b"alice") (int64 b"300") expiryNX;
+  _ <- expireIf Reply (Str Binary) (tag b"session") (sessions b"alice") (int64 b"600") expiryGT;
+  _ <- expireIf Reply (Str Binary) (tag b"session") (sessions b"alice") (int64 b"60") expiryGT;
+  remaining <- ttl Reply (Str Binary) (tag b"session") (sessions b"alice");
+  pure Reply (tag b"session") remaining
+}
+
+def main : Client Reply := do {
+  remaining <- inv Reply (tag b"session") renew;
+  done Reply remaining
+}
