@@ -1,0 +1,33 @@
+module ProfileFields
+
+schema profiles : String -> Key Hash tag b"account"
+
+def seed : Script Reply (tag b"account") := do {
+  _ <- hset Reply (tag b"account") (profiles b"alice") b"name" b"Alice";
+  _ <- hset Reply (tag b"account") (profiles b"alice") b"role" b"member";
+  pure Reply (tag b"account") (status b"OK")
+}
+
+def select : Script Reply (tag b"account") := do {
+  r <- hmget Reply (tag b"account") (profiles b"alice")
+    (bulkMore b"role" (bulkMore b"missing" (bulkMore b"name" (bulkOne b"role"))));
+  pure Reply (tag b"account") r
+}
+
+def remove : Script Reply (tag b"account") := do {
+  r <- del Reply Hash (tag b"account") (profiles b"alice");
+  pure Reply (tag b"account") r
+}
+
+def main : Client Reply := do {
+  _ <- inv Reply (tag b"account") seed;
+  r <- inv Reply (tag b"account") select;
+  done Reply r
+}
+
+def retained : Client Reply := do {
+  _ <- inv Reply (tag b"account") seed;
+  r <- inv Reply (tag b"account") select;
+  _ <- inv Reply (tag b"account") remove;
+  done Reply r
+}

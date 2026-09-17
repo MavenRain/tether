@@ -20,12 +20,10 @@ let integer text = Result.bind (Int64.of_string_opt text |> Option.to_result ~no
 let set key value store = "OK", put key (Str value) (remove key store)
 let exists key store = if Keys.mem key store.values then "1" else "0" let del key store = exists key store, remove key store
 let ( let* ) = Result.bind
-let add value amount =
-  if (amount > 0L && value > Int64.sub Int64.max_int amount) || (amount < 0L && value < Int64.sub Int64.min_int amount) then Error Overflow
+let add value amount = if (amount > 0L && value > Int64.sub Int64.max_int amount) || (amount < 0L && value < Int64.sub Int64.min_int amount) then Error Overflow
   else Ok (Int64.to_string (Int64.add value amount))
 let incrby key amount store = let* amount = integer amount in let* value = get key store in
-  let* value = integer (Option.value ~default:"0" value) in
-  let* text = add value amount in Ok (text, put key (Str text) store)
+  let* value = integer (Option.value ~default:"0" value) in let* text = add value amount in Ok (text, put key (Str text) store)
 let incr key store = incrby key "1" store let decr key store = incrby key "-1" store
 let advance milliseconds store = let* delta = integer milliseconds in if delta < 0L then Error Not_integer else let* now = add store.now delta in let* now = integer now in
   Ok (Keys.fold (fun key deadline next -> if deadline < now then remove key next else next) store.deadlines { store with now })
@@ -44,13 +42,13 @@ let persist key store = (if Keys.mem key store.deadlines then "1" else "0"), { s
 let hash = read Keys.empty (function Hash fields -> Ok (Keys.of_seq (List.to_seq fields)) | Str _ | List _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
 let save_hash key fields store = save key (Hash (Keys.bindings fields)) ~empty:(Keys.is_empty fields) store
 let hget key field store = let* fields = hash key store in Ok (Keys.find_opt field fields)
+let hmget key first rest store = let* fields = hash key store in Ok (List.map (fun field -> Keys.find_opt field fields) (first :: rest))
 let hexists key field store = let* fields = hash key store in Ok (if Keys.mem field fields then "1" else "0")
 let hlen key store = let* fields = hash key store in Ok (string_of_int (Keys.cardinal fields))
 let hgetall key store = Result.map (fun fields -> List.concat_map (fun (f, v) -> [f; v]) (Keys.bindings fields)) (hash key store)
 let hproject project key store = Result.map (fun fs -> List.sort String.compare (List.map project (Keys.bindings fs))) (hash key store)
 let change_hash ~adding update key field store = let* fields = hash key store in
-  let count = if Keys.mem field fields = adding then "0" else "1" in
-  Ok (count, save_hash key (update fields) store)
+  let count = if Keys.mem field fields = adding then "0" else "1" in Ok (count, save_hash key (update fields) store)
 let hset key field value = change_hash ~adding:true (Keys.add field value) key field let hdel key field = change_hash ~adding:false (Keys.remove field) key field
 let hincrby key field amount store = let* amount = integer amount in let* old = hget key field store in
   let* value = integer (Option.value ~default:"0" old) |> Result.map_error (fun _ -> Hash_not_integer) in

@@ -75,11 +75,12 @@ complete absolute-expiry ladder and pins these new checks:
 - 17 compiled source mutations, each required to fail its intended
   assertion, followed by ten restored controls.
 
-The uncaught-error scenario runs in LuaJIT and both live hosts. The trusted
-preludes total 164 lines. The existing trusted-line bounds remain unchanged:
-Lua is 320/320 and the store is 200/200. The M0Spine checker and erasure use
-51636 polls before a 12-poll static walk. Stage D gives that walk six polls
-at fuel 51642 and still requires `SH-BUDGET` with no published output.
+The uncaught-error scenario runs in LuaJIT and both live hosts. This slice
+brought the trusted preludes to 164 lines. Its checker and erasure used
+51636 polls before a 12-poll static walk; fuel 51642 left six walk polls
+and required `SH-BUDGET` with no published output. The current prelude
+count is in `SPEC.md`, and `dev/STAGE-D.md` records the current fuel.
+The trusted-line bounds remain unchanged: Lua is 320/320 and the store is 200/200.
 
 Other bulk Hash, List and Set operations, ZSet commands, the remaining
 examples, the Lean exporter and M1 performance gates remain open.

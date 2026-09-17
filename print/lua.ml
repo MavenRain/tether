@@ -20,11 +20,11 @@ local function text(b) local out = {}; while b.tag == 1 do out[#out+1] = string.
   return table.concat(out)
 end
 local function key(k)
-  local wanted = text(k[1])
-  for i = 1, #KEYS do if KEYS[i] == wanted then return KEYS[i] end end
+  local wanted = text(k[1]); for i = 1, #KEYS do if KEYS[i] == wanted then return KEYS[i] end end
   error('LUA-KEY missing declared key')
 end
 local function clos(f,n,c) return {f=f,n=n,c=c} end
+local function bulkargs(xs,tail) for i = #xs, 1, -1 do tail = {tag=1,xs[i],tail} end; return tail end
 local function app(f,args)
   local values = {}
   for i = 1, #f.c do values[#values+1] = f.c[i] end
@@ -48,8 +48,7 @@ local function reply(r) if r.tag == 0 then return false end
 end
 local function byte_less(a,b) for i = 1, math.min(#a,#b) do
     local x,y = string.byte(a,i),string.byte(b,i); if x ~= y then return x < y end
-  end
-  return #a < #b
+  end; return #a < #b
 end
 local function run(s) while s.tag ~= 0 do
     local k, r, next = key(s[1]), false, s[2]
@@ -66,10 +65,11 @@ local function run(s) while s.tag ~= 0 do
         elseif read == false then r = {tag=0}
         else r = {tag=1,{tag=0,bytes(read)}} end
       end
-    elseif s.tag == 2 or s.tag == 3 or s.tag == 4 or s.tag == 10 or s.tag == 21 or s.tag == 22 or (s.tag >= 24 and s.tag <= 34) then
+    elseif s.tag == 2 or s.tag == 3 or s.tag == 4 or s.tag == 10 or s.tag == 21 or s.tag == 22 or (s.tag >= 24 and s.tag <= 34) or s.tag == 52 then
       local got
       if s.tag == 10 then got = redis.pcall('HGET',k,text(s[2])); next = s[3]
       elseif s.tag == 2 then got = redis.pcall('GET',k)
+      elseif s.tag == 52 then local args, fs = {k}, s[2]; while fs.tag == 1 do args[#args+1], fs = text(fs[1]), fs[2] end; args[#args+1] = text(fs[1]); got = redis.pcall('HMGET',unpack(args)); next = s[3]
       elseif s.tag >= 28 and s.tag <= 34 then
         local args = {k}; if s.tag >= 32 then args[2], next = key(s[2]), s[3] end
         got = redis.pcall(({[28]='SMEMBERS',[29]='HGETALL',[30]='HKEYS',[31]='HVALS',[32]='SUNION',[33]='SINTER',[34]='SDIFF'})[s.tag],unpack(args))
@@ -80,10 +80,10 @@ local function run(s) while s.tag ~= 0 do
       else got = redis.pcall('SET',k,text(s.tag == 3 and s[2] or s[2][1])); next = s[3] end
       if type(got) == 'table' and got.err then r = {tag=4,bytes(got.err)}
       elseif type(got) == 'table' and got.ok then r = {tag=3,bytes(got.ok)}
-      elseif s.tag >= 27 and s.tag <= 34 then
+      elseif (s.tag >= 27 and s.tag <= 34) or s.tag == 52 then
         local stride, order = s.tag == 29 and 2 or 1, {}; for i = 1, #got, stride do order[#order+1] = i end
-        if s.tag ~= 27 then table.sort(order,function(a,b) return byte_less(got[a],got[b]) end) end
-        local rs = {tag=0}; for n = #order, 1, -1 do for i = order[n]+stride-1, order[n], -1 do rs = {tag=1,{tag=2,bytes(got[i])},rs} end end; r = {tag=5,rs}
+        if s.tag ~= 27 and s.tag ~= 52 then table.sort(order,function(a,b) return byte_less(got[a],got[b]) end) end
+        local rs = {tag=0}; for n = #order, 1, -1 do for i = order[n]+stride-1, order[n], -1 do rs = {tag=1,got[i] == false and {tag=0} or {tag=2,bytes(got[i])},rs} end end; r = {tag=5,rs}
       elseif got == false then r = {tag=0} else r = {tag=2,bytes(got)} end
     elseif (s.tag >= 7 and s.tag <= 13) or (s.tag >= 15 and s.tag <= 20) or s.tag == 23 or (s.tag >= 35 and s.tag <= 51) then
       local got
@@ -127,23 +127,23 @@ let emit rows ~entry =
     | E.KVar i -> Kanon_kernel.Rules.at i env |> Option.to_result ~none:"LUA-VAR"
     | E.KErased -> Ok "false"
     | E.KLit (Kanon_kernel.Literal.LString s) -> Ok (quote s)
-    | E.KLit (Kanon_kernel.Literal.LInt n) ->
-        let text = Kanon_kernel.Bignum.to_string n in
+    | E.KLit (Kanon_kernel.Literal.LInt n) -> let text = Kanon_kernel.Bignum.to_string n in
         if String.length text < 16 || (String.length text = 16 && text <= "9007199254740991")
         then Ok text else Error "LUA-NAT-RANGE use Signed64 bytes for Int64"
-    | E.KGlobal name ->
-        let* ps, _r, _b = lookup name in let* f = fname name in
+    | E.KGlobal name -> let* ps, _r, _b = lookup name in let* f = fname name in
         Ok (if ps = [] then f ^ "()" else Printf.sprintf "clos(%s,%d,{})" f (List.length ps))
-    | E.KClos (E.Fid name, arity, captures) ->
-        let* f = fname name in let* cs = many captures in
+    | E.KClos (E.Fid name, arity, captures) -> let* f = fname name in let* cs = many captures in
         Ok (Printf.sprintf "clos(%s,%d,{%s})" f arity cs)
     | E.KApp (f, args) | E.KTail (f, args) ->
         let* f = expr depth env f in let* args = many args in Ok ("app(" ^ f ^ ",{" ^ args ^ "})")
     | E.KStruct (_tid, fields) -> let* fields = many fields in Ok ("{" ^ fields ^ "}")
-    | E.KTag (_tid, tag, fields) -> let* fields = many fields in
-        Ok (Printf.sprintf "{tag=%d%s%s}" tag (if fields = "" then "" else ",") fields)
-    | E.KProj (_tid, index, value) -> let* value = expr depth env value in
-        Ok (Printf.sprintf "(%s)[%d]" value (index + 1))
+    (* Flat constructor spines avoid Redis Lua's expression nesting limit. *)
+    | E.KTag (E.Tid "mu<BulkArgs>", 1, [head; tail]) ->
+        let rec collect acc = function E.KTag (E.Tid "mu<BulkArgs>", 1, [head; tail]) -> collect (head :: acc) tail
+          | (E.KVar _ | E.KLit _ | E.KErased | E.KGlobal _ | E.KClos _ | E.KApp _ | E.KTail _ | E.KStruct _ | E.KTag _ | E.KProj _ | E.KLet _ | E.KCase _ | E.KDelay _ | E.KForce _) as tail -> List.rev acc, tail in
+        let heads, tail = collect [head] tail in let* heads = many heads in let* tail = expr depth env tail in Ok ("bulkargs({" ^ heads ^ "}," ^ tail ^ ")")
+    | E.KTag (_tid, tag, fields) -> let* fields = many fields in Ok (Printf.sprintf "{tag=%d%s%s}" tag (if fields = "" then "" else ",") fields)
+    | E.KProj (_tid, index, value) -> let* value = expr depth env value in Ok (Printf.sprintf "(%s)[%d]" value (index + 1))
     | E.KLet (_name, value, body) ->
         let name = "v" ^ string_of_int depth in
         let* value = expr depth env value in let* body = expr (depth + 1) (name :: env) body in

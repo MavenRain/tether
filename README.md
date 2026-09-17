@@ -4,6 +4,12 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports variadic HMGET on Hash keys. A typed nonempty field list
+preserves request order, duplicates and nil replies for missing fields.
+`./tether exec examples/ProfileFields.tet --host node` prints
+`["member",null,"Alice","member"]`; `retained` keeps that reply after
+deleting the Hash. See `dev/HMGET.md`; run `sh dev/m1-hmget.sh` for validation.
+
 M1 now supports typed NX, XX, GT and LT conditions on relative and
 absolute expiry. `./tether exec examples/SessionRenewal.tet --host node`
 extends a session lease to ten minutes, rejects a shorter renewal and

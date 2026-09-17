@@ -942,3 +942,50 @@ The three added store assertions pin the seconds scale of a conditional
 install, relative and absolute, and the state after a rejected seconds
 install. No mutant row changes: the ten controls and the 17 mutants of the
 table above are unchanged.
+
+## 2026-09-17 M1 variadic HMGET
+
+`python3 -P dev/hmget-mutations.py` builds every mutation before running
+a named semantic assertion. Compile failures do not count as kills.
+Each source file is restored in a `finally` block; six controls are
+rebuilt and rerun after the final mutation.
+
+| Mutation | Fault inserted | Required witness |
+| --- | --- | --- |
+| STORE-ORDER | Reverse the reply list of the store | FAIL HMGET-UNIT store preserves order, nils and duplicates |
+| STORE-DROP | Drop every field after the first | FAIL HMGET-UNIT store preserves order, nils and duplicates |
+| STORE-DUPLICATES | Collapse duplicate field requests | FAIL HMGET-UNIT store preserves order, nils and duplicates |
+| STORE-NIL | Reply with empty bytes for a missing field | FAIL HMGET-UNIT store preserves order, nils and duplicates |
+| STORE-TYPE | Read a non-Hash key as an empty Hash | FAIL HMGET-UNIT store wrong type |
+| INTERPRETER-ARGS | Decode the key as the first field | FAIL HMGET-UNIT interpreter reply and complete state |
+| INTERPRETER-STATE | Return an empty store after the read | FAIL HMGET-UNIT interpreter reply and complete state |
+| INTERPRETER-NIL | Encode a nil field as an empty bulk | FAIL HMGET-UNIT interpreter reply and complete state |
+| READONLY | Classify tag 52 as a writer | HMGET write classification |
+| LUA-ORDER | Walk the reply order forward | LISTS LuaJIT reply |
+| LUA-ARGUMENT-ORDER | Flatten the bulkMore spine forward | LISTS LuaJIT reply |
+| LUA-NIL | Emit empty bytes for a missing field | LISTS LuaJIT reply |
+| LUA-LAST-FIELD | Send a fixed name for the last field | LISTS LuaJIT reply |
+| LUA-ARRAY | Tag the reply array as nil | TWIN reply kind nil wanted array |
+| TWIN-ARGS | Forward only the first field in the twin | LISTS LuaJIT reply |
+| TWIN-NIL | Reply with empty bytes for a missing field in the twin | LISTS LuaJIT reply |
+
+Every name of the table is the name the runner prints in its `KILLED NAME`
+row, so a ladder log matches this record row by row.
+
+The controls are the 26-scenario unit executable and the lookup,
+single-field, within-script snapshot, cross-script snapshot and computed
+field-list probes. The suite requires 16 killed mutations, zero survivors
+and six restored controls.
+
+The full ladder capture `run-fIAb5S` under
+`/Users/oobi/Documents/gpt18/tether-m1-hmget/.kanon-exec/` records:
+
+```text
+PASS HMGET-MUTATIONS killed=16 survived=0 restored=6
+PASS LIST-RANGE-MUTATIONS killed=11 survived=0 restored=5
+```
+
+The existing LRANGE ARRAY-BULK and LUA-ERR-TAG anchors now match the
+generalized array encoder. Their original assertions are unchanged and
+both mutations still fail at those assertions. No trusted-source or
+timing bound changed.

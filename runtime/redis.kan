@@ -28,6 +28,10 @@ mu ExpiryCondition : Type 0 :=
 | expiryGT : ExpiryCondition
 | expiryLT : ExpiryCondition
 
+mu BulkArgs : Type 0 :=
+| bulkOne : Bytes -> BulkArgs
+| bulkMore : Bytes -> BulkArgs -> BulkArgs
+
 mutual
 mu Reply : Type 0 :=
 | nil : Reply
@@ -104,6 +108,7 @@ mu Script (0 A : Type 0) : (0 g : Tag) -> Type 0 :=
 | pexpireIf : (0 t : RedisType) -> (0 g : Tag) -> Key t g -> Signed64 -> ExpiryCondition -> (Reply -> Script A g) -> Script A g
 | expireatIf : (0 t : RedisType) -> (0 g : Tag) -> Key t g -> Signed64 -> ExpiryCondition -> (Reply -> Script A g) -> Script A g
 | pexpireatIf : (0 t : RedisType) -> (0 g : Tag) -> Key t g -> Signed64 -> ExpiryCondition -> (Reply -> Script A g) -> Script A g
+| hmget : (0 g : Tag) -> Key Hash g -> BulkArgs -> (Reply -> Script A g) -> Script A g
 
 mu Client (0 A : Type 0) : Type 0 :=
 | done : A -> Client A

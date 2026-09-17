@@ -3854,3 +3854,184 @@ under the rule set in the TTL round, and the bound stays at 150 ms.
 Review pass 1 (2026-09-16) fixed 5 findings.
 
 Fix rounds: 1.
+
+## 2026-09-17 M1 variadic HMGET
+
+Implemented `hmget` at Script tag 52 with the nonempty `BulkArgs` type.
+`bulkOne` and `bulkMore` accept byte field names. Results preserve request
+order, repeated fields, empty bulk values and nil entries at every position.
+Missing Hashes return one nil per field. Wrong types return WRONGTYPE, and
+reads preserve the complete store, expiry metadata and unrelated keys.
+
+The independent store and LuaJIT twin agree with live Redis. The existing
+Node and Bash UTF-8 reply boundary is unchanged. The new
+`examples/ProfileFields.tet` prints
+`["member",null,"Alice","member"]` on all three hosts; its retained entry
+returns that snapshot after deleting the Hash.
+
+The first 129-field host case exposed Redis Lua's expression nesting
+limit, despite passing in LuaJIT. The Lua emitter now flattens syntactic
+`bulkMore` spines and rebuilds them iteratively. The final host suite
+passes that case and a computed field-list case. The shared array encoder
+now accepts nil elements; LRANGE's ARRAY-BULK and LUA-ERR-TAG mutation
+anchors were updated to preserve their original assertions.
+
+Evidence checkout: `/Users/oobi/Documents/gpt18/tether-m1-hmget`, based on
+`bf17a893a8e9cf7358ca57e762b2ee2b7ec1a2d0`. All captures below are under
+its `.kanon-exec/` directory.
+
+| Check | Observed result |
+| --- | --- |
+| HMGET unit scenarios | `PASS HMGET-UNIT cases=26` |
+| Emitted artifact pairs | `PASS HMGET-ARTIFACTS pairs=10` |
+| Typed and atomic refusals | `PASS HMGET-REFUSALS cases=10 atomic_output=10` |
+| Independent interpreters | `PASS HMGET-ORACLES store=18 luajit=18` |
+| Live hosts | `PASS HMGET-E2E cases=20 hosts=42 readonly=38 utf8_refusals=2 errors=2` |
+| Examples | `PASS HMGET-EXAMPLE exec=6` |
+| Prelude integrity | `PRELUDE-INTEGRITY lines=169 files=2 OK` |
+
+The complete new integration suite exited 0 in `run-V1Sc4Z`. It checks
+binary field names, all byte values in the independent interpreters,
+nil positions, duplicate requests, five wrong key types, retained replies,
+the complete value and absolute expiry deadline, and read-only ACLs.
+The deliberate invalid-UTF-8 cases require exit 4 without partial stdout.
+
+`run-jK1x1R` measured 53323 checker/erasure polls followed by 12 static-walk
+polls. Stage D's fixture now supplies 53329, leaving the same six walk
+polls and requiring `SH-BUDGET` without publishing output. Measurement
+instrumentation was removed. The conditional-expiry document now labels
+its previous prelude and fuel counts as historical.
+
+All eight trusted-source bounds are unchanged, including Lua 320/320 and
+store 200/200. Short expression formatting changes accommodate the new
+code within those bounds. The prelude manifest pins both files and
+reports their 169 lines separately.
+
+The full `sh dev/m1-hmget.sh` ladder completed in `run-fIAb5S` with exit 1,
+796 stdout rows and no stderr. All functional, refusal, mutation, source
+audit, prelude and trusted-line checks passed. The new mutation row is
+`PASS HMGET-MUTATIONS killed=16 survived=0 restored=6`, and the updated
+LRANGE controls report `PASS LIST-RANGE-MUTATIONS killed=11 survived=0
+restored=5`. All 380 PASS rows are preserved in that capture.
+
+The sole failing measurement is `M0-TIME median_ms=217.864 bound_ms=150`.
+The other 38 FAIL rows are MEASURE, Stage F and M1 aggregates carrying
+that result. The five samples ranged from 182.359 to 925.135 ms at
+one-minute load 33.01. The unchanged clean committed checkout was then
+measured separately: median 201.202 ms, minimum 196.498 ms, maximum
+235.458 ms at load 47.92. That baseline capture is
+`/Users/oobi/Documents/gpt18/.kanon-exec/run-pVkml0` and also exited 1.
+These observations do not establish a performance improvement or close
+M0-TIME. The 150 ms bound stays unchanged; neither PASS M1-HMGET nor
+M0-EXIT is claimed.
+
+Other Hash and List bulk commands, remaining Set operations, ZSet
+support, the remaining examples, the Lean exporter and M1 performance
+milestones remain open. This slice does not declare M1 complete.
+
+### Review round 2026-09-17 (M1 hash field selection)
+
+The review of the variadic HMGET slice kept two low findings. Both are
+fixed in this round. No product source file changed: the fixes touch the
+mutation record and one test suite.
+
+| id | severity | File | Defect | Fix |
+| --- | --- | --- | --- | --- |
+| C-1 | low | dev/MUTATION-LOG.md | The staged HMGET table named five layers, not the 16 mutants, so a `KILLED NAME` row of a ladder log had no matching record row | One row per mutant name, with its fault and its required witness, in the column shape of the earlier sections |
+| C-2 | low | dev/hmget-tests.py | Four of the ten refusal cases asserted the generic marker `CHECK`, so any checker refusal satisfied them | Each of the four malformed field lists pins its own constructor-level diagnostic |
+
+C-1 keeps every count unchanged. The runner still requires 16 killed
+mutants, zero survivors and six restored controls, and the names of the
+table are the names `dev/hmget-mutations.py` prints.
+
+C-2 keeps `PASS HMGET-REFUSALS cases=10 atomic_output=10`. The four
+bodies now require these exact diagnostics, measured on a copy of the
+tree with `./tether emit`:
+
+```text
+b"a"                        CHECK unbound: bytesCons is not a constructor of BulkArgs
+repliesNil                  CHECK unbound: repliesNil is not a constructor of BulkArgs
+(bulkOne nil)               CHECK unbound: nil is not a constructor of Bytes
+(bulkMore b"a" repliesNil)  CHECK unbound: repliesNil is not a constructor of BulkArgs
+```
+
+The same probe shows the bodies that the old assertion also admitted:
+`(bulkOne zzzUnknownIdent)` gives `CHECK unbound: zzzUnknownIdent` and
+`(bulkOne b"a" b"b")` gives `CHECK mismatch: bulkOne takes 1 arguments
+and the term gives 2`. Neither satisfies the new assertions, so the gate
+now pins the shape of `BulkArgs`.
+
+`M0-TIME median_ms=301.969 bound_ms=150` failed in the review baseline
+ladder at one-minute load 21.39. That is the open timing item of the
+slice, reported with its row and its load row. The 150 ms bound is not
+moved and no timing claim is added.
+
+Refuted: 2. D-1 (`dev/HMGET.md:47`) names the oracle denominator (18)
+and the host denominator (42) separately, the same house form already
+used by `dev/SET-MEMBERS.md:47` and `dev/HASH-PROJECTIONS.md:54`; every
+clause is true of its own denominator, confirmed against
+`gates-baseline.log:776-777`, refuted by probe
+`probes/D-verify-1.txt`. D-2 (`dev/TTL.md:97`) restates a ruling already
+recorded at `dev/M1-BUILD-LOG.md:3779`, which names `dev/TTL.md` the
+carrier of the current prelude poll count while
+`dev/ABSOLUTE-EXPIRY.md` and `dev/CONDITIONAL-EXPIRY.md` stay past
+tense; the staged numbers 53323 polls and fuel 53329 agree with
+`dev/STAGE-D.md:69-70` and `dev/stage-d-tests.py:217`, refuted by probe
+`probes/D-verify-2.txt`.
+
+Merged and dropped: 3. D-1 and D-2 dropped, refuted at verification and
+not revived (see above). M0-TIME dropped: not a finding, the
+pre-registered GATE-1 timing item; its only fixes would move the frozen
+150 ms bound or record a new timing measurement, both barred.
+
+The gate capture for this round is `gates-gates-1.log`, tag `gates-1`,
+one-minute load 17.61. That capture is INCOMPLETE: it was still running
+when this round closed, `row_total=278`, `fail_count=8`, and the log
+holds no `EXIT-ALL` row; the last row captured before this round closed
+is `PASS STRINGS-ORACLES store=21 luajit=27`. Every FAIL row of this
+capture lies in the timing set (`M0-TIME`, `MEASURE`, `STAGE-F`,
+`M1-DO`, `M1-READONLY`), and the load is under the 40 RED-LOAD
+threshold, so these are real open timing items, not RED-LOAD-waived:
+
+```
+FAIL M0-TIME median_ms=213.016 bound_ms=150
+FAIL MEASURE
+FAIL STAGE-F
+FAIL STAGE-F
+FAIL M1-DO
+FAIL M1-DO
+FAIL M1-READONLY
+FAIL M1-READONLY
+```
+
+| leg | verbatim row |
+| --- | --- |
+| PIN/CARRY | `PIN 2c2e6e6 unlisted=0`, `CARRY files=36 diff=0 vendor=32 copies=4` |
+| R0 | `R0-COUNT formers=2 schema=4 shapes=5 admitted=3`, `R0-AUDIT ok` |
+| STAGE-B | `PASS STAGE-B-SURFACE cases=59`, `PASS STAGE-B-MUTATIONS killed=5 restored=1` |
+| STAGE-C | `PASS STAGE-C-MUTATIONS killed=3 restored=1`, `PASS STAGE-C-TESTS`, `PASS STAGE-C-INTEGRITY killed=5 restored=1` |
+| STAGE-D | `PASS STAGE-D-MUTATIONS killed=5 restored=1`, `PASS STAGE-D-TESTS` |
+| DO | `PASS DO-MUTATIONS killed=4 survived=0 restored=1` |
+| M1-DO | `FAIL M1-DO` (x2) |
+| RO | `PASS RO-MUTATIONS killed=4 survived=0 restored=2`, `PASS TRUSTED-LINES` |
+| M1-READONLY | `FAIL M1-READONLY` (x2) |
+| STRINGS | `PASS STRINGS-UNIT cases=46`, `PASS STRINGS-ARTIFACTS pairs=9`, `PASS STRINGS-REFUSALS cases=8 atomic_output=8`, `PASS STRINGS-ORACLES store=21 luajit=27` (last row captured) |
+
+Mutation summary captured in this incomplete run: STAGE-B-MUTATIONS
+killed=5 restored=1, STAGE-C-MUTATIONS killed=3 restored=1,
+STAGE-C-INTEGRITY killed=5 restored=1, STAGE-D-MUTATIONS killed=5
+restored=1, DO-MUTATIONS killed=4 survived=0 restored=1, RO-MUTATIONS
+killed=4 survived=0 restored=2. The ladder had not yet reached
+HMGET-MUTATIONS or a close-time TRUSTED-LINES triple when this round
+closed, and no `gates-close.log` exists on disk: the operator queues
+that closing ladder next, at a calm load. The last full run,
+`gates-baseline.log` (07:59:44, `EXIT-ALL 1`), reads
+`PASS HMGET-MUTATIONS killed=16 survived=0 restored=6` and
+`TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240
+store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK`; C-1
+and C-2 change no counted row, so those numbers stand unless the close
+ladder says otherwise.
+
+Review pass 1 (2026-09-17) fixed 2 findings.
+
+Fix rounds: 1.

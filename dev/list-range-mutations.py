@@ -20,7 +20,7 @@ MUTANTS = [
      UNIT, b'FAIL LIST-RANGE-UNIT range all'),
     ('ARRAY-ORDER', 'store/interp.ml', b'ss (data "Replies" 0 [])', b'(List.rev ss) (data "Replies" 0 [])',
      UNIT, b'FAIL LIST-RANGE-UNIT range all'),
-    ('ARRAY-BULK', 'store/interp.ml', b'[scalar 2 s; rs]', b'[scalar 3 s; rs]',
+    ('ARRAY-BULK', 'store/interp.ml', b'| 27, [Signed i; Signed j] -> array (scalar 2)', b'| 27, [Signed i; Signed j] -> array (scalar 3)',
      UNIT, b'FAIL LIST-RANGE-UNIT range all'),
     ('RANGE-STATE', 'store/interp.ml', b'keep (Store.lrange key i j store)',
      b'Result.map (fun ss -> ss, Store.empty) (Store.lrange key i j store)',
@@ -40,10 +40,10 @@ MUTANTS = [
     ('LUA-ERR-TAG', 'print/lua.ml',
      b"      if type(got) == 'table' and got.err then r = {tag=4,bytes(got.err)}\n"
      b"      elseif type(got) == 'table' and got.ok then r = {tag=3,bytes(got.ok)}\n"
-     b'      elseif s.tag >= 27 and s.tag <= 34 then',
+     b'      elseif (s.tag >= 27 and s.tag <= 34) or s.tag == 52 then',
      b"      if type(got) == 'table' and got.err then r = {tag=2,bytes(got.err)}\n"
      b"      elseif type(got) == 'table' and got.ok then r = {tag=3,bytes(got.ok)}\n"
-     b'      elseif s.tag >= 27 and s.tag <= 34 then',
+     b'      elseif (s.tag >= 27 and s.tag <= 34) or s.tag == 52 then',
      probe('all'), b'TWIN reply kind string wanted status'),
 ]
 

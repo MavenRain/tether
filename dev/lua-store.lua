@@ -36,7 +36,7 @@ local function add(left, right)
   if not canonical(result) then return nil, 'ERR increment or decrement would overflow' end
   return result
 end
-local function hash_call(command, key, field, value)
+local function hash_call(command, key, field, value, ...)
   if command == 'HINCRBY' and not canonical(value) then
     return {err='ERR value is not an integer or out of range'}
   end
@@ -45,6 +45,11 @@ local function hash_call(command, key, field, value)
     return {err='WRONGTYPE Operation against a key holding the wrong kind of value'}
   end
   local fields = values[key] or {}
+  if command == 'HMGET' then
+    local requested, out = {field, value, ...}, {}
+    for i, name in ipairs(requested) do out[i] = fields[name] or false end
+    return out
+  end
   if command == 'HGETALL' or command == 'HKEYS' or command == 'HVALS' then
     local keys, out = {}, {}
     for field in pairs(fields) do keys[#keys+1] = field end
@@ -181,7 +186,7 @@ local function list_call(command, key, value, extra)
   if #items == 0 then values[key] = nil end
   return popped
 end
-local function data_call(command, key, amount, value)
+local function data_call(command, key, amount, value, ...)
   if command == 'SMOVE' then
     local source, target = values[key], values[amount]
     if source == nil then return 0 end
@@ -206,7 +211,7 @@ local function data_call(command, key, amount, value)
     values[key] = #result > 0 and {[set_kind]=members} or nil
     return #result
   end
-  if command:sub(1,1) == 'H' then return hash_call(command, key, amount, value) end
+  if command:sub(1,1) == 'H' then return hash_call(command, key, amount, value, ...) end
   if command == 'SADD' or command == 'SREM' or command == 'SISMEMBER' or command == 'SCARD' or command == 'SMEMBERS'
     or command == 'SUNION' or command == 'SINTER' or command == 'SDIFF' then
     return set_call(command, key, amount)
@@ -248,7 +253,7 @@ local function advance(delta)
   end
 end
 if not canonical(now) or now:sub(1,1) == '-' then error('TWIN invalid clock') end
-local function call(command, key, amount, value)
+local function call(command, key, amount, value, ...)
   if command == 'EXPIRE' or command == 'PEXPIRE' or command == 'EXPIREAT' or command == 'PEXPIREAT' then
     if not canonical(amount) then return {err='ERR value is not an integer or out of range'} end
     local duration = (command == 'EXPIRE' or command == 'EXPIREAT') and amount ~= '0' and amount .. '000' or amount
@@ -282,7 +287,7 @@ local function call(command, key, amount, value)
     deadlines[key] = nil
     return changed
   end
-  local result = data_call(command, key, amount, value)
+  local result = data_call(command, key, amount, value, ...)
   if not (type(result) == 'table' and result.err) and
     (command == 'SET' or command == 'SUNIONSTORE' or command == 'SINTERSTORE' or command == 'SDIFFSTORE') then
     deadlines[key] = nil
