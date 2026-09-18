@@ -1,0 +1,87 @@
+module S = Tether_store.Store
+module I = Tether_store.Interp
+module E = Kanon_kernel.Eterm
+let ( let* ) = Result.bind
+let store result = Result.map_error S.message result
+let require condition reason = if condition then Ok () else Error ("SET-BULK-UNIT " ^ reason)
+let fold f xs = List.fold_left (fun acc x -> let* n = acc in let* () = f x in Ok (n + 1)) (Ok 0) xs
+let rec term = function
+  | I.Data (tid, tag, xs) -> E.KTag (tid, tag, List.map term xs)
+  | I.Literal l -> E.KLit l
+  | I.Fields _ | I.Closure _ | I.Erased -> E.KErased
+let bytes s = term (I.bytes s)
+let rec arguments first = function
+  | [] -> E.KTag (E.Tid "mu<BulkArgs>", 0, [bytes first])
+  | next :: rest -> E.KTag (E.Tid "mu<BulkArgs>", 1, [bytes first; arguments next rest])
+let execute ?(expose=false) tag args before =
+  let key = E.KTag (E.Tid "mu<Key>", 0, [bytes "k"]) in
+  let script = E.KTag (E.Tid "mu<Script>", tag, key :: args @ [E.KClos (E.Fid "pure", 1, [])]) in
+  let client = E.KTag (E.Tid "mu<Client>", 1, [script; E.KClos (E.Fid "done", 1, [])]) in
+  let fn name ps body = E.KFun (E.Fid name, ps, E.RI31, body) in
+  let answer = if expose then E.KCase (E.Tid "mu<Reply>", E.KVar 0,
+    [{E.tag=4; arity=1; body=E.KTag (E.Tid "mu<Reply>", 3, [E.KVar 0])}]) else E.KVar 0 in
+  let rows = ["main", Kanon_kernel.Erase.Code [fn "main" [] client;
+    fn "pure" [E.RI31] (E.KTag (E.Tid "mu<Script>", 0, [answer]));
+    fn "done" [E.RI31] (E.KTag (E.Tid "mu<Client>", 0, [E.KVar 0]))]] in
+  I.run ~budget:(Kanon_kernel.Budget.of_poll (fun () -> false)) rows ~entry:"main" before
+let run_command (update, tag, cases) =
+  let* values = fold (fun (initial, first, rest, expected, count) ->
+    let before = S.put "other" (S.Str "kept") S.empty in
+    let before = Option.fold ~none:before ~some:(fun xs -> S.put "k" (S.Set xs) before) initial in
+    let* _, before = store (S.expire ~seconds:false "k" "5000" before) in
+    let wanted = match expected with [] -> S.remove "k" before | xs -> S.put "k" (S.Set xs) before in
+    let* actual = store (S.change_set ~rest update "k" first before) in
+    let* () = require (actual = (count, wanted)) "store count and complete state" in
+    let* reply, after = execute tag [arguments first rest] before in
+    require (reply = I.Int count && after = wanted) "interpreter count and complete state") cases in
+  let* errors = fold (fun value ->
+    let before = S.put "k" value (S.put "other" (S.Str "kept") S.empty) in
+    let* _, before = store (S.expire ~seconds:false "k" "5000" before) in
+    let* () = require (S.change_set ~rest:["b"; "c"] update "k" "a" before = Error S.Wrong_type) "store wrong type" in
+    let* () = require (execute tag [arguments "a" ["b"; "c"]] before = Error (S.message S.Wrong_type)) "error stops client" in
+    let* reply, after = execute ~expose:true tag [arguments "a" ["b"; "c"]] before in
+    require (reply = I.Status (S.message S.Wrong_type) && after = before) "error preserves complete state")
+    [S.Str "old"; S.Hash ["f", "v"]; S.List ["m"]; S.ZSet ["m", "1"]; S.Stream []] in
+  let bad tag xs = E.KTag (E.Tid "mu<BulkArgs>", tag, xs) in
+  let* shapes = fold (fun (args, expected) ->
+    require (execute tag args S.empty = Error expected) "malformed operand refusal") [
+      [], "STORE-SCRIPT-COMMAND"; [bytes "a"], "STORE-SCRIPT-COMMAND";
+      [arguments "a" []; arguments "b" []], "STORE-SCRIPT-COMMAND";
+      [bad 2 [bytes "a"]], "STORE-BULK-ARGS"; [bad 0 []], "STORE-BULK-ARGS";
+      [bad 0 [E.KErased]], "STORE-BYTES"] in
+  let before = S.put "k" (S.Hash ["f", "v"]) (S.put "other" (S.Str "kept") S.empty) in
+  let* _, expiring = store (S.expire ~seconds:false "k" "1" before) in
+  let* expired = store (S.advance "2" expiring) in
+  let* reply, after = execute tag [arguments "a" []] expired in
+  let count, wanted = if tag = 55 then "1", S.put "k" (S.Set ["a"]) expired else "0", expired in
+  let* () = require (reply = I.Int count && after = wanted) "expired key is absent and has no expiry" in
+  Ok (values + errors + shapes + 1)
+let run () =
+  let many = List.init 129 (Printf.sprintf "v%03d") in
+  let* added = run_command (S.Members.add, 55, [
+    None, "a", [], ["a"], "1";
+    None, "a", ["b"; "a"; "c"; ""], [""; "a"; "b"; "c"], "4";
+    Some ["a"; "old"], "a", ["b"; "b"], ["a"; "b"; "old"], "1";
+    Some ["a"], "a", ["a"], ["a"], "0";
+    Some ["old"], "dup", ["dup"; ""], [""; "dup"; "old"], "2";
+    Some [""], "", [""; "a"], [""; "a"], "1";
+    Some ["seed"], I.octets, ["\000"; I.octets], ["\000"; I.octets; "seed"], "2";
+    None, "9007199254740993", ["01"; "1"], ["01"; "1"; "9007199254740993"], "3";
+    None, "first", many, "first" :: many, "130";
+    Some many, "v000", many, many, "0"] ) in
+  let* removed = run_command (S.Members.remove, 56, [
+    None, "a", [], [], "0";
+    None, "a", ["b"; "a"], [], "0";
+    Some ["a"; "b"; "old"], "a", ["b"; "a"; "missing"], ["old"], "2";
+    Some ["a"], "missing", ["missing"], ["a"], "0";
+    Some ["a"], "a", ["a"], [], "1";
+    Some [""; "a"], "", [""; "a"], [], "2";
+    Some ["\000"; I.octets; "seed"], I.octets, ["\000"; I.octets], ["seed"], "2";
+    Some ["01"; "1"; "9007199254740993"], "1", ["9007199254740993"], ["01"], "2";
+    Some many, "missing", many, [], "129";
+    Some ("kept" :: many), "v000", many, ["kept"], "129"] ) in
+  let count = added + removed in
+  let* () = require (count = 44) "case inventory" in Ok count
+let () = run () |> Result.fold
+  ~ok:(fun count -> Printf.printf "PASS SET-BULK-UNIT cases=%d\n" count)
+  ~error:(fun e -> prerr_endline ("FAIL " ^ e); exit 1)

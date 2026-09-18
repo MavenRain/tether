@@ -1,0 +1,45 @@
+module TeamBatch
+
+schema members : String -> Key Set tag b"team"
+
+def enroll : Script Reply (tag b"team") := do {
+  r <- saddMany Reply (tag b"team") (members b"red")
+    (bulkMore b"alice" (bulkMore b"bob" (bulkMore b"alice" (bulkOne b"carol"))));
+  pure Reply (tag b"team") r
+}
+
+def leave : Script Reply (tag b"team") := do {
+  r <- sremMany Reply (tag b"team") (members b"red")
+    (bulkMore b"alice" (bulkMore b"alice" (bulkOne b"carol")));
+  pure Reply (tag b"team") r
+}
+
+def roster : Script Reply (tag b"team") := do {
+  r <- smembers Reply (tag b"team") (members b"red");
+  pure Reply (tag b"team") r
+}
+
+def remove : Script Reply (tag b"team") := do {
+  r <- del Reply Set (tag b"team") (members b"red");
+  pure Reply (tag b"team") r
+}
+
+def main : Client Reply := do {
+  _ <- inv Reply (tag b"team") enroll;
+  r <- inv Reply (tag b"team") roster;
+  done Reply r
+}
+
+def remaining : Client Reply := do {
+  _ <- inv Reply (tag b"team") enroll;
+  _ <- inv Reply (tag b"team") leave;
+  r <- inv Reply (tag b"team") roster;
+  done Reply r
+}
+
+def retained : Client Reply := do {
+  _ <- inv Reply (tag b"team") enroll;
+  r <- inv Reply (tag b"team") leave;
+  _ <- inv Reply (tag b"team") remove;
+  done Reply r
+}

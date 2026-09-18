@@ -4,6 +4,12 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports variadic Set changes with `saddMany` and `sremMany`.
+`./tether exec examples/TeamBatch.tet --host node` enrolls three distinct
+members and prints `["alice","bob","carol"]`. The `remaining` entry removes
+Alice and Carol, and `retained` keeps the removal count after deleting
+the Set. See `dev/SET-BULK.md`; run `sh dev/m1-set-bulk.sh` for validation.
+
 M1 now supports variadic List pushes with `lpushMany` and `rpushMany`.
 `./tether exec examples/QueueBatch.tet --host node` enqueues three jobs
 in one command and prints `["welcome:alice","welcome:bob","welcome:carol"]`.

@@ -105,6 +105,7 @@ let run ~budget rows ~entry store =
           | (48 | 49 | 50 | 51), [Signed duration; Condition condition] -> integer (Store.expire ~condition ~absolute:(tag >= 50) ~seconds:(tag = 48 || tag = 50) key duration store)
           | 52, [BulkFields (first, rest)] -> array nullable (keep (Store.hmget key first rest store))
           | (53 | 54), [BulkFields (first, rest)] -> integer (Store.push ~rest (if tag = 53 then Store.Left else Store.Right) key first store)
+          | (55 | 56), [BulkFields (first, rest)] -> integer (Store.change_set ~rest (if tag = 55 then Store.Members.add else Store.Members.remove) key first store)
           | _, _ -> Error "STORE-SCRIPT-COMMAND" in
         let* next = apply k [answer] in script store next
     | Data _ | Fields _ | Literal _ | Closure _ | Erased -> Error "STORE-SCRIPT" in

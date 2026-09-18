@@ -87,7 +87,7 @@ local function hash_call(command, key, field, value, ...)
   -- Redis answers the exact new value; the printed body reads it back with HGET.
   return updated
 end
-local function set_call(command, key, member)
+local function set_call(command, key, member, ...)
   local stored = values[key]
   if stored ~= nil and (type(stored) ~= 'table' or stored[set_kind] == nil) then
     return {err='WRONGTYPE Operation against a key holding the wrong kind of value'}
@@ -123,13 +123,20 @@ local function set_call(command, key, member)
     return count
   end
   if command == 'SADD' then
-    local added = members[member] and 0 or 1
-    members[member], values[key] = true, {[set_kind]=members}
+    local added = 0
+    for _, item in ipairs({member, ...}) do
+      if not members[item] then added = added + 1 end
+      members[item] = true
+    end
+    values[key] = {[set_kind]=members}
     return added
   end
   if command ~= 'SREM' then error('TWIN unsupported set command') end
-  local removed = members[member] and 1 or 0
-  members[member] = nil
+  local removed = 0
+  for _, item in ipairs({member, ...}) do
+    if members[item] then removed = removed + 1 end
+    members[item] = nil
+  end
   if next(members) == nil then values[key] = nil end
   return removed
 end
@@ -216,7 +223,7 @@ local function data_call(command, key, amount, value, ...)
   if command:sub(1,1) == 'H' then return hash_call(command, key, amount, value, ...) end
   if command == 'SADD' or command == 'SREM' or command == 'SISMEMBER' or command == 'SCARD' or command == 'SMEMBERS'
     or command == 'SUNION' or command == 'SINTER' or command == 'SDIFF' then
-    return set_call(command, key, amount)
+    return set_call(command, key, amount, value, ...)
   end
   if command == 'LPUSH' or command == 'RPUSH' or command == 'LPOP' or command == 'RPOP' or command == 'LLEN'
     or command == 'LINDEX' or command == 'LSET' or command == 'LTRIM' or command == 'LRANGE' then

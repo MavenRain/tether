@@ -56,12 +56,11 @@ let hincrby key field amount store = let* amount = integer amount in let* old = 
 let members = read Members.empty (function Set values -> Ok (Members.of_list values) | Str _ | Hash _ | List _ | ZSet _ | Stream _ -> Error Wrong_type)
 let save_set key values store = save key (Set (Members.elements values)) ~empty:(Members.is_empty values) store
 let sismember key member store = Result.map (fun values -> if Members.mem member values then "1" else "0") (members key store)
-let scard key store = let* values = members key store in Ok (string_of_int (Members.cardinal values))
-let smembers key store = Result.map Members.elements (members key store)
+let scard key store = let* values = members key store in Ok (string_of_int (Members.cardinal values)) let smembers key store = Result.map Members.elements (members key store)
 let scombine op key other store = let* left = members key store in let* right = members other store in Ok (Members.elements (op left right))
 let sstore op destination key other store = let* values = scombine op key other store in Ok (string_of_int (List.length values), save destination (Set values) ~empty:(values = []) (remove destination store))
-let change_set update key member store = let* values = members key store in let next = update member values in
-  if Members.equal values next then Ok ("0", store) else Ok ("1", save_set key next store)
+let change_set ?(rest = []) update key member store = let* values = members key store in let next = List.fold_left (fun acc item -> update item acc) (update member values) rest in
+  if Members.equal values next then Ok ("0", store) else Ok (string_of_int (abs (Members.cardinal next - Members.cardinal values)), save_set key next store)
 let sadd = change_set Members.add let srem = change_set Members.remove
 let smove key other member store = let* present = sismember key member store in let* _ = if Keys.mem key store.values then members other store else Ok Members.empty in
   if present = "0" || key = other then Ok (present, store) else let* _, next = srem key member store in Result.map (fun (_, after) -> "1", after) (sadd other member next)

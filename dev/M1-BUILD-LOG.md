@@ -4296,3 +4296,156 @@ survived=0 restored=6`.
 Review pass 1 (2026-09-17) fixed 3 findings.
 
 Fix rounds: 2.
+
+### 2026-09-17: M1 Set bulk changes
+
+This slice starts from committed `e10d5b6` and adds `saddMany` and
+`sremMany`, Script tags 55 and 56. Both take a typed Set key and the
+existing nonempty `BulkArgs` type. They return the number of distinct
+members changed, preserve existing expiry and unrelated state, and remove
+the key and its expiry when the final member is removed. Wrong-type
+operations preserve complete state. The Lua emitter issues one command
+per operation and classifies both as writes, including no-op requests.
+
+The independent store folds over the member arguments after checking the
+key type. The LuaJIT twin counts changes independently as each member is
+added or removed. `TeamBatch.tet` demonstrates enrollment, removal and a
+removal reply retained after deleting the Set. The three entries print
+`["alice","bob","carol"]`, `["bob"]` and `2`.
+
+The focused validation ran in
+`/Users/oobi/Documents/gpt18/tether-m1-set-bulk`, using OCaml 5.2.1,
+the `zxcaml-p1` tool environment and temporary loopback Redis/REST servers.
+Captures under that checkout's `.kanon-exec/` record:
+
+| Capture | Result |
+| --- | --- |
+| `run-FcVjzA` | Build: zero errors and warnings |
+| `run-uQsAIX` | 44 unit scenarios |
+| `run-Tr1dls` | 14 artifact pairs and 20 atomic typed refusals |
+| `run-RZln3R` | 28 store/twin scenarios, 68 live-host runs, nine example executions |
+| `run-0VxT6F` | 16 compiling mutants killed, zero survivors, six restored controls |
+
+The host cases cover duplicate and absent members, removal of the last
+member, binary and empty members, 129-member requests, computed argument
+heads and tails, complete membership, expiry preservation, every wrong
+Redis type, within-script and cross-invocation retention, four host error
+refusals and two invalid-UTF-8 refusals without partial stdout. Binary
+member changes remain applied before a later invalid-UTF-8 read fails.
+
+The final within-script and cross-invocation retention fixtures distinguish
+the removal count of two from the later deletion count of one. Their
+focused probes pass in captures `run-ASxETz` and `run-KzTR0D`.
+
+The trusted preludes now total 173 lines, pinned by
+`dev/PRELUDES.sha256`. The fuel probe capture
+`/Users/oobi/Documents/gpt18/.kanon-exec/run-d3L0M6` records
+`FUEL before=60327 after=60339`: the static walk still uses 12 polls.
+Stage D uses fuel 60333 to leave six walk polls and requires the same
+`SH-BUDGET` failure without publishing output. The zero-fuel checker
+refusal remains in place.
+
+All eight trusted-source bounds remain unchanged: kernel 3997/4000,
+encoder 246/600, Lua 320/320, shell 227/240, store 200/200, Node 196/300,
+REST 156/300 and driver 404/450. No pinned vendor source or frozen
+denominator changed. The 150 ms M0 timing bound remains unchanged.
+
+The full ladder capture `run-u6SDDi` retains the open M0 timing failure:
+`FAIL M0-TIME median_ms=292.573 bound_ms=150`, with five samples ranging
+from 260.156 to 417.349 ms and load averages 22.62, 30.81 and 34.64.
+The preceding committed review already recorded this gate as open.
+The deliberate SPINE-WORK mutation still fails the bound, and the
+149/150 ms boundary control passes. These results do not close the
+timing item or claim an overall green ladder.
+
+The completed full ladder in `run-u6SDDi` exits 1 with all 20 feature
+functional suites and mutation suites passing. Its final Set bulk run
+includes the strengthened retention fixtures and reports 44 unit cases,
+14 artifact pairs, 20 atomic typed refusals, 28 cases per independent
+oracle, 68 live-host runs, nine example executions, and 16 compiling
+mutants killed with zero survivors and six restored controls.
+
+The full-stream audit in `run-B7lxd4` verifies all required feature rows,
+39 housekeeping passes, empty stderr, and exactly 43 failure rows. Each
+failure is the M0 timing result or its propagation through the enclosing
+ladder wrappers. Stages A through E and Stage F's functional checks pass.
+The audit reports no additional functional or mutation failure.
+
+### Review round 2026-09-17 (M1 Set bulk changes)
+
+The review of the Set bulk slice kept four low findings. All four are fixed in
+this round. No finding moved a bound, edited a pinned copy or recorded a new
+timing number, so the recorded counts of the slice stay as the author block
+states them.
+
+| id | file | change |
+| --- | --- | --- |
+| A-1 | dev/set-bulk-tests.py, dev/set-bulk-mutations.py | The twin reply comparison of the Set bulk suite now reports `SET-BULK LuaJIT reply`. The mutants TWIN-ADD-COUNT and TWIN-REMOVE-COUNT require that string. |
+| A-2 | dev/set-bulk-tests.py | The empty-key assertion reports `SET-BULK removal deletes the key` for the plain emptying cases and keeps the retention wording for `within` and `earlier`. |
+| A-3 | dev/dune | The `set_bulk_tests` executable no longer links `tether_print`, which it does not use. The stanza now matches the sibling unit executables. |
+| C-2 | dev/set-bulk-mutations.py | The mutation runner asserts the control inventory and counts only the controls whose marker the run observed, so the `restored` field of the reported row is a measurement. |
+
+The recorded rows of the slice are unchanged: `PASS SET-BULK-UNIT cases=44`,
+`PASS SET-BULK-ARTIFACTS pairs=14`, `PASS SET-BULK-REFUSALS cases=20 atomic_output=20`,
+`PASS SET-BULK-ORACLES store=28 luajit=28` and
+`PASS SET-BULK-MUTATIONS killed=16 survived=0 restored=6`. The trusted-line
+groups stay at `lua=320/320` and `store=200/200`.
+
+The M0 timing gate stays open. The baseline of this round reports
+`FAIL M0-TIME median_ms=231.435 bound_ms=150` at a one-minute load under 40.
+That gate is not a defect of this slice and the 150 ms bound does not move.
+
+The round used 6 findings. The judge kept 4, the verifiers refuted 1, and
+1 was merged and then cut.
+
+C-3 (low, dev/m1-set-bulk.sh:52) is refuted. The driver has no PRELUDES leg,
+but the verifier showed the PRELUDES pin still runs six times inside one
+m1-set-bulk run through the nested drivers, so the slice re-pin stays
+checked. C-1 (medium, dev/set-bulk-mutations.py) is dropped: the judge
+merged it into A-1, which states the same TWIN-ADD-COUNT and
+TWIN-REMOVE-COUNT defect and carries the same fix. Lenses B and D returned
+zero findings.
+
+The baseline ladder of this round is `gates-baseline.log`, tag `baseline`:
+926 rows, PASS 413, FAIL 43, EXIT-ALL 1, start load 20.82. Every FAIL row is
+the M0-TIME timing cascade, `FAIL M0-TIME median_ms=231.435 bound_ms=150`,
+so the ladder is GREEN-FUNCTIONAL under the open GATE-1 item, EXIT-MUT 0.
+
+The fix ladder of round 1 is `gates-fix-1.log`, tag `fix-1`: 51 rows, PASS
+17 (9 PASS rows and 8 PASS-LEG rows), FAIL 0, EXIT-ALL 0, start load 25.89,
+copy mode with selector set-bulk-only. The copy control
+`check-1-C-2-c` ran EXIT-ALL 0 (51 rows, same PASS 17, FAIL 0) and the copy
+mutant probe `check-1-C-2-m` ran EXIT-ALL 1 (31 rows, PASS 0, FAIL 1, the
+single FAIL row is `FAIL SET-BULK-MUTATIONS Control inventory controls=5`,
+the mutant killed as intended).
+
+The close ladder of record for this round is `gates-close.log`, tag
+`close`: 926 rows, PASS 416, FAIL 43, EXIT-ALL 1, start load 27.10. The FAIL
+multiset is the same M0-TIME timing cascade as the baseline, FAIL-name hash
+0977ddf1c717 identical to the baseline, `FAIL M0-TIME median_ms=165.542
+bound_ms=150`, GATE-1 OPEN, GREEN-FUNCTIONAL, EXIT-MUT 0. The close log
+records `TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320
+sh=227/240 store=200/200 host-node=196/300 host-rest=156/300 bin=404/450
+OK`, HOUSE 39, TRUSTED-LINES 22, full ROOT legs. The SET-BULK legs of the
+close ladder read `PASS SET-BULK-UNIT cases=44`, `PASS SET-BULK-ARTIFACTS
+pairs=14`, `PASS SET-BULK-REFUSALS cases=20 atomic_output=20`, `PASS
+SET-BULK-ORACLES store=28 luajit=28`, `PASS SET-BULK-E2E cases=32 hosts=68
+utf8_refusals=2 errors=4`, `PASS SET-BULK-EXAMPLE exec=9`, `PASS
+SET-BULK-TESTS`, `PASS SET-BULK-MUTATIONS killed=16 survived=0 restored=6`
+and `PASS SET-BULK-COUNTS`. The top verdict row of the close ladder reads
+`FAIL M1-SET-BULK`, the nested aggregate FAIL expected while GATE-1 stays
+open.
+
+The M0-TIME bound of 150 ms never moved. Every FAIL row of each ladder
+belongs to the ruled timing cascade, and a timing FAIL at a one-minute load
+below 40 leaves GATE-1 open rather than marking a regression. No functional
+FAIL row occurred and every mutation summary row reads survived=0, so each
+ladder is GREEN-FUNCTIONAL under the open GATE-1 timing item.
+
+The round ran its finders and its fixer at opus medium, its verifiers at
+opus high, and its closer at sonnet medium; rulings finder/builder/closer
+unmet, verifier met.
+
+Review pass 1 (2026-09-17) fixed 4 findings.
+
+Fix rounds: 1.

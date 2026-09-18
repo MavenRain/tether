@@ -111,6 +111,8 @@ mu Script (0 A : Type 0) : (0 g : Tag) -> Type 0 :=
 | hmget : (0 g : Tag) -> Key Hash g -> BulkArgs -> (Reply -> Script A g) -> Script A g
 | lpushMany : (0 g : Tag) -> Key List g -> BulkArgs -> (Reply -> Script A g) -> Script A g
 | rpushMany : (0 g : Tag) -> Key List g -> BulkArgs -> (Reply -> Script A g) -> Script A g
+| saddMany : (0 g : Tag) -> Key Set g -> BulkArgs -> (Reply -> Script A g) -> Script A g
+| sremMany : (0 g : Tag) -> Key Set g -> BulkArgs -> (Reply -> Script A g) -> Script A g
 
 mu Client (0 A : Type 0) : Type 0 :=
 | done : A -> Client A

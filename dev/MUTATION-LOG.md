@@ -1032,3 +1032,39 @@ The final continuation capture `run-yVZLJB` in the same directory repeats
 `PASS LIST-BULK-MUTATIONS killed=16 survived=0 restored=6` on the final
 source tree. It completes the nine components left unfinished by the
 external timeout of `run-QPhjp8`; the M0 timing failure remains open.
+
+## M1 Set bulk changes, 2026-09-17
+
+`python3 -P dev/set-bulk-mutations.py` compiled and killed all 16 mutants
+and reran six restored controls. The focused capture is
+`/Users/oobi/Documents/gpt18/tether-m1-set-bulk/.kanon-exec/run-0VxT6F`.
+
+| Mutation | Required failure |
+| --- | --- |
+| STORE-DUPLICATES | Distinct count and complete store state |
+| STORE-DROP | Missing requested members in complete state |
+| STORE-FIRST | Changed first member in complete state |
+| STORE-EXPIRY | Lost expiry in complete state |
+| STORE-EMPTY | Empty key retained after removing the final member |
+| STORE-TYPE | Wrong-type store operation accepted |
+| INTERPRETER-DIRECTION | Add and remove dispatch reversed |
+| INTERPRETER-ARGS | Interpreter drops the remaining members |
+| INTERPRETER-STATE | Interpreter drops unrelated state |
+| LUA-COMMAND | Lua dispatch selects the wrong Redis command |
+| LUA-LAST | Terminal member lost in the emitted command |
+| LUA-HEADS | Earlier members lost in the emitted command |
+| READONLY | Write command classified as read-only |
+| TWIN-ARGS | Independent twin drops the remaining members |
+| TWIN-ADD-COUNT | Duplicate additions counted more than once |
+| TWIN-REMOVE-COUNT | Missing or duplicate removals counted |
+
+Every mutant must build and fail its assigned assertion. Restored controls
+cover the 44 unit scenarios plus add, remove, within-script retention,
+cross-invocation retention and computed member arguments. Each probe
+requires a nonempty scenario list.
+
+```text
+PASS SET-BULK-MUTATIONS killed=16 survived=0 restored=6
+```
+
+All inherited mutation assertions and trusted-source bounds remain in place.
