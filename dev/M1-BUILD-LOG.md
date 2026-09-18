@@ -3984,54 +3984,315 @@ not revived (see above). M0-TIME dropped: not a finding, the
 pre-registered GATE-1 timing item; its only fixes would move the frozen
 150 ms bound or record a new timing measurement, both barred.
 
-The gate capture for this round is `gates-gates-1.log`, tag `gates-1`,
-one-minute load 17.61. That capture is INCOMPLETE: it was still running
-when this round closed, `row_total=278`, `fail_count=8`, and the log
-holds no `EXIT-ALL` row; the last row captured before this round closed
-is `PASS STRINGS-ORACLES store=21 luajit=27`. Every FAIL row of this
-capture lies in the timing set (`M0-TIME`, `MEASURE`, `STAGE-F`,
-`M1-DO`, `M1-READONLY`), and the load is under the 40 RED-LOAD
-threshold, so these are real open timing items, not RED-LOAD-waived:
+The close ladder of record for this round is `gates-gates-1.log`, tag
+`gates-1`, root mode, full leg. The run started at 08:59:07 at a one-minute
+load of 25.94. The full leg ended at 10:26:50 at a load of 26.60. The run
+ended at 10:27:19 at a load of 25.09. The log holds 854 rows. The porcelain
+count was 23 rows before the run and 0 rows after it, because the user
+committed the reviewed slice as 5a589b8 at 09:43:43 while the ladder ran on
+the same tree. The mutation legs restored every file that they touched.
+
+The run holds 39 FAIL rows. Every FAIL row is part of the timing cascade:
+`FAIL M0-TIME median_ms=213.016 bound_ms=150` once, `FAIL MEASURE` once,
+`FAIL STAGE-F` twice, each of the 17 nested M1 aggregates twice (`M1-DO`,
+`M1-READONLY`, `M1-STRINGS`, `M1-HASHES`, `M1-SETS`, `M1-LISTS`,
+`M1-LIST-ACCESS`, `M1-LIST-RANGE`, `M1-SET-MEMBERS`, `M1-HASH-ENTRIES`,
+`M1-HASH-PROJECTIONS`, `M1-SET-ALGEBRA`, `M1-SET-STORE`, `M1-SET-MOVE`,
+`M1-TTL`, `M1-ABSOLUTE-EXPIRY`, `M1-CONDITIONAL-EXPIRY`), and
+`FAIL M1-HMGET` once. No functional FAIL row occurred. No deadline row
+occurred. The verdict of the run is GREEN-FUNCTIONAL. Each of the 26 PASS
+mutation summary rows reads survived=0, and `PASS HOUSE` occurs 35 times,
+the same count as the baseline run.
 
 ```
+LOAD 9:07  up 31 days, 11:42, 29 users, load averages: 18.84 25.86 40.00
+BENCH m0-time median_ms=213.016 min_ms=207.594 max_ms=220.934 runs=5
 FAIL M0-TIME median_ms=213.016 bound_ms=150
 FAIL MEASURE
-FAIL STAGE-F
-FAIL STAGE-F
-FAIL M1-DO
-FAIL M1-DO
-FAIL M1-READONLY
-FAIL M1-READONLY
+PASS HMGET-BUILD
+PASS HMGET-UNIT cases=26
+PASS HMGET-UNIT-EXE
+PASS HMGET-ARTIFACTS pairs=10
+PASS HMGET-REFUSALS cases=10 atomic_output=10
+PASS HMGET-ORACLES store=18 luajit=18
+PASS HMGET-E2E cases=20 hosts=42 readonly=38 utf8_refusals=2 errors=2
+PASS HMGET-EXAMPLE exec=6
+PASS HMGET-TESTS
+PASS HMGET-TESTS-RUN
+KILLED STORE-ORDER by FAIL HMGET-UNIT store preserves order, nils and duplicates
+KILLED STORE-DROP by FAIL HMGET-UNIT store preserves order, nils and duplicates
+KILLED STORE-DUPLICATES by FAIL HMGET-UNIT store preserves order, nils and duplicates
+KILLED STORE-NIL by FAIL HMGET-UNIT store preserves order, nils and duplicates
+KILLED STORE-TYPE by FAIL HMGET-UNIT store wrong type
+KILLED INTERPRETER-ARGS by FAIL HMGET-UNIT interpreter reply and complete state
+KILLED INTERPRETER-STATE by FAIL HMGET-UNIT interpreter reply and complete state
+KILLED INTERPRETER-NIL by FAIL HMGET-UNIT interpreter reply and complete state
+KILLED READONLY by HMGET write classification
+KILLED LUA-ORDER by LISTS LuaJIT reply
+KILLED LUA-ARGUMENT-ORDER by LISTS LuaJIT reply
+KILLED LUA-NIL by LISTS LuaJIT reply
+KILLED LUA-LAST-FIELD by LISTS LuaJIT reply
+KILLED LUA-ARRAY by TWIN reply kind nil wanted array
+KILLED TWIN-ARGS by LISTS LuaJIT reply
+KILLED TWIN-NIL by LISTS LuaJIT reply
+PASS HMGET-MUTATIONS killed=16 survived=0 restored=6
+PASS HMGET-MUTATIONS-RUN
+PASS HMGET-COUNTS
+panicscan: 0 shown across 43 file(s)  (0 halt, 0 crash, 0 present, 0 sound)
+PASS HOUSE
+PASS HOUSE
+TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240 store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK
+PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1
+EXIT-MUT 0
+EXIT-ALL 1
 ```
 
 | leg | verbatim row |
 | --- | --- |
 | PIN/CARRY | `PIN 2c2e6e6 unlisted=0`, `CARRY files=36 diff=0 vendor=32 copies=4` |
 | R0 | `R0-COUNT formers=2 schema=4 shapes=5 admitted=3`, `R0-AUDIT ok` |
-| STAGE-B | `PASS STAGE-B-SURFACE cases=59`, `PASS STAGE-B-MUTATIONS killed=5 restored=1` |
-| STAGE-C | `PASS STAGE-C-MUTATIONS killed=3 restored=1`, `PASS STAGE-C-TESTS`, `PASS STAGE-C-INTEGRITY killed=5 restored=1` |
-| STAGE-D | `PASS STAGE-D-MUTATIONS killed=5 restored=1`, `PASS STAGE-D-TESTS` |
-| DO | `PASS DO-MUTATIONS killed=4 survived=0 restored=1` |
-| M1-DO | `FAIL M1-DO` (x2) |
-| RO | `PASS RO-MUTATIONS killed=4 survived=0 restored=2`, `PASS TRUSTED-LINES` |
-| M1-READONLY | `FAIL M1-READONLY` (x2) |
-| STRINGS | `PASS STRINGS-UNIT cases=46`, `PASS STRINGS-ARTIFACTS pairs=9`, `PASS STRINGS-REFUSALS cases=8 atomic_output=8`, `PASS STRINGS-ORACLES store=21 luajit=27` (last row captured) |
+| STAGE-B | `PASS STAGE-B-MUTATIONS killed=5 restored=1` |
+| STAGE-C | `PASS STAGE-C-MUTATIONS killed=3 restored=1`, `PASS STAGE-C-INTEGRITY killed=5 restored=1` |
+| STAGE-D | `PASS STAGE-D-MUTATIONS killed=5 restored=1` |
+| STAGE-E | `PASS STAGE-E-INTEGRITY killed=14 restored=1`, `PASS STAGE-E-MUTATIONS killed=15 restored=1` |
+| STAGE-F | `PASS STAGE-F-MUTATIONS killed=3 survived=0 restored=2`, `FAIL STAGE-F` (x2) |
+| DO | `PASS DO-MUTATIONS killed=4 survived=0 restored=1`, `FAIL M1-DO` (x2) |
+| RO | `PASS RO-MUTATIONS killed=4 survived=0 restored=2`, `FAIL M1-READONLY` (x2) |
+| STRINGS | `PASS STRINGS-MUTATIONS killed=4 survived=0 restored=2`, `FAIL M1-STRINGS` (x2) |
+| HASHES | `PASS HASHES-MUTATIONS killed=6 survived=0 restored=2`, `FAIL M1-HASHES` (x2) |
+| SETS | `PASS SETS-MUTATIONS killed=8 survived=0 restored=2`, `FAIL M1-SETS` (x2) |
+| LISTS | `PASS LISTS-MUTATIONS killed=9 survived=0 restored=2`, `FAIL M1-LISTS` (x2) |
+| LIST-ACCESS | `PASS LIST-ACCESS-MUTATIONS killed=12 survived=0 restored=6`, `FAIL M1-LIST-ACCESS` (x2) |
+| LIST-RANGE | `PASS LIST-RANGE-MUTATIONS killed=11 survived=0 restored=5`, `FAIL M1-LIST-RANGE` (x2) |
+| SET-MEMBERS | `PASS SET-MEMBERS-MUTATIONS killed=9 survived=0 restored=4`, `FAIL M1-SET-MEMBERS` (x2) |
+| HASH-ENTRIES | `PASS HASH-ENTRIES-MUTATIONS killed=11 survived=0 restored=4`, `FAIL M1-HASH-ENTRIES` (x2) |
+| HASH-PROJECTIONS | `PASS HASH-PROJECTIONS-MUTATIONS killed=16 survived=0 restored=6`, `FAIL M1-HASH-PROJECTIONS` (x2) |
+| SET-ALGEBRA | `PASS SET-ALGEBRA-MUTATIONS killed=17 survived=0 restored=6`, `FAIL M1-SET-ALGEBRA` (x2) |
+| SET-STORE | `PASS SET-STORE-MUTATIONS killed=18 survived=0 restored=6`, `FAIL M1-SET-STORE` (x2) |
+| SET-MOVE | `PASS SET-MOVE-MUTATIONS killed=15 survived=0 restored=5`, `FAIL M1-SET-MOVE` (x2) |
+| TTL | `PASS TTL-MUTATIONS killed=13 survived=0 restored=5`, `FAIL M1-TTL` (x2) |
+| ABSOLUTE | `PASS ABSOLUTE-MUTATIONS killed=14 survived=0 restored=8`, `FAIL M1-ABSOLUTE-EXPIRY` (x2) |
+| CONDITIONAL | `PASS CONDITIONAL-MUTATIONS killed=17 survived=0 restored=10`, `FAIL M1-CONDITIONAL-EXPIRY` (x2) |
+| HMGET | `PASS HMGET-MUTATIONS killed=16 survived=0 restored=6`, `PASS HMGET-COUNTS`, `PASS TRUSTED-LINES`, `FAIL M1-HMGET` |
+| STAGE-A | `PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1` |
+| EXIT-MUT | `EXIT-MUT 0` |
+| EXIT-ALL | `EXIT-ALL 1` |
 
-Mutation summary captured in this incomplete run: STAGE-B-MUTATIONS
-killed=5 restored=1, STAGE-C-MUTATIONS killed=3 restored=1,
-STAGE-C-INTEGRITY killed=5 restored=1, STAGE-D-MUTATIONS killed=5
-restored=1, DO-MUTATIONS killed=4 survived=0 restored=1, RO-MUTATIONS
-killed=4 survived=0 restored=2. The ladder had not yet reached
-HMGET-MUTATIONS or a close-time TRUSTED-LINES triple when this round
-closed, and no `gates-close.log` exists on disk: the operator queues
-that closing ladder next, at a calm load. The last full run,
-`gates-baseline.log` (07:59:44, `EXIT-ALL 1`), reads
-`PASS HMGET-MUTATIONS killed=16 survived=0 restored=6` and
-`TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240
-store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK`; C-1
-and C-2 change no counted row, so those numbers stand unless the close
-ladder says otherwise.
+Close ladder verdict: GATE-1 is OPEN by the pre-registered rule. A timing
+FAIL at a one-minute load below 40 is a real open item. Report the item.
+Never close the item by a move of the 150 ms bound. The four M0-TIME
+readings of this round are the author capture at 217.864 ms (exit 1, in the
+dev record above), the baseline run at 301.969 ms at load 21.39
+(`gates-baseline.log`, 06:44), gates-1 at 213.016 ms at load 18.84 (09:07),
+and the confirm run at 269.203 ms at load 31.10 (10:33). The bound stayed at
+150 ms in every run. The confirm run `gates-confirm-m0-1.log` ran the
+m0-time leg alone, 22 rows, start 10:33:00, and it confirms the open gate at
+a calm queue load of 27.02:
+
+```
+LOAD 10:33  up 31 days, 13:07, 29 users, load averages: 31.10 28.99 39.14
+BENCH m0-time median_ms=269.203 min_ms=244.194 max_ms=301.372 runs=5
+FAIL M0-TIME median_ms=269.203 bound_ms=150
+```
+
+The `TRUSTED-LINES` row of gates-1 and the HMGET count rows of gates-1 equal
+the baseline rows, so C-1 and C-2 changed no counted row.
 
 Review pass 1 (2026-09-17) fixed 2 findings.
 
 Fix rounds: 1.
+
+## 2026-09-17 M1 List bulk pushes
+
+Implemented `lpushMany` and `rpushMany` at Script tags 53 and 54 using
+the existing nonempty `BulkArgs` type. Existing tags and single-value
+push signatures are unchanged. Each emitted operation makes one Redis
+command call. Left pushes reverse the request at the head; right pushes
+append in request order. Both return the resulting List length.
+
+The store and independent LuaJIT twin preserve duplicate, empty and
+binary values. Pushes preserve existing expiry deadlines and unrelated
+keys, create persistent Lists for missing keys, and leave wrong key types
+unchanged. The new `examples/QueueBatch.tet` demonstrates FIFO enqueueing,
+priority insertion, and a count retained after deleting the List.
+
+Evidence checkout: `/Users/oobi/Documents/gpt18/tether-m1-list-bulk`, based
+on `5a589b86c1288a9b495f868090bfc30beb36a2f5`. Captures below are under its
+`.kanon-exec/` directory.
+
+The focused integration capture `run-L3fPcb` completed with exit 0:
+
+| Check | Observed result |
+| --- | --- |
+| Emitted artifact pairs | `PASS LIST-BULK-ARTIFACTS pairs=13` |
+| Typed and atomic refusals | `PASS LIST-BULK-REFUSALS cases=20 atomic_output=20` |
+| Independent interpreters | `PASS LIST-BULK-ORACLES store=23 luajit=23` |
+| Live hosts | `PASS LIST-BULK-E2E cases=27 hosts=56 utf8_refusals=2 errors=2` |
+| Examples | `PASS LIST-BULK-EXAMPLE exec=9` |
+
+The unit executable reports `PASS LIST-BULK-UNIT cases=40`. Cases compare
+complete values and deadlines, cover all five wrong key types in both
+directions, and recreate an expired key without retaining its deadline.
+The integration suite includes 129-value requests in each direction,
+computed heads and tails, all byte values, captured counts, and the
+existing UTF-8 reply refusal. Its live state assertions confirm that a
+push remains applied when formatting a later invalid UTF-8 reply fails.
+
+Before the mutation run, the argument-order fixture was strengthened to
+use a non-palindromic sequence of constructor heads while retaining
+duplicates. Capture `run-rsWxMp` completed with exit 0 and
+`PASS LIST-BULK-MUTATIONS killed=16 survived=0 restored=6`. Every mutant
+compiled and failed at its named assertion. The controls cover both push
+directions, retained counts and computed arguments.
+
+Capture `run-0N9MvM` measured 56769 checker/erasure polls followed by the
+same 12 static-walk polls. Stage D now supplies fuel 56775, leaving six
+walk polls and requiring `SH-BUDGET` without publishing output. The
+temporary measurement code was removed. HMGET's prior counts are now
+explicitly historical; Stage D and TTL carry the current fuel counts.
+
+The pinned preludes total 171 lines. All eight trusted-source counts and
+bounds are unchanged, including Lua 320/320 and store 200/200. Short
+expression formatting changes keep the new command paths within those
+bounds. The frozen timing inputs and the 150 ms M0 bound are unchanged.
+
+Validation finished across two captures. The cumulative
+`sh dev/m1-list-bulk.sh` run, `run-QPhjp8`, reached the external 30-minute
+capture limit and exited 124 during Hash projections. Its completed
+prefix through Hash enumeration contains 243 PASS rows. Its only failed
+check is `M0-TIME median_ms=201.269 bound_ms=150`; the other 23 FAIL rows
+in that prefix are aggregates propagating that result. Five timing
+samples ranged from 181.944 to 325.867 ms at one-minute load 21.13.
+
+The timeout terminated Hash-projection tests and removed their temporary
+captures. The resulting three Hash-projection FAIL rows and missing-row
+messages belong to that interruption. They are not recorded as passes.
+
+The continuation driver
+`/Users/oobi/Documents/gpt18/resume-tether-list-bulk-validation.py` ran
+the nine unfinished components in order, starting at Hash projections.
+It replaced only each component's invocation of the already completed
+parent ladder, retained all local checks and assertions, recorded each
+original gate script's hash, and verified unchanged source hashes after
+every component. The repository's gate scripts retain their inherited
+legs. This reused completed validation without repeating those stages.
+
+Continuation capture `run-yVZLJB` completed with exit 0: all nine
+components passed, with 163 PASS rows and no FAIL rows. It includes
+the final List bulk results listed above, plus
+`PASS LIST-BULK-UNIT cases=40` and
+`PASS LIST-BULK-MUTATIONS killed=16 survived=0 restored=6`. The final
+house audit reports zero findings across 44 OCaml files, and all eight
+trusted-source counts remain unchanged.
+
+The continuation's `PASS M1-LIST-BULK` row describes the component's local
+checks. It does not close the cumulative ladder's M0 timing failure.
+All functional, refusal, mutation and source-integrity checks completed
+across these captures. M0-TIME remains open; M0-EXIT and a green complete
+cumulative ladder are not claimed. Other bulk commands, ZSet support,
+remaining examples, the Lean exporter and M1 performance work remain open.
+
+### Review round 2026-09-17 (M1 List bulk pushes)
+
+The round used six findings. The judge kept two, the verifiers refuted
+two, and two were merged and then cut. Both kept findings are low and
+both are documentation only. No source file, no gate script and no
+mutation runner changed, so no recorded count moved.
+
+B-1: the staged `print/lua.ml` diff changes four lines. Line 105 narrows
+the expiry guard to tags 39 to 51 and line 108 narrows the member-count
+arm to tags 35 to 37, so tags 53 and 54 report `list length`. No mutant of
+`dev/list-bulk-mutations.py` touches either line, and no suite pins the
+text. Line 104 catches an error table first, Redis answers an integer for
+`LPUSH` and `RPUSH`, and the twin `dev/lua-store.lua` answers a number, so
+the branch is unreachable. The fix adds that statement to
+`dev/LIST-BULK.md`. No line was added to `print/lua.ml`, because the
+trusted lua group sits at 320/320.
+
+D-2: `dev/ABSOLUTE-EXPIRY.md` line 75 gave the prelude count of 154 lines
+in the present tense with no historical marker. The current count is 171
+lines, which `SPEC.md` and `dev/LIST-BULK.md` record. The fix relabels the
+sentence in the form this round used for `dev/HMGET.md`.
+
+A-1 and D-1 were refuted. `dev/MUTATION-LOG.md` has no single heading
+convention, and its dated sections are append only. C-1 and D-3 repeated
+the same heading claim and were cut.
+
+The baseline ladder of this round is `gates-baseline.log`, tag `baseline`,
+root mode, full leg. The run started at 11:37:29 at a one-minute load of
+22.72 and the full leg ended at 12:18:17. The log holds 890 non-empty rows
+and the last row `EXIT-ALL 1`. It holds 41 FAIL rows, every one in the
+ruled timing set below `FAIL M0-TIME median_ms=304.374 bound_ms=150`.
+M0-TIME remains open.
+
+The fix ladder of round 1 is `gates-fix-1.log`, tag `fix-1`, copy mode,
+full leg, on the copy `/tmp/claude-501/ladder-fix-1`. The run started at
+14:53:13 at a one-minute load of 29.69 and the full leg ended at 16:06:10.
+The log holds 846 non-empty rows and the last row `EXIT-ALL 1`. It holds
+41 FAIL rows, the same reading as the baseline run: `FAIL M0-TIME
+median_ms=283.094 bound_ms=150` once, measured at a one-minute load of
+18.85, `FAIL MEASURE` once, `FAIL STAGE-F` twice, `FAIL M1-LIST-BULK`
+once, and each of the 18 nested M1 aggregates twice (`M1-DO`,
+`M1-READONLY`, `M1-STRINGS`, `M1-HASHES`, `M1-SETS`, `M1-LISTS`,
+`M1-LIST-ACCESS`, `M1-LIST-RANGE`, `M1-SET-MEMBERS`, `M1-HASH-ENTRIES`,
+`M1-HASH-PROJECTIONS`, `M1-SET-ALGEBRA`, `M1-SET-STORE`, `M1-SET-MOVE`,
+`M1-TTL`, `M1-ABSOLUTE-EXPIRY`, `M1-CONDITIONAL-EXPIRY`, `M1-HMGET`). No
+functional FAIL row occurred, no deadline row occurred, and every mutation
+summary row reads survived=0, so the verdict of the run is
+GREEN-FUNCTIONAL. The list-bulk legs of that log read:
+
+```
+PASS LIST-BULK-BUILD
+PASS LIST-BULK-UNIT cases=40
+PASS LIST-BULK-UNIT-EXE
+PASS LIST-BULK-ARTIFACTS pairs=13
+PASS LIST-BULK-REFUSALS cases=20 atomic_output=20
+PASS LIST-BULK-ORACLES store=23 luajit=23
+PASS LIST-BULK-E2E cases=27 hosts=56 utf8_refusals=2 errors=2
+PASS LIST-BULK-EXAMPLE exec=9
+PASS LIST-BULK-TESTS
+PASS LIST-BULK-TESTS-RUN
+PASS LIST-BULK-MUTATIONS killed=16 survived=0 restored=6
+PASS LIST-BULK-MUTATIONS-RUN
+PASS LIST-BULK-COUNTS
+```
+
+| id | severity | file | fix or ruling |
+| --- | --- | --- | --- |
+| B-1 | low | print/lua.ml:105 and :108 | Fixed. dev/LIST-BULK.md gains six lines: line 105 keeps the expiry message for tags 39 to 51, line 108 keeps the member count message for tags 35 to 37, Redis answers an integer for LPUSH and RPUSH, dev/lua-store.lua answers a number or an error table that line 104 catches first, so no host reaches the two lines and no mutation covers them. |
+| D-2 | low | dev/ABSOLUTE-EXPIRY.md:75 | Fixed. Line 75 now reads that at that slice the four constructors brought the trusted preludes to 154 lines, and SPEC.md records the current count. |
+| ND-1-1 | medium | dev/M1-BUILD-LOG.md:4223 | Fixed. The closing paragraph is rewritten to name the baseline ladder and the round 1 fix ladder on disk, in place of a sentence that claimed a fix ladder before it existed. |
+| A-1 | refuted | dev/MUTATION-LOG.md:993 | Refuted. The file has no single date-first heading convention: `### M1 List range controls, 2026-09-13` and `### M1 Set enumeration mutations, 2026-09-14` use the same name comma date form, and three more forms occur elsewhere. The date-anchored pattern lists four rows, not nine. No script parses these headings. |
+| D-1 | refuted | dev/MUTATION-LOG.md:935 | Refuted. Line 935 sits inside the dated, append only section `## 2026-09-16 M1 conditional expiry` and is byte identical in HEAD and index. The same construct appears unflagged at lines 903 and 876, and no round has ever rewritten a prior round. The fix would edit a prior record. |
+| C-1 | dropped | dev/MUTATION-LOG.md:993 | Merged with D-3, then cut as the same defect as the refuted A-1. `## Stage B 2026-09-10` (186) and `## Stage C 2026-09-10` (221) are name first at the same level, and no consumer of these headings exists outside markdown. |
+| D-3 | dropped | dev/MUTATION-LOG.md:993 | Duplicate of C-1 and of A-1. Its claim that every other heading puts the date first is false on lines 3, 81, 186 and 221. |
+
+The judge refuted 2 findings, A-1 and D-1: both reproduce a cited fact
+but fail the file's actual heading and relabel conventions, so neither
+is a real defect. The judge merged and dropped 2 findings, C-1 and D-3:
+both restate the same heading claim as the refuted A-1 and are cut as
+the same defect, never revived.
+
+The close ladder of record for this round is `gates-close.log`, tag
+`close`, root mode, full leg, queued at a one-minute load of 5.52 (line
+6: `16:46  up 31 days, 19:21, 29 users, load averages: 5.52 7.65
+10.42`), started 16:46:17. The log holds 890 rows and the last row
+`EXIT-ALL 1`. It holds 41 FAIL rows, the same sorted names as
+`gates-baseline.log`. Every FAIL belongs to the ruled timing cascade:
+row 203 `MUTANT-M0-TIME exceeded median_ms=187.462 bound_ms=150`, row
+204 `KILLED SPINE-WORK by M0-TIME definitions_added=2000` and row
+216 `FAIL M0-TIME median_ms=162.611 bound_ms=150`. No functional
+FAIL row occurred, so the verdict is GREEN-FUNCTIONAL under
+the open GATE-1 timing item; the M0-TIME bound of 150 ms never moved.
+`PASS HOUSE` occurs 37 times. Row 86 holds the full trusted-lines
+row `TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320
+sh=227/240 store=200/200 host-node=196/300 host-rest=156/300
+bin=404/450 OK`, and 21 rows end in `bin=404/450 OK`. The nested
+hmget leg reads `PASS
+HMGET-MUTATIONS killed=16 survived=0 restored=6`, and the list bulk
+leg of this round reads `PASS LIST-BULK-MUTATIONS killed=16
+survived=0 restored=6`.
+
+Review pass 1 (2026-09-17) fixed 3 findings.
+
+Fix rounds: 2.

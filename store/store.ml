@@ -68,8 +68,7 @@ let smove key other member store = let* present = sismember key member store in 
 let list = read [] (function List values -> Ok values | Str _ | Hash _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
 type side = Left | Right let orient = function Left -> Fun.id | Right -> List.rev
 let llen key store = let* values = list key store in Ok (string_of_int (List.length values))
-let push side key value store = let* values = list key store in let values = orient side (value :: orient side values) in
-  Ok (string_of_int (List.length values), put key (List values) store)
+let push ?(rest = []) side key value store = let* values = list key store in let values = orient side (List.rev_append rest (value :: orient side values)) in Ok (string_of_int (List.length values), put key (List values) store)
 let pop side key store = let* values = list key store in match orient side values with | [] -> Ok (None, store)
   | value :: rest -> Ok (Some value, save key (List (orient side rest)) ~empty:(rest = []) store)
 let position values index = if index < 0L then Int64.add (Int64.of_int (List.length values)) index else index

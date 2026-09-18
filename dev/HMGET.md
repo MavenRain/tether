@@ -51,9 +51,10 @@ wrong key types, binary fields and UTF-8 refusal. Six restored controls
 and 16 compiling mutations cover argument order, nils, duplicates, state,
 read-only flags and the independent twin.
 
-The new prelude has 169 lines across both pinned files. The unchanged
-Stage D static walk uses 12 polls after 53323 checker/erasure polls;
-fuel 53329 leaves six walk polls and must still return `SH-BUDGET`.
+At the HMGET slice, the prelude had 169 lines across both pinned files.
+The Stage D static walk used 12 polls after 53323 checker/erasure polls;
+fuel 53329 left six walk polls and returned `SH-BUDGET`. See
+`dev/LIST-BULK.md` for the current prelude and fuel counts.
 All eight trusted-source bounds and the 150 ms M0 timing bound are
 unchanged. Actual gate results are recorded in `dev/M1-BUILD-LOG.md`.
 Other Hash and List bulk commands, ZSet support, remaining examples,

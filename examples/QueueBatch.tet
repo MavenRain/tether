@@ -1,0 +1,44 @@
+module QueueBatch
+
+schema jobs : String -> Key List tag b"queue"
+
+def enqueue : Script Reply (tag b"queue") := do {
+  r <- rpushMany Reply (tag b"queue") (jobs b"mail")
+    (bulkMore b"welcome:alice" (bulkMore b"welcome:bob" (bulkOne b"welcome:carol")));
+  pure Reply (tag b"queue") r
+}
+
+def urgent : Script Reply (tag b"queue") := do {
+  _ <- lpushMany Reply (tag b"queue") (jobs b"mail")
+    (bulkMore b"retry:alice" (bulkOne b"retry:bob"));
+  r <- lrange Reply (tag b"queue") (jobs b"mail") (int64 b"0") (int64 b"-1");
+  pure Reply (tag b"queue") r
+}
+
+def preview : Script Reply (tag b"queue") := do {
+  r <- lrange Reply (tag b"queue") (jobs b"mail") (int64 b"0") (int64 b"-1");
+  pure Reply (tag b"queue") r
+}
+
+def remove : Script Reply (tag b"queue") := do {
+  r <- del Reply List (tag b"queue") (jobs b"mail");
+  pure Reply (tag b"queue") r
+}
+
+def main : Client Reply := do {
+  _ <- inv Reply (tag b"queue") enqueue;
+  r <- inv Reply (tag b"queue") preview;
+  done Reply r
+}
+
+def priority : Client Reply := do {
+  _ <- inv Reply (tag b"queue") enqueue;
+  r <- inv Reply (tag b"queue") urgent;
+  done Reply r
+}
+
+def retained : Client Reply := do {
+  r <- inv Reply (tag b"queue") enqueue;
+  _ <- inv Reply (tag b"queue") remove;
+  done Reply r
+}

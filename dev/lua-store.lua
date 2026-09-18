@@ -145,7 +145,7 @@ local function list_offset(index, length)
   local n = tonumber(index)
   return n < 0 and length + n or n
 end
-local function list_call(command, key, value, extra)
+local function list_call(command, key, value, extra, ...)
   if (command == 'LTRIM' or command == 'LRANGE') and (not canonical(value) or not canonical(extra)) then
     return {err='ERR value is not an integer or out of range'}
   end
@@ -176,7 +176,9 @@ local function list_call(command, key, value, extra)
   end
   if command == 'LLEN' then return #items end
   if command == 'LPUSH' or command == 'RPUSH' then
-    table.insert(items, command == 'LPUSH' and 1 or #items + 1, value)
+    for _, item in ipairs({value, extra, ...}) do
+      table.insert(items, command == 'LPUSH' and 1 or #items + 1, item)
+    end
     values[key] = {[list_kind]=items}
     return #items
   end
@@ -218,7 +220,7 @@ local function data_call(command, key, amount, value, ...)
   end
   if command == 'LPUSH' or command == 'RPUSH' or command == 'LPOP' or command == 'RPOP' or command == 'LLEN'
     or command == 'LINDEX' or command == 'LSET' or command == 'LTRIM' or command == 'LRANGE' then
-    return list_call(command, key, amount, value)
+    return list_call(command, key, amount, value, ...)
   end
   if command == 'EXISTS' then return values[key] ~= nil and 1 or 0 end
   if command == 'DEL' then

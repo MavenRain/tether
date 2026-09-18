@@ -989,3 +989,46 @@ The existing LRANGE ARRAY-BULK and LUA-ERR-TAG anchors now match the
 generalized array encoder. Their original assertions are unchanged and
 both mutations still fail at those assertions. No trusted-source or
 timing bound changed.
+
+## M1 List bulk pushes, 2026-09-17
+
+`dev/list-bulk-mutations.py` builds every mutant before requiring a
+nonzero exit at its named semantic assertion. It uses an isolated copy,
+restores each edited file, rebuilds, and reruns all six controls.
+
+| Mutation | Deliberate defect | Required witness |
+| --- | --- | --- |
+| STORE-ORDER | Keep the tail in request order before prepending | LIST-BULK-UNIT store order, count and complete state |
+| STORE-DROP | Drop all tail values | LIST-BULK-UNIT store order, count and complete state |
+| STORE-FIRST | Corrupt the first value | LIST-BULK-UNIT store order, count and complete state |
+| STORE-EXPIRY | Remove the List deadline | LIST-BULK-UNIT store order, count and complete state |
+| STORE-TYPE | Treat a wrong key type as a missing List | LIST-BULK-UNIT store wrong type |
+| INTERPRETER-DIRECTION | Exchange the two push directions | LIST-BULK-UNIT interpreter order, count and complete state |
+| INTERPRETER-ARGS | Drop the tail while interpreting | LIST-BULK-UNIT interpreter order, count and complete state |
+| INTERPRETER-STATE | Discard the complete store after the push | LIST-BULK-UNIT interpreter order, count and complete state |
+| LUA-DIRECTION | Exchange LPUSH and RPUSH | TWIN list order mismatch |
+| LUA-LAST | Replace the final value | TWIN list order mismatch |
+| LUA-HEADS | Replace each preceding value | TWIN list order mismatch |
+| LUA-ARGUMENT-ORDER | Reverse the flattened argument spine | TWIN list order mismatch |
+| READONLY | Classify both pushes as reads | LIST-BULK write classification |
+| TWIN-ARGS | Forward only two values to the twin | TWIN list length mismatch |
+| TWIN-DIRECTION | Exchange insertion ends in the twin | TWIN list order mismatch |
+| TWIN-DROP | Insert only the first value in the twin | TWIN list length mismatch |
+
+Controls cover 40 unit scenarios and the left, right, within-script,
+cross-script and computed-argument probes. The argument-order fixture
+contains duplicates and a non-palindromic sequence of constructor heads.
+
+The focused capture `run-rsWxMp` under
+`/Users/oobi/Documents/gpt18/tether-m1-list-bulk/.kanon-exec/` records:
+
+```text
+PASS LIST-BULK-MUTATIONS killed=16 survived=0 restored=6
+```
+
+No inherited mutation assertion or trusted-source bound changed.
+
+The final continuation capture `run-yVZLJB` in the same directory repeats
+`PASS LIST-BULK-MUTATIONS killed=16 survived=0 restored=6` on the final
+source tree. It completes the nine components left unfinished by the
+external timeout of `run-QPhjp8`; the M0 timing failure remains open.

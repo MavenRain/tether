@@ -1,6 +1,6 @@
 # tether specification
 
-M1 HMGET slice, 2026-09-17. The driver emits the executable Wasm
+M1 List bulk push slice, 2026-09-17. The driver emits the executable Wasm
 Client and Bash pair. The foundation, counter surface, printers, store and
 local hosts are implemented. See `dev/STAGE-B.md` through `dev/STAGE-F.md`
 for syntax and limits. The latest build-log entry records whether the
@@ -46,6 +46,8 @@ The four `expireIf` variants take a typed NX, XX, GT or LT condition.
 See `dev/CONDITIONAL-EXPIRY.md` for conditional updates and session renewal.
 HMGET accepts a nonempty `BulkArgs` field list and returns an ordered array
 of bulk and nil replies. See `dev/HMGET.md` for duplicate fields and snapshots.
+`lpushMany` and `rpushMany` push a nonempty `BulkArgs` list in one command.
+See `dev/LIST-BULK.md` for ordering, length replies and retained expiries.
 
 ## Foundation (inherited)
 
@@ -136,7 +138,7 @@ implementation measures lua 320/320, including flags, SHA-1 and byte lowering; s
 including the shared Client plan and reactor printer; store 200/200;
 host-node 196/300; host-rest 156/300; and bin 404/450, covering the command
 host, the driver and the local process owner. Both trusted preludes are pinned by
-`dev/PRELUDES.sha256`; their 169 lines are reported separately without
+`dev/PRELUDES.sha256`; their 171 lines are reported separately without
 adding or changing a ruled bound.
 The store and printers live outside `lib`.
 OCaml uses explicit Result/Option errors, exhaustive sum matches and total
@@ -154,13 +156,13 @@ compile-time median exceeds its bound, even when all functional gates pass.
 
 M1 do-notation, EVALSHA_RO dispatch, basic String/key commands and
 single-field Hash commands, basic Set and List commands, indexed List
-access, trimming and range replies, Set and Hash enumeration and Hash
+access, trimming, range replies and bulk pushes, Set and Hash enumeration and Hash
 projections and variadic field selection, two-key Set algebra, destination writes and member transfers,
 relative, absolute and conditional expiry and persistence, and the FIFO job
 queue, preview, team roster, Hash snapshot, Hash catalog, team access and
-team cache, team transfer, session lease, session deadline, session renewal and profile-field examples are implemented.
+team cache, team transfer, session lease, session deadline, session renewal, profile-field and queue-batch examples are implemented.
 Other bulk Hash operations,
-List bulk operations, ZSet commands, other Set bulk operations, the rate limiter,
+other List bulk operations, ZSet commands, other Set bulk operations, the rate limiter,
 leaderboard and session-store examples, the counted Lean 4 exporter,
 and the M1 ratio and traversal gates remain
 M1 work. M2 adds migrations, batch,

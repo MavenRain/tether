@@ -4,6 +4,13 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports variadic List pushes with `lpushMany` and `rpushMany`.
+`./tether exec examples/QueueBatch.tet --host node` enqueues three jobs
+in one command and prints `["welcome:alice","welcome:bob","welcome:carol"]`.
+The `priority` entry prepends urgent jobs, and `retained` keeps the returned
+count after deleting the queue. See `dev/LIST-BULK.md`; run
+`sh dev/m1-list-bulk.sh` for validation.
+
 M1 now supports variadic HMGET on Hash keys. A typed nonempty field list
 preserves request order, duplicates and nil replies for missing fields.
 `./tether exec examples/ProfileFields.tet --host node` prints

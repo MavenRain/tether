@@ -72,7 +72,8 @@ Wasm/Bash executions, and the example on three hosts. The uncaught-error
 scenario is tested in LuaJIT and both live hosts. Fourteen mutations must
 fail their intended assertions, followed by eight restored controls.
 
-The four constructors increase the trusted preludes to 154 lines.
+At that slice the four constructors brought the trusted preludes to 154
+lines. `SPEC.md` records the current count.
 Checker/erasure cost for M0Spine was 44256 polls at this slice and its
 static walk was 12 polls. Stage D supplied six walk polls at fuel 44262
 to retain its printer-budget refusal. Lua remains 320/320 and store 200/200;
