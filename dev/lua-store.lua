@@ -76,8 +76,13 @@ local function hash_call(command, key, field, value, ...)
     return count
   end
   if command == 'HSET' then
-    local count = fields[field] ~= nil and 0 or 1
-    fields[field], values[key] = value, fields
+    local items, count = {field, value, ...}, 0
+    if #items % 2 ~= 0 then error('TWIN odd HSET argument count') end
+    for i = 1, #items, 2 do
+      if fields[items[i]] == nil then count = count + 1 end
+      fields[items[i]] = items[i+1]
+    end
+    values[key] = fields
     return count
   end
   if command ~= 'HINCRBY' then error('TWIN unsupported hash command') end

@@ -28,7 +28,7 @@ MUTANTS = [
     ('STORE-TYPE', 'store/store.ml', b'let hmget key first rest store = let* fields = hash key store in',
      b'let hmget key first rest store = let fields = Result.value ~default:Keys.empty (hash key store) in',
      UNIT, b'FAIL HMGET-UNIT store wrong type'),
-    ('INTERPRETER-ARGS', 'store/interp.ml', b'Ok (b, first :: rest)', b'Ok (first, b :: rest)',
+    ('INTERPRETER-ARGS', 'store/interp.ml', b'Ok (first, next :: rest)', b'Ok (next, first :: rest)',
      UNIT, b'FAIL HMGET-UNIT interpreter reply and complete state'),
     ('INTERPRETER-STATE', 'store/interp.ml', b'keep (Store.hmget key first rest store)',
      b'Result.map (fun values -> values, Store.empty) (Store.hmget key first rest store)',

@@ -3,7 +3,7 @@ let ( let* ) = Result.bind
 type value = Data of E.tid * int * value list | Fields of value list
   | Literal of Kanon_kernel.Literal.t | Closure of string * int * value list | Erased
 type reply = Nil | Int of string | Bulk of string | Status of string | Err of string | Array of reply list
-type operand = Octets of string | Signed of string | KeyName of string | Condition of Store.expiry_condition | BulkFields of string * string list
+type operand = Octets of string | Signed of string | KeyName of string | Condition of Store.expiry_condition | BulkFields of string * string list | HashPairs of (string * string) * (string * string) list
 let all xs = List.fold_right (fun x acc -> let* x = x in let* xs = acc in Ok (x :: xs)) xs (Ok [])
 let data name tag xs = Data (E.Tid ("mu<" ^ name ^ ">"), tag, xs)
 let octets = "\000\001\002\003\004\005\006\007\008\009\010\011\012\013\014\015\016\017\018\019\020\021\022\023\024\025\026\027\028\029\030\031\032\033\034\035\036\037\038\039\040\041\042\043\044\045\046\047\048\049\050\051\052\053\054\055\056\057\058\059\060\061\062\063\064\065\066\067\068\069\070\071\072\073\074\075\076\077\078\079\080\081\082\083\084\085\086\087\088\089\090\091\092\093\094\095\096\097\098\099\100\101\102\103\104\105\106\107\108\109\110\111\112\113\114\115\116\117\118\119\120\121\122\123\124\125\126\127\128\129\130\131\132\133\134\135\136\137\138\139\140\141\142\143\144\145\146\147\148\149\150\151\152\153\154\155\156\157\158\159\160\161\162\163\164\165\166\167\168\169\170\171\172\173\174\175\176\177\178\179\180\181\182\183\184\185\186\187\188\189\190\191\192\193\194\195\196\197\198\199\200\201\202\203\204\205\206\207\208\209\210\211\212\213\214\215\216\217\218\219\220\221\222\223\224\225\226\227\228\229\230\231\232\233\234\235\236\237\238\239\240\241\242\243\244\245\246\247\248\249\250\251\252\253\254\255"
@@ -15,12 +15,15 @@ let rec text = function
       let* c = Seq.find (fun c -> Char.code c = byte) (String.to_seq octets) |> Option.to_result ~none:"STORE-BYTE" in
       let* tail = text tail in Ok (String.make 1 c ^ tail)
   | Data _ | Fields _ | Literal _ | Closure _ | Erased -> Error "STORE-BYTES"
-let rec bulk_args = function
-  | Data (E.Tid "mu<BulkArgs>", 0, [b]) -> let* b = text b in Ok (b, [])
-  | Data (E.Tid "mu<BulkArgs>", 1, [b; rest]) -> let* b = text b in let* first, rest = bulk_args rest in Ok (b, first :: rest)
-  | Data _ | Fields _ | Literal _ | Closure _ | Erased -> Error "STORE-BULK-ARGS"
+let rec arguments family decode fault = function
+  | Data (E.Tid tid, 0, xs) when tid = family -> let* first = decode xs in Ok (first, [])
+  | Data (E.Tid tid, 1, xs) when tid = family -> (match List.rev xs with [] -> Error fault | tail :: heads -> let* first = decode (List.rev heads) in let* next, rest = arguments family decode fault tail in Ok (first, next :: rest))
+  | Data _ | Fields _ | Literal _ | Closure _ | Erased -> Error fault
+let bulk_args = arguments "mu<BulkArgs>" (function [b] -> text b | _ -> Error "STORE-BULK-ARGS") "STORE-BULK-ARGS"
+let bulk_pairs = arguments "mu<BulkPairs>" (function [f; v] -> let* f = text f in let* v = text v in Ok (f, v) | _ -> Error "STORE-BULK-PAIRS") "STORE-BULK-PAIRS"
 let operand = function
   | (Data (E.Tid "mu<BulkArgs>", _, _) as args) -> Result.map (fun (first, rest) -> BulkFields (first, rest)) (bulk_args args)
+  | (Data (E.Tid "mu<BulkPairs>", _, _) as args) -> Result.map (fun (first, rest) -> HashPairs (first, rest)) (bulk_pairs args)
   | Data (E.Tid "mu<Signed64>", 0, [b]) -> Result.map (fun s -> Signed s) (text b)
   | Data (E.Tid "mu<Key>", 0, [b]) -> Result.map (fun s -> KeyName s) (text b)
   | Data (E.Tid "mu<ExpiryCondition>", tag, []) -> List.assoc_opt tag [0, Store.NX; 1, Store.XX; 2, Store.GT; 3, Store.LT] |> Option.to_result ~none:"STORE-EXPIRY-CONDITION" |> Result.map (fun c -> Condition c)
@@ -70,20 +73,17 @@ let run ~budget rows ~entry store =
     | Data (E.Tid "mu<Script>", tag, Data (E.Tid "mu<Key>", 0, [key]) :: args) -> let* key = text key in
         let* args, k = match List.rev args with [] -> Error "STORE-SCRIPT-COMMAND" | k :: vs -> let* vs = all (List.rev_map operand vs) in Ok (vs, k) in
         let finish encode result = Ok (Result.fold ~ok:(fun (s, st) -> encode s, st) ~error:(fun e -> data "Reply" 4 [bytes (Store.message e)], store) result) in
-        let scalar tag s = data "Reply" tag [bytes s] in let keep r = Result.map (fun s -> s, store) r in
-        let integer = finish (fun s -> data "Reply" 1 [data "Signed64" 0 [bytes s]]) in
+        let scalar tag s = data "Reply" tag [bytes s] in let keep r = Result.map (fun s -> s, store) r in let integer = finish (fun s -> data "Reply" 1 [data "Signed64" 0 [bytes s]]) in
         let nullable = Option.fold ~none:(data "Reply" 0 []) ~some:(scalar 2) in let bulk = finish nullable in let status = finish (scalar 3) in
         let array encode = finish (fun ss -> data "Reply" 5 [List.fold_right (fun s rs -> data "Replies" 1 [encode s; rs]) ss (data "Replies" 0 [])]) in
         let* answer, store = match tag, args with
           | (1 | 6), [] -> integer (Store.incrby key (if tag = 1 then "1" else "-1") store)
           | 2, [] -> bulk (keep (Store.get key store))
-          | 3, [Octets s] -> status (Ok (Store.set key s store))
-          | 4, [Signed s] -> status (Store.integer s |> Result.map (fun _ -> Store.set key s store))
+          | 3, [Octets s] -> status (Ok (Store.set key s store)) | 4, [Signed s] -> status (Store.integer s |> Result.map (fun _ -> Store.set key s store))
           | 5, [Signed s] -> integer (Store.incrby key s store)
           | (7 | 8), [] -> integer (Ok (if tag = 7 then Store.del key store else (Store.exists key store, store)))
-          | 9, [Octets f; Octets v] -> integer (Store.hset key f v store)
-          | 10, [Octets f] -> bulk (keep (Store.hget key f store))
-          | (11 | 12), [Octets f] -> integer (if tag = 11 then Store.hdel key f store else keep (Store.hexists key f store))
+          | 9, [Octets f; Octets v] -> integer (Store.hset key f v store) | 58, [HashPairs ((f, v), rest)] -> integer (Store.hset ~rest key f v store)
+          | 10, [Octets f] -> bulk (keep (Store.hget key f store)) | (11 | 12), [Octets f] -> integer (if tag = 11 then Store.hdel key f store else keep (Store.hexists key f store))
           | (13 | 18 | 23), [] -> integer (keep ((if tag = 13 then Store.hlen else if tag = 18 then Store.scard else Store.llen) key store))
           | 14, [Octets f; Signed v] -> integer (Store.hincrby key f v store)
           | (15 | 16), [Octets m] -> integer ((if tag = 15 then Store.sadd else Store.srem) key m store)

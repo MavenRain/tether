@@ -25,6 +25,7 @@ local function key(k)
 end
 local function clos(f,n,c) return {f=f,n=n,c=c} end
 local function bulkargs(xs,tail) for i = #xs, 1, -1 do tail = {tag=1,xs[i],tail} end; return tail end
+local function bulkpairs(xs,tail) if #xs % 2 ~= 0 then error('LUA-PAIRS odd head') end for i = #xs - 1, 1, -2 do tail = {tag=1,xs[i],xs[i+1],tail} end; return tail end
 local function app(f,args)
   local values = {}
   for i = 1, #f.c do values[#values+1] = f.c[i] end
@@ -53,21 +54,17 @@ end
 local function run(s) while s.tag ~= 0 do
     local k, r, next = key(s[1]), false, s[2]
     if s.tag == 1 or s.tag == 5 or s.tag == 6 or s.tag == 14 then
-      local changed
-      if s.tag == 14 then changed = redis.pcall('HINCRBY',k,text(s[2]),text(s[3][1])); next = s[4]
+      local changed; if s.tag == 14 then changed = redis.pcall('HINCRBY',k,text(s[2]),text(s[3][1])); next = s[4]
       elseif s.tag == 5 then changed = redis.pcall('INCRBY',k,text(s[2][1])); next = s[3]
       else changed = redis.pcall(s.tag == 1 and 'INCR' or 'DECR',k) end
       if type(changed) == 'table' and changed.err then r = {tag=4,bytes(changed.err)}
-      else
-        local read
-        if s.tag == 14 then read = redis.pcall('HGET',k,text(s[2])) else read = redis.pcall('GET',k) end
+      else local read; if s.tag == 14 then read = redis.pcall('HGET',k,text(s[2])) else read = redis.pcall('GET',k) end
         if type(read) == 'table' and read.err then r = {tag=4,bytes(read.err)}
         elseif read == false then r = {tag=0}
         else r = {tag=1,{tag=0,bytes(read)}} end
       end
     elseif s.tag == 2 or s.tag == 3 or s.tag == 4 or s.tag == 10 or s.tag == 21 or s.tag == 22 or (s.tag >= 24 and s.tag <= 34) or s.tag == 52 then
-      local got
-      if s.tag == 10 then got = redis.pcall('HGET',k,text(s[2])); next = s[3]
+      local got; if s.tag == 10 then got = redis.pcall('HGET',k,text(s[2])); next = s[3]
       elseif s.tag == 2 then got = redis.pcall('GET',k)
       elseif s.tag == 52 then local args, fs = {k}, s[2]; while fs.tag == 1 do args[#args+1], fs = text(fs[1]), fs[2] end; args[#args+1] = text(fs[1]); got = redis.pcall('HMGET',unpack(args)); next = s[3]
       elseif s.tag >= 28 and s.tag <= 34 then
@@ -85,8 +82,9 @@ local function run(s) while s.tag ~= 0 do
         if s.tag ~= 27 and s.tag ~= 52 then table.sort(order,function(a,b) return byte_less(got[a],got[b]) end) end
         local rs = {tag=0}; for n = #order, 1, -1 do for i = order[n]+stride-1, order[n], -1 do rs = {tag=1,got[i] == false and {tag=0} or {tag=2,bytes(got[i])},rs} end end; r = {tag=5,rs}
       elseif got == false then r = {tag=0} else r = {tag=2,bytes(got)} end
-    elseif (s.tag >= 7 and s.tag <= 13) or (s.tag >= 15 and s.tag <= 20) or s.tag == 23 or (s.tag >= 35 and s.tag <= 51) or (s.tag >= 53 and s.tag <= 57) then
+    elseif (s.tag >= 7 and s.tag <= 13) or (s.tag >= 15 and s.tag <= 20) or s.tag == 23 or (s.tag >= 35 and s.tag <= 51) or (s.tag >= 53 and s.tag <= 58) then
       local got; if s.tag == 9 then got = redis.pcall('HSET',k,text(s[2]),text(s[3])); next = s[4]
+      elseif s.tag == 58 then local args, ps = {k}, s[2]; while ps.tag == 1 do args[#args+1], args[#args+2], ps = text(ps[1]), text(ps[2]), ps[3] end; args[#args+1], args[#args+2] = text(ps[1]), text(ps[2]); got = redis.pcall('HSET',unpack(args)); next = s[3]
       elseif s.tag >= 53 and s.tag <= 57 then local args, vs = {k}, s[2]; while vs.tag == 1 do args[#args+1], vs = text(vs[1]), vs[2] end; args[#args+1] = text(vs[1]); got = redis.pcall(s.tag == 57 and 'HDEL' or (s.tag >= 55 and (s.tag == 55 and 'SADD' or 'SREM') or (s.tag == 53 and 'LPUSH' or 'RPUSH')),unpack(args)); next = s[3]
       elseif s.tag >= 39 then
         local args = {k}; if s.tag <= 40 or s.tag == 44 or s.tag == 45 or s.tag >= 48 then args[2], next = text(s[2][1]), s[3] end
@@ -103,9 +101,8 @@ local function run(s) while s.tag ~= 0 do
       else got = redis.pcall(s.tag == 7 and 'DEL' or 'EXISTS',k) end
       if type(got) == 'table' and got.err then r = {tag=4,bytes(got.err)}
       elseif s.tag >= 39 and s.tag <= 51 and (type(got) ~= 'number' or got >= 9007199254740992 or got < -2 or got ~= math.floor(got)) then r = {tag=4,bytes('ERR expiry reply is outside exact integer range')}
-      elseif type(got) ~= 'number' then
-        local what = (s.tag == 7 or s.tag == 8) and 'key count' or ((s.tag == 17 or s.tag == 38) and 'membership'
-          or (s.tag == 57 and 'field count' or (((s.tag >= 35 and s.tag <= 37) or s.tag >= 55) and 'member count' or (s.tag >= 19 and 'list length' or (s.tag >= 15 and 'member count' or 'field count')))))
+      elseif type(got) ~= 'number' then local what = (s.tag == 7 or s.tag == 8) and 'key count' or ((s.tag == 17 or s.tag == 38) and 'membership'
+          or (s.tag >= 57 and 'field count' or (((s.tag >= 35 and s.tag <= 37) or s.tag >= 55) and 'member count' or (s.tag >= 19 and 'list length' or (s.tag >= 15 and 'member count' or 'field count')))))
         r = {tag=4,bytes('ERR ' .. what .. ' reply is not an integer')}
       else r = {tag=1,{tag=0,bytes(string.format('%d',got))}} end
     else error('LUA-SCRIPT unsupported tag') end
@@ -142,6 +139,9 @@ let emit rows ~entry =
         let rec collect acc = function E.KTag (E.Tid "mu<BulkArgs>", 1, [head; tail]) -> collect (head :: acc) tail
           | (E.KVar _ | E.KLit _ | E.KErased | E.KGlobal _ | E.KClos _ | E.KApp _ | E.KTail _ | E.KStruct _ | E.KTag _ | E.KProj _ | E.KLet _ | E.KCase _ | E.KDelay _ | E.KForce _) as tail -> List.rev acc, tail in
         let heads, tail = collect [head] tail in let* heads = many heads in let* tail = expr depth env tail in Ok ("bulkargs({" ^ heads ^ "}," ^ tail ^ ")")
+    | E.KTag (E.Tid "mu<BulkPairs>", 1, [field; value; tail]) ->
+        let rec collect acc = function E.KTag (E.Tid "mu<BulkPairs>", 1, [f; v; tail]) -> collect (v :: f :: acc) tail
+          | (E.KVar _ | E.KLit _ | E.KErased | E.KGlobal _ | E.KClos _ | E.KApp _ | E.KTail _ | E.KStruct _ | E.KTag _ | E.KProj _ | E.KLet _ | E.KCase _ | E.KDelay _ | E.KForce _) as tail -> List.rev acc, tail in let heads, tail = collect [value; field] tail in let* heads = many heads in let* tail = expr depth env tail in Ok ("bulkpairs({" ^ heads ^ "}," ^ tail ^ ")")
     | E.KTag (_tid, tag, fields) -> let* fields = many fields in Ok (Printf.sprintf "{tag=%d%s%s}" tag (if fields = "" then "" else ",") fields)
     | E.KProj (_tid, index, value) -> let* value = expr depth env value in Ok (Printf.sprintf "(%s)[%d]" value (index + 1))
     | E.KLet (_name, value, body) ->

@@ -32,6 +32,10 @@ mu BulkArgs : Type 0 :=
 | bulkOne : Bytes -> BulkArgs
 | bulkMore : Bytes -> BulkArgs -> BulkArgs
 
+mu BulkPairs : Type 0 :=
+| pairOne : Bytes -> Bytes -> BulkPairs
+| pairMore : Bytes -> Bytes -> BulkPairs -> BulkPairs
+
 mutual
 mu Reply : Type 0 :=
 | nil : Reply
@@ -114,6 +118,7 @@ mu Script (0 A : Type 0) : (0 g : Tag) -> Type 0 :=
 | saddMany : (0 g : Tag) -> Key Set g -> BulkArgs -> (Reply -> Script A g) -> Script A g
 | sremMany : (0 g : Tag) -> Key Set g -> BulkArgs -> (Reply -> Script A g) -> Script A g
 | hdelMany : (0 g : Tag) -> Key Hash g -> BulkArgs -> (Reply -> Script A g) -> Script A g
+| hsetMany : (0 g : Tag) -> Key Hash g -> BulkPairs -> (Reply -> Script A g) -> Script A g
 
 mu Client (0 A : Type 0) : Type 0 :=
 | done : A -> Client A

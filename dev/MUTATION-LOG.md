@@ -1109,3 +1109,67 @@ summaries. The full ladder stays red solely for the open M0 timing gate.
 
 All inherited mutation assertions, trusted-source bounds and the 150 ms
 M0 timing bound remain in place.
+
+## 2026-09-18 M1 Hash field/value writes
+
+The `dev/hset-many-mutations.py` runner compiles each mutant in an
+isolated copy and requires its named semantic assertion to fail.
+Compilation failures and missing or ambiguous anchors cannot count as
+kills. The runner restores each source file in `finally`, rebuilds, and
+requires all six exact control markers after the final restoration.
+
+| Mutation | Required detector |
+| --- | --- |
+| STORE-DUPLICATES | Distinct new-field count and complete state |
+| STORE-TAIL | Remaining pairs are applied |
+| STORE-FIRST | The first field and value are retained |
+| STORE-ORDER | The last repeated field wins |
+| STORE-EXPIRY | Complete state includes the existing expiry |
+| STORE-TYPE | Wrong types refuse without writes |
+| INTERPRETER-ARGS | The interpreter passes all remaining pairs |
+| INTERPRETER-PAIR | Field and value positions stay distinct |
+| INTERPRETER-STATE | Returned state retains unrelated data |
+| LUA-COMMAND | HSET writes the complete expected Hash |
+| LUA-LAST | The final pair's value is preserved |
+| LUA-HEADS | Computed fields and values keep their positions |
+| LUA-FLATTEN | Iterative lowering preserves all 129 pairs |
+| READONLY | Tag 58 always uses write dispatch |
+| TWIN-ARGS | The independent twin applies every pair |
+| TWIN-COUNT | Repeated and existing fields do not inflate counts |
+
+Controls are the 43-case unit suite, a nine-case write probe,
+three 129-pair cases, and one case each for computed operands,
+within-Script retention and cross-invocation retention. The older
+HSET-COUNT mutation retains its overwrite-count assertion while its
+anchor follows the shared HSET implementation. HMGET's INTERPRETER-ARGS
+anchor follows the shared argument decoder and still swaps the first
+two arguments. Its reply-and-complete-state assertion is unchanged.
+Earlier records are unchanged.
+
+The first full ladder capture, `run-hjThUQ`, exposed a stale HMGET
+INTERPRETER-ARGS anchor and five stale scalar-state detector markers in
+the new suite. The HMGET anchor now targets the generic decoder's
+`Ok (first, next :: rest)` expression. The HSET markers now pin the
+actual Hash-state assertions. The initial failures remain in their
+capture; they are not counted as successful kills.
+
+The corrected complete runners report:
+
+```text
+PASS HSET-MANY-MUTATIONS killed=16 survived=0 restored=6
+PASS HMGET-MUTATIONS killed=16 survived=0 restored=6
+```
+
+Evidence is retained under
+`/Users/oobi/Documents/gpt18/tether-m1-hset-many/.kanon-exec/`:
+`run-pKXzlo` for HSET and `run-LOcPwk` for HMGET. Both exit 0 with empty
+stderr, 16 named kills and all six controls restored. The full-stream
+audit `run-Gb8dfw` verifies these alongside every earlier slice's required
+rows and all 27 mutation summaries. The independent 150 ms M0 timing
+gate remains open at a measured median of 293.206 ms.
+
+The review round of 2026-09-18 renames the twin HSET argument table from
+`pairs` to `items` and refuses an odd argument count. The TWIN-ARGS and
+TWIN-COUNT anchors follow the new names. Both detectors are unchanged.
+The unit control is the 43-case suite, which adds the empty tag 1
+`mu<BulkPairs>` payload.

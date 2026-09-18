@@ -13,8 +13,8 @@ STATIC = [sys.executable, '-P', 'dev/hashes-tests.py', '--static']
 BUILD = ['dune', 'build', 'bin/tether.exe', 'dev/store_run.exe', 'dev/hashes_tests.exe']
 MUTANTS = [
     ('HGET-WRITE', 'print/flags.ml', b'&& tag <> 10', b'&& true', STATIC, b'HASHES write classification'),
-    ('HSET-COUNT', 'store/store.ml', b'if Keys.mem field fields = adding then "0" else "1"',
-     b'if adding || Keys.mem field fields then "1" else "0"',
+    ('HSET-COUNT', 'store/store.ml', b'Keys.cardinal updated - Keys.cardinal fields',
+     b'List.length ((field, value) :: rest)',
      UNIT, b'FAIL HASHES-UNIT overwrite count'),
     ('HDEL-EMPTY-KEY', 'store/store.ml', b'~empty:(Keys.is_empty fields)',
      b'~empty:(Keys.is_empty fields && not (Keys.mem key store.values))',

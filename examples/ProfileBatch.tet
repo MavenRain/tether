@@ -1,0 +1,31 @@
+module ProfileBatch
+schema profiles : String -> Key Hash tag b"profiles"
+
+def save : Script Reply (tag b"profiles") := do {
+  r <- hsetMany Reply (tag b"profiles") (profiles b"alice")
+    (pairMore b"name" b"Alice" (pairMore b"role" b"guest"
+      (pairMore b"role" b"member" (pairOne b"visits" b"9007199254740993"))));
+  pure Reply (tag b"profiles") r
+}
+def view : Script Reply (tag b"profiles") := do {
+  r <- hgetall Reply (tag b"profiles") (profiles b"alice");
+  pure Reply (tag b"profiles") r
+}
+def erase : Script Reply (tag b"profiles") := do {
+  r <- del Reply Hash (tag b"profiles") (profiles b"alice");
+  pure Reply (tag b"profiles") r
+}
+def main : Client Reply := do {
+  _ <- inv Reply (tag b"profiles") save;
+  r <- inv Reply (tag b"profiles") view;
+  done Reply r
+}
+def added : Client Reply := do {
+  r <- inv Reply (tag b"profiles") save;
+  done Reply r
+}
+def retained : Client Reply := do {
+  r <- inv Reply (tag b"profiles") save;
+  _ <- inv Reply (tag b"profiles") erase;
+  done Reply r
+}

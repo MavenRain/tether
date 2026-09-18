@@ -65,9 +65,9 @@ Redis key bytes. Binary values can still pass through JSON strings.
 All front-end and static-control walks share the explicit kernel budget.
 At fuel 0 the checker exhausts that budget before the static walk starts,
 so one gate case pins the checker's `CHECK budget` refusal. The front end
-and erasure of `M0Spine.tet` spend 62148 polls with the M1 Hash deletion
-prelude and the static walk spends 12, so fuel 62148 through 62159 reaches
-the printer's own guard. A second gate case runs at fuel 62154 and pins
+and erasure of `M0Spine.tet` spend 64007 polls with the M1 Hash write
+prelude and the static walk spends 12, so fuel 64007 through 64018 reaches
+the printer's own guard. A second gate case runs at fuel 64013 and pins
 `SH-BUDGET`.
 Resource exhaustion in other printer work remains residual.
 

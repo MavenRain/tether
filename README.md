@@ -4,6 +4,15 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports variadic Hash writes with `hsetMany`. A nonempty
+`BulkPairs` value keeps every field paired with its value.
+`./tether exec examples/ProfileBatch.tet --host node` stores a profile in
+one command and prints
+`["name","Alice","role","member","visits","9007199254740993"]`. The
+`added` and `retained` entries return the distinct new-field count `3`,
+and `retained` keeps that count after a later invocation deletes the Hash.
+See `dev/HSET-MANY.md`; run `sh dev/m1-hset-many.sh` for validation.
+
 M1 now supports variadic Hash deletion with `hdelMany`.
 `./tether exec examples/ProfileCleanup.tet --host node` removes stale
 profile fields and prints `["name","Alice"]`. The `removed` and `retained`

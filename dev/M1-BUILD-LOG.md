@@ -4627,3 +4627,198 @@ finder/builder/closer unmet, verifier met.
 Review pass 1 (2026-09-18) fixed 4 findings.
 
 Fix rounds: 2.
+
+## 2026-09-18 M1 Hash field/value writes
+
+This slice adds `hsetMany` at Script tag 58 and the nonempty `BulkPairs`
+type. `pairOne` contains a field and value; `pairMore` adds another pair.
+The type excludes empty and odd-length requests and keeps the existing
+`BulkArgs` command APIs and all older Script tags stable.
+
+The Lua printer emits one HSET command and lowers pair spines iteratively,
+including computed fields, values and tails. The independent store uses
+ordered field updates and counts new distinct fields. Its shared HSET
+implementation preserves untouched fields, complete state and expiry.
+The unused `change_hash ~adding` helper recorded as A-3 in the previous
+review is removed. The HSET-COUNT mutation is re-anchored to the new
+count expression and retains its original overwrite-count assertion.
+The HMGET INTERPRETER-ARGS mutation follows the shared argument decoder
+and retains its original reply-and-complete-state assertion.
+No earlier mutation or build-log record is rewritten.
+
+`examples/ProfileBatch.tet` writes a profile with a repeated role field.
+Its main entry returns
+`["name","Alice","role","member","visits","9007199254740993"]`.
+The `added` and `retained` entries return `3`, with retention checked
+after a later invocation deletes the Hash.
+
+The new ladder requires 43 unit cases, nine artifact pairs, 14 typed
+refusals with no published output, 23 store/twin cases, 52 live-host runs
+and nine example executions. Tests cover new and existing Hashes,
+overwrites and duplicate fields, empty and binary fields and values,
+129-pair requests, computed operands, complete state and key expiry,
+every wrong Redis type, within-Script and cross-invocation retention,
+and errors or invalid UTF-8 without partial stdout.
+
+The socket-free suite passes in
+`/Users/oobi/Documents/gpt18/tether-m1-hset-many/.kanon-exec/run-JmflKY`.
+The instrumented fuel probe in `run-G1f0Kw` reports
+`FUEL before=64007 after=64019`. Stage D leaves six walk polls at fuel
+64013 and keeps the zero-fuel checker refusal. The two pinned preludes
+total 179 lines. All eight trusted-source bounds remain unchanged:
+kernel 3997/4000, encoder 246/600, Lua 320/320, shell 227/240,
+store 200/200, Node 196/300, REST 156/300 and driver 404/450.
+The pinned vendor, frozen denominators and 150 ms M0 timing bound are
+unchanged.
+
+The full ladder is captured at
+`/Users/oobi/Documents/gpt18/tether-m1-hset-many/.kanon-exec/run-hjThUQ`.
+It completed with 928 stdout rows, empty stderr and exit 1. All new
+functional checks passed, including 52 Node/Bash host runs, nine example
+executions, 14 atomic typed refusals and 23 store/twin cases.
+
+Two mutation-runner defects were corrected after that run. HMGET's
+INTERPRETER-ARGS anchor still named the pre-refactor decoder. Five new
+HSET mutants failed at the intended Hash-state assertions, but their
+runner expected the scalar-state diagnostic. The corrected markers
+require `TWIN expected hash` for LUA-COMMAND and `TWIN hash field mismatch`
+for LUA-LAST, LUA-HEADS, LUA-FLATTEN and TWIN-ARGS. The production code and
+functional fixtures were unchanged after the full ladder.
+
+Both complete mutation suites pass after those fixes: capture `run-pKXzlo`
+reports `PASS HSET-MANY-MUTATIONS killed=16 survived=0 restored=6`, and
+`run-LOcPwk` reports `PASS HMGET-MUTATIONS killed=16 survived=0 restored=6`.
+Each capture contains 16 named kills, its exact final marker and no stderr.
+
+The full-stream audit in `run-Gb8dfw` checks every byte of the full ladder
+and both reruns. It verifies 151 required rows and 27 mutation summaries.
+The original ladder contains 440 PASS rows and 53 FAIL rows: 47 belong
+to the timing result and its aggregate propagation; six record the two
+mutation failures and their enclosing run/count legs, now closed by the
+two complete reruns. No other failure is present. The audit exits 0 with
+`FUNCTIONAL-OK`, and retains `full_ladder=FAIL` for the original run.
+
+The timing gate reports `FAIL M0-TIME median_ms=293.206 bound_ms=150`.
+GATE-1 remains open. The bound, deliberate SPINE-WORK timing mutation
+and 149/150 ms boundary control remain unchanged. No full green ladder
+is claimed. Final house, prelude-integrity and trusted-line checks pass.
+
+### Review round 2026-09-18 (M1 Hash field/value writes)
+
+The round reviewed the staged slice on `0d59add`: Script tag 58,
+`hsetMany` over the pair list `mu BulkPairs`, 26 staged paths, +830/-50.
+The round used 17 findings. The judge kept 7, the verifiers refuted 7,
+and 3 were merged and then cut. All seven kept findings are fixed. No
+production behaviour changes for an even argument list,
+which is the only list that the printer and the interpreter build today.
+
+`README.md` said that `added` and `retained` return the three new fields.
+Both entries return the reply of `save`, which is the integer count `3`.
+The Status paragraph now prints the main reply, names the distinct
+new-field count and keeps the retention sentence, in the form of the
+`hdelMany` paragraph below it (D-1).
+
+`dev/hset_many_tests.ml` now refuses a `mu<BulkPairs>` node that has tag 1
+and an empty payload. The shared decoder of `store/interp.ml` answers that
+shape with the family fault `STORE-BULK-PAIRS`, and no case built the
+shape before. The unit inventory moves from 42 cases to 43.
+`dev/m1-hset-many.sh`, the controls of `dev/hset-many-mutations.py`,
+`dev/HSET-MANY.md`, `dev/MUTATION-LOG.md` and this log move with it (A-1).
+
+`dev/lua-store.lua` named its HSET argument table `pairs`, which hides the
+standard global that the same file uses for HLEN and SCARD. The table is
+now `items`. The block also counted a field as new and then stored nil
+when the argument count is odd. It now refuses an odd count with
+`TWIN odd HSET argument count`. The TWIN-ARGS and TWIN-COUNT anchors of
+`dev/hset-many-mutations.py` follow the new names and keep their
+detectors (B-2).
+
+`bulkpairs` of `print/lua.ml` stepped from `#xs` down to 2 and dropped the
+first element when the head list has an odd length. The helper now steps
+in pairs from `#xs - 1` and refuses an odd head list. The change is one
+row for one row, so the Lua group stays at 320/320 (B-3).
+
+`dev/hset-many-tests.py` pinned the bare prefix `CHECK` for the arity
+refusal, which any `CHECK` diagnostic satisfies. The row now pins
+`CHECK mismatch: pairOne takes 2 arguments and the term gives 1`, which is
+the measured refusal. The count row stays at 14 typed refusals (B-1).
+
+`dev/HDEL-MANY.md` used the spelling "totalled" against seven "totaled"
+rows of the sibling documents, and the rewritten pointer paragraph left
+rows of 24 and 80 columns. The paragraph is re-filled with the same words
+and the repository spelling (D-2, D-3).
+
+Seven findings are refuted and never revived. A-2: the shared anchor is
+real, but the two entries differ in test binary and required marker. A-4:
+the spine is mutated, by `dev/hmget-mutations.py:31`. B-4: the cited row
+is correct for every input and rows 78 to 86 hold no `pairs()` call, so
+the item is a naming preference, not a defect. C-2: the retarget was
+forced because the old `~adding` anchor no longer exists, and the
+coverage is not duplicate. C-3: the `BulkPairs` instantiation is mutated
+by INTERPRETER-PAIR. C-4: the count is asserted by the quoted line, where
+`hosts = 2*len(live_cases) + 2 = 52`. D-4: date-first is the file's own
+majority dated form. Three findings are merged and then cut: B-5 into
+D-1, which is the same file and the same defect; A-3 into B-2, whose
+rename holds the fix; and C-1 by the cap, because its "four distinct
+detector markers" title is wrong.
+
+The baseline ladder of this round is `gates-baseline.log`, tag
+`baseline`. It has 1000 rows, 450 PASS rows and 47 FAIL rows, and its
+last row reads `EXIT-ALL 1`. The one-minute load was 14.79 at the queue
+10:28:38 and the LOAD row of 10:40 reads 22.13 30.07 32.06. The timing
+row reads `FAIL M0-TIME median_ms=222.748 bound_ms=150`. The FAIL
+multiset is the timing cascade: M0-TIME, MEASURE, STAGE-F twice, every
+nested M1 aggregate twice and M1-HSET-MANY once. GATE-1 stays open.
+
+The fix ladder of round 1 is `gates-fix-1.log`, tag `fix-1`. It is a copy
+ladder with hset-many-only legs on W/scratch/probe-fix1 and it holds no
+M0-TIME leg. It has 51 rows, 16 PASS rows and 0 FAIL rows, and its last
+row reads `EXIT-ALL 0`. The one-minute load was 23.60 at 12:46:56. Its
+one FAIL-LEG HSET-MANY-COUNTS row reads
+`MISSING ROW PASS HSET-MANY-UNIT cases=42`, which is the stale copy-mode
+kit count pin that predates the A-1 unit case, not a functional failure;
+the driver `dev/m1-hset-many.sh` pins cases=43 and the close ladder rules
+on the driver.
+
+The close ladder of record for this round is `gates-close.log`, tag
+`close`. It has 1000 rows, 450 PASS rows and 47 FAIL rows, and its last
+row reads `EXIT-ALL 1`. The one-minute load was 29.59 at the daemon start
+12:48:46 and the run ended 13:32:50. Its FAIL multiset is the same as the
+baseline multiset, with `FAIL M0-TIME median_ms=207.468 bound_ms=150`.
+The root HSET-MANY-COUNTS leg passes on cases=43 and
+`PASS HSET-MANY-MUTATIONS killed=16 survived=0 restored=6` holds.
+
+The M0-TIME bound of 150 ms never moved. Every FAIL row of each ladder
+belongs to the ruled timing cascade, and a timing FAIL at a one-minute
+load below 40 leaves GATE-1 open rather than marking a regression. No
+functional FAIL row occurred and every mutation summary row reads
+survived=0, so each ladder is GREEN-FUNCTIONAL under the open GATE-1
+timing item. The top verdict row reads `FAIL M1-HSET-MANY`.
+
+```
+PASS M0-TIME-BOUNDARY below=149 at=150
+LOAD 12:55  up 32 days, 15:30, 29 users, load averages: 19.81 21.93 24.41
+FAIL M0-TIME median_ms=207.468 bound_ms=150
+PASS HSET-MANY-UNIT cases=43
+PASS HSET-MANY-ARTIFACTS pairs=9
+PASS HSET-MANY-REFUSALS cases=14 atomic_output=14
+PASS HSET-MANY-ORACLES store=23 luajit=23
+PASS HSET-MANY-E2E cases=25 hosts=52 utf8_refusals=2 errors=2
+PASS HSET-MANY-EXAMPLE exec=9
+PASS HSET-MANY-TESTS
+PASS HSET-MANY-MUTATIONS killed=16 survived=0 restored=6
+PASS HSET-MANY-COUNTS
+TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240 store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK
+FAIL M1-HSET-MANY
+EXIT 1
+EXIT-MUT 0
+EXIT-ALL 1
+```
+
+The round ran its finders at opus medium, its verifiers and its judge at
+opus max, its fixer at opus xhigh, and its closer at opus medium; every
+tier ruling of 2026-09-18 is met.
+
+Review pass 1 (2026-09-18) fixed 7 findings.
+
+Fix rounds: 1.

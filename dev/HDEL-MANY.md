@@ -48,13 +48,16 @@ example executions. Five restored controls and 14 compiling mutations
 cover distinct counts, complete state, expiry, deletion, argument lowering,
 write classification and the independent twin.
 
-The two pinned preludes total 174 lines. Stage D's static walk uses
-12 polls after 62148 checker/erasure polls. Fuel 62154 leaves six walk
-polls and must return `SH-BUDGET` without publishing output. All eight
-trusted-source bounds and the 150 ms M0 timing bound remain unchanged.
+At this slice's close, the two pinned preludes totaled 174 lines.
+Stage D's static walk used 12 polls after 62148 checker/erasure polls.
+Fuel 62154 left six walk polls and returned `SH-BUDGET` without
+publishing output. See `dev/HSET-MANY.md` for the current prelude and
+fuel counts. All eight trusted-source bounds and the 150 ms M0 timing
+bound remain unchanged.
 The malformed integer reply diagnostic is defensive and has no mutation
 claim; Redis and the twin return a number or error for HDEL.
 
 Actual validation results are recorded in `dev/M1-BUILD-LOG.md`. Bulk
-Hash writes, other List and Set bulk commands, ZSet support, remaining
+Hash writes are described in `dev/HSET-MANY.md`. Other List and Set bulk
+commands, ZSet support, remaining
 examples, the Lean exporter and M1 performance milestones remain open.
