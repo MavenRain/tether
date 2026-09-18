@@ -52,10 +52,12 @@ example executions. Six restored controls and 16 compiling mutations
 cover distinct counts, complete state, expiry, deletion, argument lowering,
 write classification and the independent twin.
 
-The two pinned preludes total 173 lines. Stage D's static walk uses
-12 polls after 60327 checker/erasure polls. Fuel 60333 leaves six walk
-polls and must return `SH-BUDGET` without publishing output. All eight
-trusted-source bounds and the 150 ms M0 timing bound remain unchanged.
+At the Set bulk slice, the two pinned preludes totaled 173 lines.
+Stage D's static walk used 12 polls after 60327 checker/erasure polls.
+Fuel 60333 left six walk polls and returned `SH-BUDGET` without publishing
+output. See `dev/HDEL-MANY.md` for the current prelude and fuel counts.
+All eight trusted-source bounds and the 150 ms M0 timing bound are
+unchanged.
 The integer reply type checks remain defensive: Redis and the twin return
 a number or error for these commands, so their malformed-type diagnostic
 branches are not exercised by the host or mutation cases.

@@ -1068,3 +1068,44 @@ PASS SET-BULK-MUTATIONS killed=16 survived=0 restored=6
 ```
 
 All inherited mutation assertions and trusted-source bounds remain in place.
+
+## M1 Hash field deletion, 2026-09-18
+
+`python3 -P dev/hdel-many-mutations.py` checks 14 compiling mutations
+against assertions about the command's observable behavior. The runner
+works in a temporary copy, restores each edited file and rebuilds before
+rerunning the five named controls. Its summary counts observed control
+markers and requires the complete control inventory.
+
+| Mutation | Required failure |
+| --- | --- |
+| STORE-DUPLICATES | Missing or duplicate fields counted as removals |
+| STORE-TAIL | Remaining requested fields omitted |
+| STORE-FIRST | First requested field changed |
+| STORE-EXPIRY | Nonempty Hash loses its expiry |
+| STORE-EMPTY | Empty Hash key retained |
+| STORE-TYPE | Wrong-type store operation accepted |
+| INTERPRETER-ARGS | Interpreter drops remaining fields |
+| INTERPRETER-STATE | Interpreter drops unrelated state |
+| LUA-COMMAND | Lua dispatch selects HEXISTS instead of HDEL |
+| LUA-LAST | Terminal field lost in the emitted command |
+| LUA-HEADS | Earlier fields lost in the emitted command |
+| READONLY | Write command classified as read-only |
+| TWIN-ARGS | Independent twin drops remaining fields |
+| TWIN-COUNT | Independent twin counts missing or duplicate fields |
+
+The controls cover the 36 unit scenarios, the eight-case deletion probe,
+within-script retention, cross-invocation retention and computed arguments.
+Every probe requires a nonempty scenario list. The scoped run captured in
+`run-QwVt8A` reports:
+
+```text
+PASS HDEL-MANY-MUTATIONS killed=14 survived=0 restored=5
+```
+
+The complete ladder in `run-h0yezK` repeats the same successful mutation
+summary. Its full-stream audit verifies all 26 inherited and new mutation
+summaries. The full ladder stays red solely for the open M0 timing gate.
+
+All inherited mutation assertions, trusted-source bounds and the 150 ms
+M0 timing bound remain in place.

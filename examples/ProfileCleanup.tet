@@ -1,0 +1,39 @@
+module ProfileCleanup
+schema profiles : String -> Key Hash tag b"profiles"
+
+def seed : Script Reply (tag b"profiles") := do {
+  _ <- hset Reply (tag b"profiles") (profiles b"alice") b"name" b"Alice";
+  _ <- hset Reply (tag b"profiles") (profiles b"alice") b"token" b"old-token";
+  r <- hset Reply (tag b"profiles") (profiles b"alice") b"lastSeen" b"100";
+  pure Reply (tag b"profiles") r
+}
+def prune : Script Reply (tag b"profiles") := do {
+  r <- hdelMany Reply (tag b"profiles") (profiles b"alice")
+    (bulkMore b"token" (bulkMore b"lastSeen" (bulkMore b"token" (bulkOne b"missing"))));
+  pure Reply (tag b"profiles") r
+}
+def view : Script Reply (tag b"profiles") := do {
+  r <- hgetall Reply (tag b"profiles") (profiles b"alice");
+  pure Reply (tag b"profiles") r
+}
+def erase : Script Reply (tag b"profiles") := do {
+  r <- del Reply Hash (tag b"profiles") (profiles b"alice");
+  pure Reply (tag b"profiles") r
+}
+def main : Client Reply := do {
+  _ <- inv Reply (tag b"profiles") seed;
+  _ <- inv Reply (tag b"profiles") prune;
+  r <- inv Reply (tag b"profiles") view;
+  done Reply r
+}
+def removed : Client Reply := do {
+  _ <- inv Reply (tag b"profiles") seed;
+  r <- inv Reply (tag b"profiles") prune;
+  done Reply r
+}
+def retained : Client Reply := do {
+  _ <- inv Reply (tag b"profiles") seed;
+  r <- inv Reply (tag b"profiles") prune;
+  _ <- inv Reply (tag b"profiles") erase;
+  done Reply r
+}

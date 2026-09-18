@@ -4,6 +4,12 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports variadic Hash deletion with `hdelMany`.
+`./tether exec examples/ProfileCleanup.tet --host node` removes stale
+profile fields and prints `["name","Alice"]`. The `removed` and `retained`
+entries return the distinct deletion count, including after deleting the
+Hash. See `dev/HDEL-MANY.md`; run `sh dev/m1-hdel-many.sh` for validation.
+
 M1 now supports variadic Set changes with `saddMany` and `sremMany`.
 `./tether exec examples/TeamBatch.tet --host node` enrolls three distinct
 members and prints `["alice","bob","carol"]`. The `remaining` entry removes

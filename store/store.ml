@@ -47,9 +47,9 @@ let hexists key field store = let* fields = hash key store in Ok (if Keys.mem fi
 let hlen key store = let* fields = hash key store in Ok (string_of_int (Keys.cardinal fields))
 let hgetall key store = Result.map (fun fields -> List.concat_map (fun (f, v) -> [f; v]) (Keys.bindings fields)) (hash key store)
 let hproject project key store = Result.map (fun fs -> List.sort String.compare (List.map project (Keys.bindings fs))) (hash key store)
-let change_hash ~adding update key field store = let* fields = hash key store in
-  let count = if Keys.mem field fields = adding then "0" else "1" in Ok (count, save_hash key (update fields) store)
-let hset key field value = change_hash ~adding:true (Keys.add field value) key field let hdel key field = change_hash ~adding:false (Keys.remove field) key field
+let change_hash ~adding update key field store = let* fields = hash key store in let count = if Keys.mem field fields = adding then "0" else "1" in Ok (count, save_hash key (update fields) store)
+let hset key field value = change_hash ~adding:true (Keys.add field value) key field let hdel ?(rest = []) key field store = let* fields = hash key store in
+  let next = List.fold_left (fun acc name -> Keys.remove name acc) (Keys.remove field fields) rest in Ok (string_of_int (Keys.cardinal fields - Keys.cardinal next), save_hash key next store)
 let hincrby key field amount store = let* amount = integer amount in let* old = hget key field store in
   let* value = integer (Option.value ~default:"0" old) |> Result.map_error (fun _ -> Hash_not_integer) in
   let* text = add value amount in let* _count, after = hset key field text store in Ok (text, after)

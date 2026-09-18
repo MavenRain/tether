@@ -4,6 +4,11 @@
  (libraries tether_store kanon_kernel))
 
 (executable
+ (name hdel_many_tests)
+ (modules hdel_many_tests)
+ (libraries tether_store kanon_kernel))
+
+(executable
  (name list_bulk_tests)
  (modules list_bulk_tests)
  (libraries tether_store kanon_kernel))

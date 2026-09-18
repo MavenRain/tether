@@ -103,7 +103,7 @@ let run ~budget rows ~entry store =
           | (41 | 42 | 46 | 47), [] -> integer (keep (Store.ttl ~absolute:(tag >= 46) ~seconds:(tag = 41 || tag = 46) key store))
           | 43, [] -> integer (Ok (Store.persist key store))
           | (48 | 49 | 50 | 51), [Signed duration; Condition condition] -> integer (Store.expire ~condition ~absolute:(tag >= 50) ~seconds:(tag = 48 || tag = 50) key duration store)
-          | 52, [BulkFields (first, rest)] -> array nullable (keep (Store.hmget key first rest store))
+          | (52 | 57), [BulkFields (first, rest)] -> if tag = 52 then array nullable (keep (Store.hmget key first rest store)) else integer (Store.hdel ~rest key first store)
           | (53 | 54), [BulkFields (first, rest)] -> integer (Store.push ~rest (if tag = 53 then Store.Left else Store.Right) key first store)
           | (55 | 56), [BulkFields (first, rest)] -> integer (Store.change_set ~rest (if tag = 55 then Store.Members.add else Store.Members.remove) key first store)
           | _, _ -> Error "STORE-SCRIPT-COMMAND" in

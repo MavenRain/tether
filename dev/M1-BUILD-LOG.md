@@ -4449,3 +4449,181 @@ unmet, verifier met.
 Review pass 1 (2026-09-17) fixed 4 findings.
 
 Fix rounds: 1.
+
+## 2026-09-18 M1 Hash field deletion
+
+Implemented `hdelMany` with a Hash key and nonempty `BulkArgs`. Script
+tag 57 is appended, preserving all previous command tags and the
+single-field `hdel` signature. The Lua printer sends one variadic HDEL;
+the independent store and LuaJIT twin remove each distinct field once.
+Both implementations preserve remaining fields and key expiry, remove
+the key and expiry when it becomes empty, and preserve complete state
+on WRONGTYPE. The write classifier uses its existing default.
+
+Added `examples/ProfileCleanup.tet`, the command documentation, a full
+ladder driver, 36 unit scenarios, nine artifact pairs, ten typed refusals,
+21 store/twin cases and a 14-mutation battery with five restored controls.
+The suite includes empty and binary field names, duplicate and missing
+fields, 129-field requests, computed arguments, unrelated state, key
+expiries, wrong types and replies retained within a Script or across
+Client invocations.
+
+The scoped build, unit run (`run-1OSTWd`), offline run (`run-stc9TD`) and
+mutation run (`run-QwVt8A`) passed. All named mutation assertions failed
+under their assigned compiling defect, and all restored controls passed.
+
+A temporary fuel probe, restored after measurement, reported
+`FUEL before=62148 after=62160`. The gate rows `PASS STAGE-D-TESTS` and
+`PASS STAGE-D` pin that measurement. Stage D's exhaustion test
+now uses fuel 62154, retaining its six-poll allowance inside the 12-poll
+static walk and requiring `SH-BUDGET` without output publication. This
+adjusts the test's setup cost for the appended constructor. The zero-fuel
+checker refusal and the 150 ms M0 timing bound remain unchanged.
+
+`dev/PRELUDES.sha256` pins the new Redis prelude. The two preludes total
+174 lines. The trusted-source counts remain kernel 3997/4000, encoder
+246/600, lua 320/320, sh 227/240, store 200/200, host-node 196/300,
+host-rest 156/300 and bin 404/450. No vendored source or ruled bound changed.
+
+The complete `sh dev/m1-hdel-many.sh` ladder ran in
+`/Users/oobi/Documents/gpt18/tether-m1-hdel-many` on base `3f9cdf8`.
+Its capture is `.kanon-exec/run-h0yezK`. All feature checks pass, including:
+
+```text
+PASS HDEL-MANY-UNIT cases=36
+PASS HDEL-MANY-ARTIFACTS pairs=9
+PASS HDEL-MANY-REFUSALS cases=10 atomic_output=10
+PASS HDEL-MANY-ORACLES store=21 luajit=21
+PASS HDEL-MANY-E2E cases=23 hosts=48 utf8_refusals=2 errors=2
+PASS HDEL-MANY-EXAMPLE exec=9
+PASS HDEL-MANY-TESTS
+PASS HDEL-MANY-MUTATIONS killed=14 survived=0 restored=5
+PASS HDEL-MANY-COUNTS
+```
+
+The full-stream audit in `/Users/oobi/Documents/gpt18/.kanon-exec/run-e2GUvH`
+reads all 904 stdout rows and empty stderr. It verifies 143 required rows,
+429 PASS rows and 26 mutation summaries, including the four older summaries
+that report killed/restored counts without a survived field. All 45 FAIL
+rows are the timing result or its propagation through the enclosing drivers.
+Stages A through E, Stage F's functional checks and every M1 feature pass.
+
+The ladder exits 1 and ends with `FAIL M1-HDEL-MANY` because the independent
+timing gate reports `FAIL M0-TIME median_ms=198.860 bound_ms=150` at a
+one-minute load of 14.03. GATE-1 remains open; the 150 ms bound is unchanged.
+No additional functional or mutation failure is present. The separate
+audit exits 0 with `FUNCTIONAL-OK`, while preserving the full ladder's failure.
+
+### Review round 2026-09-18 (M1 Hash field deletion)
+
+The review of the tag 57 slice kept five findings of 14 filed and refuted
+five. All kept items are low. The baseline ladder log ends with
+`EXIT-ALL 1` from the inherited timing gate GATE-1
+(`FAIL M0-TIME median_ms=200.900 bound_ms=150` at a one-minute load of
+9.92) and its 44 cascade rows. The functional evidence of that log is
+green: `TRUSTED-LINES ... OK`, `PRELUDE-INTEGRITY lines=174 files=2 OK`,
+`PASS STAGE-D-TESTS`, `PASS STAGE-D` and `PASS HOUSE`.
+
+Four documentation defects are corrected in this round. The first is the
+`SPEC.md` slice row, which carried the date of the parent slice
+2026-09-17 while both records of this round say 2026-09-18; the row now
+reads `M1 Hash deletion slice, 2026-09-18.` and keeps its name. The
+second is `dev/SET-BULK.md`, a closed record that this slice had
+rewritten to the current 174 / 62148 / 62154 pins; that paragraph is
+past tense again with its own 173 / 60327 / 60333 figures and points to
+`dev/HDEL-MANY.md` for the current counts, and the forward pointers of
+`dev/HMGET.md` and `dev/LIST-BULK.md` point at `dev/HDEL-MANY.md` too.
+The third is the control sentence of this round's mutation-log block,
+which said "eight deletion probes" where the runner holds one deletion
+probe of eight cases. The fourth is the fuel claim of the block above,
+which cited a capture id that is absent from both capture directories;
+the claim now cites the Stage D gate rows that pin fuel 62154.
+
+No fix moves a bound, edits a frozen record row or changes a measured
+number, so no count row and no mutant row changes. The ruled item A-3,
+the unused `~adding` parameter of `change_hash`, takes no fix: removing
+it re-anchors the pinned HSET-COUNT mutant and changes no behaviour.
+
+The socket-free legs pass after the fixes: `dune build bin/tether.exe
+dev/store_run.exe dev/hdel_many_tests.exe`,
+`PASS HDEL-MANY-UNIT cases=36`, `PASS HDEL-MANY-ARTIFACTS pairs=9`,
+`PASS HDEL-MANY-REFUSALS cases=10 atomic_output=10`,
+`PASS HDEL-MANY-ORACLES store=21 luajit=21`,
+`PASS HDEL-MANY-TESTS mode=offline`,
+`TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240
+store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK`,
+`PASS HOUSE`, `PASS CHECK definitions=88` and `PASS EMIT`.
+
+Fix round 2 held two evidence items from the finished logs and changed
+no ROOT file. ND-1-1, the fix-1 gate object read while the ladder was
+still running (733 of 962 rows, no EXIT row), is closed from the
+finished fix-1 log: done 06:15:19, `EXIT-ALL 1`, 45 FAIL rows, all the
+timing cascade. ND-1-2, the fix-1 ladder launched at a one-minute load
+of 42.33, above the 40 ceiling, is closed by the calm rerun fix-2:
+start load 25.17, `EXIT-ALL 1`, 45 FAIL rows, all the timing cascade.
+Main stopped Workflow `wf_96f4dca3-3cf` after round 2 because its gate
+rule reads a timing-only FAIL set at a one-minute load below 40 as
+RED, which loops for ever under the open GATE-1; the close ladder ran
+by hand.
+
+The full findings count of this round: 14 findings filed by the four
+finders (A-1..A-4, B-1..B-3, C-1..C-4, D-1..D-3). The judge kept five
+(A-1, A-2, A-3, A-4, C-4) and fixed four of them in round 1 (A-1, A-2,
+A-4, C-4), all documentation only, no recorded count moved. A-3, the
+constant `~adding` parameter of `change_hash` in `store/store.ml:50`,
+stays KEPT OPEN, NOT FIXED: its only removal re-anchors the
+HSET-COUNT mutant pinned by `dev/hashes-mutations.py:16` inside the
+frozen `dev/MUTATION-LOG.md:455` block of an earlier slice, so the
+fix belongs to a future hashes slice. The verifiers refuted five
+(B-1, B-3, C-1, C-3, D-3): B-1's "retained" example entry is
+falsifiable by its checked stdout pin; B-3 and its duplicate C-3 name
+a diagnostic whose branch is unreachable for tag 57, so no mutant
+there could survive; C-1's PRELUDES leg duplicates the same leg
+carried by six earlier M1 drivers by design. Four were merged and
+then cut (B-2, D-1 into A-1; C-2, D-2 into A-4).
+
+The close ladder of record for this round is `gates-close.log`, tag
+`close`: 962 rows, 433 PASS, 45 FAIL, `EXIT-ALL 1`, start load 19.07
+(daemon start row 07:05:20), FAIL-name sha identical to the baseline
+(`9f5640b45db2`), `FAIL M0-TIME median_ms=243.655 bound_ms=150` at a
+one-minute load of 15.51, `EXIT 1`, `EXIT-MUT 0`. The fix-2 ladder of
+record is `gates-fix-2.log`, tag `fix-2`: 962 rows, 433 PASS, 45
+FAIL, `EXIT-ALL 1`, start load 25.17, `FAIL M0-TIME
+median_ms=168.285 bound_ms=150` at a one-minute load of 16.93.
+
+The M0-TIME bound of 150 ms never moved. Every FAIL row of the
+baseline, fix-1, fix-2 and close ladders belongs to the ruled timing
+cascade, and a timing FAIL at a one-minute load below 40 leaves
+GATE-1 open rather than marking a regression. No functional FAIL row
+occurred and every mutation summary row reads survived=0, so each
+ladder is GREEN-FUNCTIONAL under the open GATE-1 timing item. The top
+verdict row of the close ladder reads `FAIL M1-HDEL-MANY`.
+
+FAIL M0-TIME median_ms=243.655 bound_ms=150
+FAIL MEASURE
+PASS TRUSTED-LINES
+PASS HDEL-MANY-BUILD
+PASS HDEL-MANY-UNIT cases=36
+PASS HDEL-MANY-UNIT-EXE
+PASS HDEL-MANY-ARTIFACTS pairs=9
+PASS HDEL-MANY-REFUSALS cases=10 atomic_output=10
+PASS HDEL-MANY-ORACLES store=21 luajit=21
+PASS HDEL-MANY-E2E cases=23 hosts=48 utf8_refusals=2 errors=2
+PASS HDEL-MANY-EXAMPLE exec=9
+PASS HDEL-MANY-TESTS
+PASS HDEL-MANY-TESTS-RUN
+PASS HDEL-MANY-MUTATIONS killed=14 survived=0 restored=5
+PASS HDEL-MANY-MUTATIONS-RUN
+PASS HDEL-MANY-COUNTS
+FAIL M1-HDEL-MANY
+EXIT 1
+EXIT-MUT 0
+EXIT-ALL 1
+
+The round ran its finders and its fixer at opus medium, its verifiers
+at opus high, and its closer at sonnet medium; rulings
+finder/builder/closer unmet, verifier met.
+
+Review pass 1 (2026-09-18) fixed 4 findings.
+
+Fix rounds: 2.

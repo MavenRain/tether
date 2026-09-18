@@ -68,8 +68,10 @@ local function hash_call(command, key, field, value, ...)
     return count
   end
   if command == 'HDEL' then
-    local count = fields[field] ~= nil and 1 or 0
-    fields[field] = nil
+    local count = 0
+    for _, name in ipairs({field, value, ...}) do
+      if fields[name] ~= nil then fields[name], count = nil, count + 1 end
+    end
     if next(fields) == nil then values[key] = nil end
     return count
   end
