@@ -54,7 +54,7 @@ read-only flags and the independent twin.
 At the HMGET slice, the prelude had 169 lines across both pinned files.
 The Stage D static walk used 12 polls after 53323 checker/erasure polls;
 fuel 53329 left six walk polls and returned `SH-BUDGET`. See
-`dev/HSET-MANY.md` for the current prelude and fuel counts.
+`dev/HASH-CONDITIONAL.md` for the current prelude and fuel counts.
 All eight trusted-source bounds and the 150 ms M0 timing bound are
 unchanged. Actual gate results are recorded in `dev/M1-BUILD-LOG.md`.
 Other Hash and List bulk commands, ZSet support, remaining examples,

@@ -4822,3 +4822,200 @@ tier ruling of 2026-09-18 is met.
 Review pass 1 (2026-09-18) fixed 7 findings.
 
 Fix rounds: 1.
+
+## 2026-09-18: conditional Hash writes and byte lengths
+
+Baseline: `54f91db2afc9b454c5ca0103d4344b9839a5eb7a`, the committed
+`hsetMany` slice. Work was isolated in
+`/Users/oobi/Documents/gpt18/tether-m1-hash-conditional`.
+The clean baseline ladder ran from
+`/Users/oobi/Documents/gpt18/tether-hash-conditional-baseline`.
+
+This slice appends `hsetnx` and `hstrlen` at Script tags 59 and 60.
+Conditional writes share HSET's store path with an `nx` guard and emit
+one atomic Redis HSETNX command. Existing fields, including empty values,
+return 0 without changing state; new fields return 1. Length reads count
+bytes, return 0 for absent keys or fields, and qualify for read-only
+dispatch. Both preserve existing expiry and unrelated fields. The
+interpreter, Lua printer and independent twin cover the same semantics.
+`examples/ProfileDefaults.tet` initializes a profile, retains its original
+name, measures that name and retains an earlier insertion reply.
+
+The scoped build and validation passed:
+
+```text
+PASS HASH-CONDITIONAL-UNIT cases=32
+PASS HASH-CONDITIONAL-ARTIFACTS pairs=13
+PASS HASH-CONDITIONAL-REFUSALS cases=15 atomic_output=15
+PASS HASH-CONDITIONAL-ORACLES store=34 luajit=34
+PASS HASH-CONDITIONAL-E2E cases=38 hosts=80 errors=4
+PASS HASH-CONDITIONAL-EXAMPLE exec=9
+PASS HASH-CONDITIONAL-TESTS
+PASS HASH-CONDITIONAL-MUTATIONS killed=12 survived=0 restored=3
+PASS HOUSE
+PRELUDE-INTEGRITY lines=181 files=2 OK
+```
+
+That capture predates the review round, which raises the mutation count
+to thirteen. The review block below holds the current capture.
+
+The 80 host runs include four uncaught WRONGTYPE exits with no stdout.
+Cases check missing and empty fields, all 256 byte values, UTF-8 byte
+lengths, computed operands, retained replies, complete Hash contents,
+unrelated keys and expiry. Wrong-type cases cover all five other Redis
+types. Fifteen typed refusals leave no published output directory.
+
+Scoped host evidence is `.kanon-exec/run-X813R2` in the isolated work
+directory. Final mutation evidence is `.kanon-exec/run-sEP73E` there.
+The first mutation run caught ten defects under their expected markers;
+two overwrite controls failed at the twin's earlier complete-state check.
+Their markers were corrected to `TWIN hash field mismatch`, then the
+author's twelve compiling mutations were killed and all three controls
+restored. The review round below raises that inventory to thirteen.
+No test assertion was removed. HSET-MANY's existing STORE-TYPE mutation
+was updated only to match the optional argument in its source anchor.
+
+The instrumented Stage D probe reported `FUEL before=67862 after=67874`.
+Fuel 67868 leaves six of the walk's twelve polls and retains the exact
+`SH-BUDGET` refusal; the zero-fuel checker refusal remains. The two pinned
+preludes total 181 lines. Trusted-source counts remain kernel 3997/4000,
+encoder 246/600, lua 320/320, sh 227/240, store 200/200, host-node 196/300,
+host-rest 156/300 and bin 404/450. No bound or frozen record was changed.
+
+The complete baseline ladder has 942 rows, 446 PASS rows and 47 FAIL
+rows, and exits 1. The complete changed ladder has 976 rows, 463 PASS
+rows and 49 FAIL rows, and also exits 1. Both captures have empty stderr.
+The baseline M0-TIME median is 640.240 ms; the changed tree measures
+310.106 ms. Both exceed the unchanged strict 150 ms bound. These loaded-host
+samples do not establish a performance improvement.
+
+The two additional FAIL rows are the new parent steps `M1-HSET-MANY`
+and `M1-HASH-CONDITIONAL`, which propagate the inherited timing failure.
+After accounting for those steps and normalizing only the measured median,
+the complete failure multiset matches the baseline. Every earlier functional
+check passes. The capture audit pins fifteen required rows, including all
+new suite counts and HSET-MANY's 43 unit scenarios and sixteen mutations:
+
+```text
+PASS HASH-CONDITIONAL-CAPTURE-AUDIT required=15 additional_functional_failures=0
+```
+
+The baseline capture is `.kanon-exec/run-M7wqUL` in the baseline directory;
+the changed capture is `.kanon-exec/run-JKGkXQ` in the work directory.
+The structured audit is
+`/Users/oobi/Documents/gpt18/tether-hash-conditional-validation.json`.
+The full ladder remains red until the M0 timing milestone is met.
+
+The final patch is staged without a commit. ZSet commands, remaining
+Hash/List/Set operations, remaining examples, the Lean exporter and the
+M1 performance milestones remain open.
+
+### Review round 2026-09-18 (M1 conditional Hash writes and byte lengths)
+
+The round reviewed the staged slice on `54f91db`: Script tags 59
+`hsetnx` and 60 `hstrlen`, 27 staged paths, +761/-34.
+The round used 12 findings. The judge kept 3, the verifiers refuted 6, and
+3 were merged and then cut.
+
+A-1 (low, `store/store.ml` row 50): `hset ~nx` ignored `~rest`. With `nx`
+and a rest list the guard tested only the first field, so the call wrote
+the rest fields past an existing one and never answered as HSETNX. The fix
+changes one row in and one row out at row 50: the `nx` guard now tests
+every field of `(field, value) :: rest`, refuses the whole write with "0"
+when any field exists, and answers "1" when the write lands. The store
+group stays 200/200. The round also added the STORE-OVERWRITE mutant to
+`dev/hash-conditional-mutations.py`.
+
+B-2 (low, `dev/hash-conditional-mutations.py` row 32): no mutant anchored
+the new tag-60 dispatch upper bound `s.tag <= 51` of `print/lua.ml`. The
+fix adds the thirteenth mutant LUA-DISPATCH-BOUND, which replaces the
+anchor `elseif s.tag >= 39 and s.tag <= 51 then` by
+`elseif s.tag >= 39 then` and is killed by the length probe marker
+`out-length/body-0.lua`. The inventory assertions move from 12 to 13, and
+the recorded counts move with it: `dev/m1-hash-conditional.sh` row 37
+(`killed=13`), `dev/HASH-CONDITIONAL.md` row 39 (thirteen) and
+`dev/MUTATION-LOG.md`.
+
+D-4 (low, `README.md` row 11): the new status paragraph named no
+`./tether exec` command, unlike every other status paragraph. The fix
+names `./tether exec examples/ProfileDefaults.tet --host node` in rows 7
+to 11. The fix is documentation only and no recorded count moved.
+
+The verifiers refuted six findings. D-1 (medium) claimed the author
+block's FAIL-row accounting does not match the baseline commit; the +2
+delta is correct, `FAIL M1-HSET-MANY` occurs twice in the changed-tree
+ladder, and the baseline capture is the base commit's own top ladder. B-1
+(medium) claimed the ORACLES count row is an unanchored literal print;
+`cases()` ends with a `require(len(rows) == 34, ...)` inventory check. C-1
+and C-2 claimed the author heading and the mutation-log heading use new
+heading shapes; earlier rows of both files already use those shapes. A-2
+claimed the expired-key behaviour is asserted only through the store API;
+the base state is run through both tags with a full state comparison. B-3
+claimed the non-integer diagnostic mislabels a tag-59 reply; the tag-59
+reply is a field count of 0 or 1 and plain HSET shares the label. Three
+findings were merged and then cut: C-3 into B-2 (its keep half is a type
+error, so no such mutant compiles), D-2 into C-1 and D-3 into C-2, each
+refuted on the same evidence.
+
+The baseline ladder of this round is `gates-baseline.log`, tag `baseline`.
+It has 1034 rows, 464 PASS rows and 49 FAIL rows, and the last row reads
+`EXIT-ALL 1`. It started at a one-minute load of 21.99. The FAIL multiset
+is the ruled timing cascade: M0-TIME x1, MEASURE x1, STAGE-F x2,
+M1-HASH-CONDITIONAL x1 and 22 nested M1-* aggregates twice each.
+
+The fix ladder of round 1 is `gates-fix-1.log`, tag `fix-1`. It has 47
+rows, 17 PASS rows and no FAIL row, and the last row reads `EXIT-ALL 0`.
+It started at a one-minute load of 15.10. It ran in COPY mode with the
+selector hash-conditional-only, so the timing leg was not exercised.
+
+The fix ladder of round 2 is `gates-fix-2.log`, tag `fix-2`. It has 47
+rows, 17 PASS rows and no FAIL row, and the last row reads `EXIT-ALL 0`.
+It started at a one-minute load of 27.45. It ran in COPY mode with the
+selector hash-conditional-only, so the timing leg was not exercised.
+
+The close ladder of record for this round is `gates-close.log`, tag
+`close`. It has 1035 rows, 467 PASS rows and 49 FAIL rows, and the last
+row reads `EXIT-ALL 1`. It started at 19:46 at a one-minute load of 21.99
+and finished at 20:43:20. The sorted FAIL tags of the close log equal
+those of the baseline log, so the FAIL multiset is the same ruled timing
+cascade.
+
+The M0-TIME bound of 150 ms never moved. Every FAIL row of each ladder
+belongs to the ruled timing cascade, and a timing FAIL at a one-minute
+load below 40 leaves GATE-1 open rather than marking a regression. No
+functional FAIL row occurred and every mutation summary row reads
+survived=0, so each ladder is GREEN-FUNCTIONAL under the open GATE-1
+timing item. The top verdict row reads `FAIL M1-HASH-CONDITIONAL`.
+
+The close ladder rows of record:
+
+```
+TRUSTED-LINES kernel=3997/4000 encoder=246/600 OK
+TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240 store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK
+PASS M0-TIME-BOUNDARY below=149 at=150
+FAIL M0-TIME median_ms=217.868 bound_ms=150
+PASS HASH-CONDITIONAL-BUILD
+PASS HASH-CONDITIONAL-UNIT cases=32
+PASS HASH-CONDITIONAL-UNIT-EXE
+PASS HASH-CONDITIONAL-ARTIFACTS pairs=13
+PASS HASH-CONDITIONAL-REFUSALS cases=15 atomic_output=15
+PASS HASH-CONDITIONAL-ORACLES store=34 luajit=34
+PASS HASH-CONDITIONAL-E2E cases=38 hosts=80 errors=4
+PASS HASH-CONDITIONAL-EXAMPLE exec=9
+PASS HASH-CONDITIONAL-TESTS
+PASS HASH-CONDITIONAL-TESTS-RUN
+KILLED STORE-OVERWRITE by FAIL HASH-CONDITIONAL-UNIT conditional insert and complete state
+KILLED LUA-DISPATCH-BOUND by out-length/body-0.lua
+PASS HASH-CONDITIONAL-MUTATIONS killed=13 survived=0 restored=3
+PASS HASH-CONDITIONAL-MUTATIONS-RUN
+PASS HASH-CONDITIONAL-COUNTS
+PASS STAGE-A-MUTATIONS killed=37 survived=0 restored=1
+```
+
+The round ran its finders at opus medium, its verifiers and its judge at
+opus max, its fixer at opus xhigh, and its closer at opus medium; every
+tier ruling of 2026-09-18 is met.
+
+Review pass 1 (2026-09-18) fixed 3 findings.
+
+Fix rounds: 2.

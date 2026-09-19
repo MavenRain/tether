@@ -52,10 +52,11 @@ the independent twin. Actual results are recorded in `dev/M1-BUILD-LOG.md`.
 The shared store refactor updates the HSET-COUNT and HMGET INTERPRETER-ARGS
 mutation anchors while preserving their existing assertions and counts.
 
-The pinned preludes total 179 lines. Stage D's static walk uses 12 polls
-after 64007 checker/erasure polls. Fuel 64013 leaves six walk polls and
-must return `SH-BUDGET` without publishing output. All eight trusted-source
-bounds and the 150 ms M0 timing bound remain unchanged.
+At the HSET-MANY slice, the pinned preludes totaled 179 lines. Stage D's
+static walk used 12 polls after 64007 checker/erasure polls. Fuel 64013
+left six walk polls and returned `SH-BUDGET` without publishing output.
+See `dev/HASH-CONDITIONAL.md` for the current prelude and fuel counts.
+All eight trusted-source bounds and the 150 ms M0 timing bound remain unchanged.
 
 Other Hash commands, List and Set bulk commands, ZSet support, remaining
 examples, the Lean exporter and M1 performance milestones remain open.

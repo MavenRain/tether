@@ -62,6 +62,7 @@ local function hash_call(command, key, field, value, ...)
   end
   if command == 'HGET' then return fields[field] or false end
   if command == 'HEXISTS' then return fields[field] ~= nil and 1 or 0 end
+  if command == 'HSTRLEN' then return fields[field] and #fields[field] or 0 end
   if command == 'HLEN' then
     local count = 0
     for _ in pairs(fields) do count = count + 1 end
@@ -74,6 +75,11 @@ local function hash_call(command, key, field, value, ...)
     end
     if next(fields) == nil then values[key] = nil end
     return count
+  end
+  if command == 'HSETNX' then
+    if fields[field] ~= nil then return 0 end
+    fields[field], values[key] = value, fields
+    return 1
   end
   if command == 'HSET' then
     local items, count = {field, value, ...}, 0

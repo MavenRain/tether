@@ -82,18 +82,18 @@ local function run(s) while s.tag ~= 0 do
         if s.tag ~= 27 and s.tag ~= 52 then table.sort(order,function(a,b) return byte_less(got[a],got[b]) end) end
         local rs = {tag=0}; for n = #order, 1, -1 do for i = order[n]+stride-1, order[n], -1 do rs = {tag=1,got[i] == false and {tag=0} or {tag=2,bytes(got[i])},rs} end end; r = {tag=5,rs}
       elseif got == false then r = {tag=0} else r = {tag=2,bytes(got)} end
-    elseif (s.tag >= 7 and s.tag <= 13) or (s.tag >= 15 and s.tag <= 20) or s.tag == 23 or (s.tag >= 35 and s.tag <= 51) or (s.tag >= 53 and s.tag <= 58) then
-      local got; if s.tag == 9 then got = redis.pcall('HSET',k,text(s[2]),text(s[3])); next = s[4]
+    elseif (s.tag >= 7 and s.tag <= 13) or (s.tag >= 15 and s.tag <= 20) or s.tag == 23 or (s.tag >= 35 and s.tag <= 51) or (s.tag >= 53 and s.tag <= 60) then
+      local got; if s.tag == 9 or s.tag == 59 then got = redis.pcall(s.tag == 59 and 'HSETNX' or 'HSET',k,text(s[2]),text(s[3])); next = s[4]
       elseif s.tag == 58 then local args, ps = {k}, s[2]; while ps.tag == 1 do args[#args+1], args[#args+2], ps = text(ps[1]), text(ps[2]), ps[3] end; args[#args+1], args[#args+2] = text(ps[1]), text(ps[2]); got = redis.pcall('HSET',unpack(args)); next = s[3]
       elseif s.tag >= 53 and s.tag <= 57 then local args, vs = {k}, s[2]; while vs.tag == 1 do args[#args+1], vs = text(vs[1]), vs[2] end; args[#args+1] = text(vs[1]); got = redis.pcall(s.tag == 57 and 'HDEL' or (s.tag >= 55 and (s.tag == 55 and 'SADD' or 'SREM') or (s.tag == 53 and 'LPUSH' or 'RPUSH')),unpack(args)); next = s[3]
-      elseif s.tag >= 39 then
+      elseif s.tag >= 39 and s.tag <= 51 then
         local args = {k}; if s.tag <= 40 or s.tag == 44 or s.tag == 45 or s.tag >= 48 then args[2], next = text(s[2][1]), s[3] end
         if s.tag >= 48 then args[3], next = ({[0]='NX',[1]='XX',[2]='GT',[3]='LT'})[s[3].tag], s[4] end
         got = redis.pcall(({[39]='EXPIRE',[40]='PEXPIRE',[41]='TTL',[42]='PTTL',[43]='PERSIST',[44]='EXPIREAT',[45]='PEXPIREAT',[46]='EXPIRETIME',[47]='PEXPIRETIME',[48]='EXPIRE',[49]='PEXPIRE',[50]='EXPIREAT',[51]='PEXPIREAT'})[s.tag],unpack(args))
-      elseif s.tag >= 35 then
+      elseif s.tag >= 35 and s.tag <= 38 then
         got = redis.pcall(({[35]='SUNIONSTORE',[36]='SINTERSTORE',[37]='SDIFFSTORE',[38]='SMOVE'})[s.tag],k,key(s[2]),s.tag == 38 and text(s[3]) or key(s[3])); next = s[4]
-      elseif s.tag == 11 or s.tag == 12 then
-        got = redis.pcall(s.tag == 11 and 'HDEL' or 'HEXISTS',k,text(s[2])); next = s[3]
+      elseif s.tag == 11 or s.tag == 12 or s.tag == 60 then
+        got = redis.pcall(s.tag == 60 and 'HSTRLEN' or (s.tag == 11 and 'HDEL' or 'HEXISTS'),k,text(s[2])); next = s[3]
       elseif s.tag == 13 or s.tag == 18 or s.tag == 23 then got = redis.pcall(s.tag == 13 and 'HLEN' or (s.tag == 18 and 'SCARD' or 'LLEN'),k)
       elseif s.tag == 15 or s.tag == 16 or s.tag == 17 then
         got = redis.pcall(s.tag == 15 and 'SADD' or (s.tag == 16 and 'SREM' or 'SISMEMBER'),k,text(s[2])); next = s[3]
@@ -102,7 +102,7 @@ local function run(s) while s.tag ~= 0 do
       if type(got) == 'table' and got.err then r = {tag=4,bytes(got.err)}
       elseif s.tag >= 39 and s.tag <= 51 and (type(got) ~= 'number' or got >= 9007199254740992 or got < -2 or got ~= math.floor(got)) then r = {tag=4,bytes('ERR expiry reply is outside exact integer range')}
       elseif type(got) ~= 'number' then local what = (s.tag == 7 or s.tag == 8) and 'key count' or ((s.tag == 17 or s.tag == 38) and 'membership'
-          or (s.tag >= 57 and 'field count' or (((s.tag >= 35 and s.tag <= 37) or s.tag >= 55) and 'member count' or (s.tag >= 19 and 'list length' or (s.tag >= 15 and 'member count' or 'field count')))))
+          or (s.tag == 60 and 'field length' or (s.tag >= 57 and 'field count' or (((s.tag >= 35 and s.tag <= 37) or s.tag >= 55) and 'member count' or (s.tag >= 19 and 'list length' or (s.tag >= 15 and 'member count' or 'field count'))))))
         r = {tag=4,bytes('ERR ' .. what .. ' reply is not an integer')}
       else r = {tag=1,{tag=0,bytes(string.format('%d',got))}} end
     else error('LUA-SCRIPT unsupported tag') end

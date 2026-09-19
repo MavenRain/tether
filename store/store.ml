@@ -44,10 +44,10 @@ let save_hash key fields store = save key (Hash (Keys.bindings fields)) ~empty:(
 let hget key field store = let* fields = hash key store in Ok (Keys.find_opt field fields)
 let hmget key first rest store = let* fields = hash key store in Ok (List.map (fun field -> Keys.find_opt field fields) (first :: rest))
 let hexists key field store = let* fields = hash key store in Ok (if Keys.mem field fields then "1" else "0")
-let hlen key store = let* fields = hash key store in Ok (string_of_int (Keys.cardinal fields))
+let hlen key store = let* fields = hash key store in Ok (string_of_int (Keys.cardinal fields)) let hstrlen key field store = Result.map (fun value -> string_of_int (Option.fold ~none:0 ~some:String.length value)) (hget key field store)
 let hgetall key store = Result.map (fun fields -> List.concat_map (fun (f, v) -> [f; v]) (Keys.bindings fields)) (hash key store)
 let hproject project key store = Result.map (fun fs -> List.sort String.compare (List.map project (Keys.bindings fs))) (hash key store)
-let hset ?(rest = []) key field value store = let* fields = hash key store in let updated = List.fold_left (fun acc (f, v) -> Keys.add f v acc) (Keys.add field value fields) rest in Ok (string_of_int (Keys.cardinal updated - Keys.cardinal fields), save_hash key updated store)
+let hset ?(nx = false) ?(rest = []) key field value store = let* fields = hash key store in if nx && List.exists (fun (f, _) -> Keys.mem f fields) ((field, value) :: rest) then Ok ("0", store) else let updated = List.fold_left (fun acc (f, v) -> Keys.add f v acc) (Keys.add field value fields) rest in Ok (string_of_int (match () with () when nx -> 1 | () -> Keys.cardinal updated - Keys.cardinal fields), save_hash key updated store)
 let hdel ?(rest = []) key field store = let* fields = hash key store in
   let next = List.fold_left (fun acc name -> Keys.remove name acc) (Keys.remove field fields) rest in Ok (string_of_int (Keys.cardinal fields - Keys.cardinal next), save_hash key next store)
 let hincrby key field amount store = let* amount = integer amount in let* old = hget key field store in

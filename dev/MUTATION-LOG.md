@@ -1173,3 +1173,42 @@ The review round of 2026-09-18 renames the twin HSET argument table from
 TWIN-COUNT anchors follow the new names. Both detectors are unchanged.
 The unit control is the 43-case suite, which adds the empty tag 1
 `mu<BulkPairs>` payload.
+
+## M1 conditional Hash writes and byte lengths (2026-09-18)
+
+`dev/hash-conditional-mutations.py` builds each source mutant in a private
+copy and requires its named failed assertion. Thirteen distinct mutations
+and three restored controls are pinned by both the runner and the slice
+driver. The author's run `run-sEP73E` in the isolated work directory's
+`.kanon-exec` records exit 0 for the first twelve of them and:
+
+```text
+PASS HASH-CONDITIONAL-MUTATIONS killed=12 survived=0 restored=3
+```
+
+| Mutation | Required detector |
+| --- | --- |
+| STORE-OVERWRITE | Conditional insertion preserves existing fields and complete state |
+| STORE-NOOP-COUNT | An existing field returns 0 |
+| STORE-NOOP-EXPIRY | A refused overwrite retains its deadline |
+| STORE-LENGTH | Byte lengths match the explicit unit cases |
+| INTERPRETER-NX | Tag 59 uses conditional insertion |
+| INTERPRETER-LENGTH | Tag 60 returns byte length |
+| LUA-OVERWRITE | The independent twin reports a Hash field mismatch |
+| LUA-LENGTH | The generated Lua returns the expected length |
+| LUA-DISPATCH-BOUND | The length probe stops in `out-length/body-0.lua` |
+| READONLY-LENGTH | HSTRLEN retains its no-writes header |
+| READONLY-INSERT | HSETNX never receives a no-writes header |
+| TWIN-OVERWRITE | The twin preserves an existing field |
+| TWIN-LENGTH | The twin returns the expected byte length |
+
+Restored controls are the 32-scenario unit suite, seven insertion probes
+and nine length probes. The first run expected a reply mismatch for the
+two overwrite mutations, but the stronger complete-state check failed
+earlier. Both markers now pin `TWIN hash field mismatch`; the complete
+rerun killed those twelve mutations with no survivors. The review round
+adds `LUA-DISPATCH-BOUND` for the new tag 60 dispatch bounds of
+`print/lua.ml`, and re-anchors `STORE-OVERWRITE` on the rest-aware `nx`
+guard of `hset`. Assertions are unchanged.
+The existing HSET-MANY STORE-TYPE source anchor follows HSET's optional
+`nx` argument and retains its original wrong-type detector.

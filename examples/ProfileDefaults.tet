@@ -1,0 +1,32 @@
+module ProfileDefaults
+schema profiles : String -> Key Hash tag b"profiles"
+
+def initialize : Script Reply (tag b"profiles") := do {
+  first <- hsetnx Reply (tag b"profiles") (profiles b"alice") b"name" b"Alice";
+  _ <- hsetnx Reply (tag b"profiles") (profiles b"alice") b"name" b"replacement";
+  _ <- hsetnx Reply (tag b"profiles") (profiles b"alice") b"role" b"member";
+  pure Reply (tag b"profiles") first
+}
+def view : Script Reply (tag b"profiles") := do {
+  r <- hgetall Reply (tag b"profiles") (profiles b"alice");
+  pure Reply (tag b"profiles") r
+}
+def measure : Script Reply (tag b"profiles") := do {
+  r <- hstrlen Reply (tag b"profiles") (profiles b"alice") b"name";
+  pure Reply (tag b"profiles") r
+}
+def main : Client Reply := do {
+  _ <- inv Reply (tag b"profiles") initialize;
+  r <- inv Reply (tag b"profiles") view;
+  done Reply r
+}
+def length : Client Reply := do {
+  _ <- inv Reply (tag b"profiles") initialize;
+  r <- inv Reply (tag b"profiles") measure;
+  done Reply r
+}
+def retained : Client Reply := do {
+  first <- inv Reply (tag b"profiles") initialize;
+  _ <- inv Reply (tag b"profiles") measure;
+  done Reply first
+}

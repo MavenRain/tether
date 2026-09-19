@@ -4,6 +4,13 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports conditional Hash writes with `hsetnx` and byte lengths
+with `hstrlen`. `./tether exec examples/ProfileDefaults.tet --host node`
+initializes missing fields without replacing existing values, prints
+`["name","Alice","role","member"]`, and exposes the stored name's length
+through its `length` entry.
+See `dev/HASH-CONDITIONAL.md`; run `sh dev/m1-hash-conditional.sh` for validation.
+
 M1 now supports variadic Hash writes with `hsetMany`. A nonempty
 `BulkPairs` value keeps every field paired with its value.
 `./tether exec examples/ProfileBatch.tet --host node` stores a profile in

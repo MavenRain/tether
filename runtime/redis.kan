@@ -119,6 +119,8 @@ mu Script (0 A : Type 0) : (0 g : Tag) -> Type 0 :=
 | sremMany : (0 g : Tag) -> Key Set g -> BulkArgs -> (Reply -> Script A g) -> Script A g
 | hdelMany : (0 g : Tag) -> Key Hash g -> BulkArgs -> (Reply -> Script A g) -> Script A g
 | hsetMany : (0 g : Tag) -> Key Hash g -> BulkPairs -> (Reply -> Script A g) -> Script A g
+| hsetnx : (0 g : Tag) -> Key Hash g -> Bytes -> Bytes -> (Reply -> Script A g) -> Script A g
+| hstrlen : (0 g : Tag) -> Key Hash g -> Bytes -> (Reply -> Script A g) -> Script A g
 
 mu Client (0 A : Type 0) : Type 0 :=
 | done : A -> Client A
