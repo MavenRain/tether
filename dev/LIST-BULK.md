@@ -64,7 +64,7 @@ them.
 At the List bulk push slice, the two pinned preludes totaled 171 lines.
 Stage D's static walk used 12 polls, after 56769 checker/erasure polls.
 Fuel 56775 left six walk polls and returned `SH-BUDGET` without publishing
-output. See `dev/HASH-CONDITIONAL.md` for the current prelude and fuel counts.
+output. See `dev/LIST-CONDITIONAL.md` for the current prelude and fuel counts.
 The eight trusted-source bounds and the 150 ms M0 timing bound are unchanged.
 Actual gate results are recorded in `dev/M1-BUILD-LOG.md`. Other Hash,
 List and Set bulk commands, ZSet support, remaining examples, the Lean

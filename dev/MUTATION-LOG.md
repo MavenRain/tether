@@ -1212,3 +1212,37 @@ adds `LUA-DISPATCH-BOUND` for the new tag 60 dispatch bounds of
 guard of `hset`. Assertions are unchanged.
 The existing HSET-MANY STORE-TYPE source anchor follows HSET's optional
 `nx` argument and retains its original wrong-type detector.
+
+## M1 conditional List pushes, 2026-09-18
+
+`python3 -P dev/list-conditional-mutations.py` compiles every mutation
+and requires exit 1 at its named behavioral assertion. The completed
+run reports `PASS LIST-CONDITIONAL-MUTATIONS killed=18 survived=0 restored=5`.
+
+| Mutation | Detector |
+| --- | --- |
+| STORE-CREATE | Missing queues stay absent with count 0 |
+| STORE-MISSING-COUNT | Complete-state unit cases pin the zero reply |
+| STORE-EXPIRY | Existing List deadlines survive a successful push |
+| INTERPRETER-SINGLE-X | Scalar tags retain the existence condition |
+| INTERPRETER-BULK-X | Bulk tags retain the existence condition |
+| INTERPRETER-SINGLE-DIRECTION | Scalar tags preserve the complete List order |
+| INTERPRETER-BULK-DIRECTION | Bulk tags preserve the complete List order |
+| LUA-LEFT-X | LPUSHX leaves a missing key absent |
+| LUA-RIGHT-X | RPUSHX leaves a missing key absent |
+| LUA-BULK-LEFT-X | Bulk LPUSHX leaves a missing key absent |
+| LUA-BULK-RIGHT-X | Bulk RPUSHX leaves a missing key absent |
+| LUA-SINGLE-DIRECTION | The twin detects incorrect scalar insertion order |
+| LUA-BULK-DIRECTION | The twin detects incorrect bulk insertion order |
+| LUA-LAST | The twin detects a dropped final bulk argument |
+| READONLY-SINGLE | LPUSHX never receives a no-writes header |
+| READONLY-BULK | Bulk LPUSHX never receives a no-writes header |
+| TWIN-CREATE | The independent twin must preserve a missing key |
+| TWIN-DIRECTION | The independent twin must preserve insertion order |
+
+Controls are the 74-case unit suite and one six-case probe for each of
+`left`, `right`, `leftBulk` and `rightBulk`, run before mutations and
+after restoration. Every mutation was killed by its intended assertion.
+The older List, bulk List, bulk Set and bulk Hash deletion mutation
+anchors follow the new shared command table and optional `xx` argument.
+Their mutation counts and failure assertions remain unchanged.

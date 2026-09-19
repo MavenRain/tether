@@ -42,12 +42,14 @@ Lua dispatch, read-only classification and the independent twin. Three
 restored controls confirm the clean implementation still passes.
 Actual results are recorded in `dev/M1-BUILD-LOG.md`.
 
-The pinned preludes total 181 lines. Stage D's static walk uses 12 polls
-after 67862 checker/erasure polls. Fuel 67868 leaves six walk polls and
-must return `SH-BUDGET` without publishing output. The checker zero-fuel
-refusal, all eight trusted-source bounds and the 150 ms M0 timing bound
-remain unchanged. The store shares HSET's update path with an `nx` guard;
-the existing bulk-write mutation retains its type-check assertion.
+At the HASH-CONDITIONAL slice, the pinned preludes totaled 181 lines.
+Stage D's static walk used 12 polls after 67862 checker/erasure polls.
+Fuel 67868 left six walk polls and returned `SH-BUDGET` without
+publishing output. The checker zero-fuel refusal, all eight
+trusted-source bounds and the 150 ms M0 timing bound remain unchanged.
+See `dev/LIST-CONDITIONAL.md` for the current prelude and fuel counts.
+The store shares HSET's update path with an `nx` guard; the existing
+bulk-write mutation retains its type-check assertion.
 
 Other Hash commands, List and Set bulk commands, ZSet support, remaining
 examples, the Lean exporter and M1 performance milestones remain open.

@@ -5019,3 +5019,286 @@ tier ruling of 2026-09-18 is met.
 Review pass 1 (2026-09-18) fixed 3 findings.
 
 Fix rounds: 2.
+
+## 2026-09-18: conditional List pushes
+
+This slice continues from `ddf0a7d0a9ff9dec8a82e50b009096d7f32c8464`.
+It adds `lpushx`, `rpushx`, `lpushxMany` and `rpushxMany` as Script tags
+61 through 64. Single pushes accept Bytes and bulk pushes require a
+nonempty BulkArgs. All require a List key in the Script's tag. They emit
+one LPUSHX or RPUSHX command, preserve existing expiry and push order,
+and return zero without creating missing or expired keys. They always
+use write dispatch. Earlier tags and ordinary List pushes retain their
+behavior. `examples/ActiveQueue.tet` covers opening a queue, conditional
+enqueueing, priority jobs, a retained reply and a missing queue.
+
+The independent store shares its push implementation through an optional
+`xx` argument. The Lua emitter shares a command table for bulk operations,
+and the independent twin implements the existence condition. Existing
+List, bulk List, bulk Set and bulk Hash deletion mutation anchors follow
+those source changes. Their inventories and behavioral assertions remain.
+
+The complete `sh dev/m1-list-conditional.sh` run finished with 1017 output
+rows, 480 PASS rows and 51 FAIL rows. There were no functional failures
+and no missing count rows for the new suite. The command exits 1 because
+the independent M0 timing gate remains red: median 247.661 ms against
+the unchanged bound of strictly under 150 ms. The failure multiset is
+M0-TIME once, MEASURE once, STAGE-F twice, the 23 preceding M1 aggregates
+twice each, and M1-LIST-CONDITIONAL once. This does not stamp M0-EXIT.
+A separate clean copy of the unchanged base also failed M0-TIME at
+622.134 ms with a one-minute load of 21.72.
+
+The new suite's recorded rows are:
+
+```
+PASS LIST-CONDITIONAL-BUILD
+PASS LIST-CONDITIONAL-UNIT cases=74
+PASS LIST-CONDITIONAL-ARTIFACTS pairs=18
+PASS LIST-CONDITIONAL-REFUSALS cases=36 atomic_output=36
+PASS LIST-CONDITIONAL-ORACLES store=45 luajit=45
+PASS LIST-CONDITIONAL-E2E cases=53 hosts=118 utf8_refusals=2 errors=4 expired=8
+PASS LIST-CONDITIONAL-EXAMPLE exec=12
+PASS LIST-CONDITIONAL-TESTS
+PASS LIST-CONDITIONAL-MUTATIONS killed=18 survived=0 restored=5
+PASS LIST-CONDITIONAL-COUNTS
+PRELUDE-INTEGRITY lines=185 files=2 OK
+```
+
+The 18 compiling mutants all failed at their intended assertions and all
+five controls passed after restoration. The earlier List, bulk List,
+bulk Set and bulk Hash deletion mutation suites killed 9, 16, 16 and 14
+mutants respectively. All other mutation summaries in the ladder passed.
+The host cases verify complete List order, wrong-type state and expiry,
+unrelated keys, missing and expired keys, and retained replies. An actual
+invalid UTF-8 byte is used for both output-refusal checks. All four
+example entries pass on node, bash and luajit.
+
+The instrumented Stage D probe reports `FUEL before=75766 after=75778`.
+Fuel 75765 fails in the checker; 75766, 75772 and 75777 reach SH-BUDGET;
+75778 passes the walk and reaches the next checker guard. Every refusal
+publishes no output. A compiled negative control disabling the printer
+guard changes the 75772 failure to CHECK budget. The zero-fuel checker
+assertion and the numeric bounds remain unchanged.
+
+Trusted counts are kernel 3997/4000, encoder 246/600, Lua 320/320,
+Bash 227/240, store 200/200, node host 196/300, REST host 156/300 and
+bin 404/450. The house check is green and the vendor pin is unchanged.
+The trusted preludes now total 185 lines, with the Redis prelude hash
+`edfade6a49217e5e6ec5b335ff4c25de5c0b0f6f69e2a08a15046df4a03e45d8`.
+
+Validation artifacts under `/Users/oobi/Documents/gpt18`:
+
+- Full ladder: `tether-m1-list-conditional/.kanon-exec/run-oR9Aee`.
+  Its stdout SHA-256 is `58b9cb3d18a289c362bb9c4a9e4b2f3b3659d4e1cdf77a54f47a0d23c139eeb3`.
+- Selected results: `tether-list-conditional-validation.json`.
+- Standalone mutation check: `tether-m1-list-conditional/.kanon-exec/run-9eeeIv`.
+- Corrected host and example check: `.kanon-exec/run-5PgPGg`.
+- Fuel measurement and negative control: `.kanon-exec/run-Zh4Co2` and
+  `.kanon-exec/run-37rfLa`.
+- Clean-base timing: `tether-list-conditional-baseline/.kanon-exec/run-IPuyzu`.
+
+### Review round 2026-09-19 (M1 conditional List pushes)
+
+The round reviewed the staged slice on `ddf0a7d`: Script tags 61 `lpushx`,
+62 `rpushx`, 63 `lpushxMany` and 64 `rpushxMany`, 25 staged paths,
++833/-42. The round used 7 findings. The judge kept 3, the verifiers
+refuted 2, and 2 were merged and then cut.
+
+C1 (low, `dev/MUTATION-LOG.md` row 1243): the staged control sentence read
+"six probes for each of `left`, `right`, `leftBulk` and `rightBulk`", which
+counts 25 controls. `dev/list-conditional-mutations.py` rows 53 to 56 build
+one probe for each entry and row 68 requires five controls; the six is the
+case count inside one probe run, printed as
+`PASS LIST-CONDITIONAL-PROBE entry=left cases=6`. The fix reads "one
+six-case probe for each of". The frozen rows 1 to 1214 stay byte identical
+to `ddf0a7d` and no recorded count moved.
+
+C2 (low, `dev/HASH-CONDITIONAL.md` row 45): the slice renumbered the closed
+Hash conditional doc in place, 181 to 185 prelude lines and fuel 67868 to
+75772, so the record of that close was lost. The fix follows the pattern of
+`ddf0a7d`: rows 45 to 52 now report the HASH-CONDITIONAL numbers in the past
+tense and end with "See `dev/LIST-CONDITIONAL.md` for the current prelude
+and fuel counts", and the five pointer rows of `dev/LIST-BULK.md`,
+`dev/HMGET.md`, `dev/HSET-MANY.md`, `dev/HDEL-MANY.md` and
+`dev/SET-BULK.md` now name `dev/LIST-CONDITIONAL.md`. The fix is
+documentation only and no measured number moved.
+
+C3 (low, `SPEC.md` row 154) was ruled with no fix: `dev/prelude-check.py`
+reports the prelude total (`PRELUDE-INTEGRITY lines=185 files=2 OK`) and
+does not bound it, by its own row 2 and by `SPEC.md` rows 154 and 155, so a
+fix would add a ninth ruled bound. The two SHA-256 prelude pins already
+refuse a silent prelude edit.
+
+The verifiers refuted two findings. A1 claimed the interpreter guards
+`~xx:(tag >= 61)` and `~xx:(tag >= 63)` of `store/interp.ml` rows 91 and 107
+admit unrelated tags; the match arms are closed patterns, so the domain is
+finite and the membership is exact, and the injected weaker guard
+`~xx:(tag >= 19)` went red at once. A2 claimed the 74 unit cases of
+`dev/list_conditional_tests.ml` assert the interpreter and not the store;
+rows 91 and 107 hold no guard of their own, so the interpreter case is the
+store assertion, and direct `S.push ~xx:true` cases pin the store path twice
+more. Two findings were merged and then cut: D1 into C1 and D2 into C2, each
+on the same file and the same row.
+
+The baseline ladder of this round is `gates-baseline.log`, tag `baseline`.
+It has 1075 rows and 51 FAIL rows, and the last row reads `EXIT-ALL 1`. It
+started at a one-minute load of 27.36. The only non-aggregate failure is
+`FAIL M0-TIME median_ms=209.246 bound_ms=150`, the ruled timing cascade that
+carries MEASURE, STAGE-F and the nested M1 aggregates, so the verdict is
+GREEN-FUNCTIONAL.
+
+The fix ladder of round 1 is `gates-fix-1.log`, tag `fix-1`. It has 58 rows
+and one FAIL row, and the last row reads `EXIT-ALL 0`. It started at a
+one-minute load of 7.00. It ran in COPY mode with the selector
+list-conditional-only, so the timing leg was not exercised. It holds
+`PASS LIST-CONDITIONAL-UNIT cases=74`,
+`PASS LIST-CONDITIONAL-MUTATIONS killed=18 survived=0 restored=5` with its
+18 KILLED rows, `PASS HOUSE`, `PRELUDE-INTEGRITY lines=185 files=2 OK` and
+`TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240
+store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK`. Its one
+`FAIL-LEG LIST-CONDITIONAL-COUNTS` row comes from the review kit, whose
+tests-run leg still calls `dev/hash-conditional-tests.py`, so the captured
+output held the Hash conditional rows and every LIST-CONDITIONAL count row
+was reported as missing.
+
+The tests ladder of round 1 is `gates-fix-1-b.log`, tag `fix-1-b`, queued at
+a one-minute load of 7.58 on the same copy. It has 20 rows and no FAIL row,
+and the last row reads `EXIT-ALL 0`. It runs
+`python3 -P dev/list-conditional-tests.py` and prints
+`PASS LIST-CONDITIONAL-ARTIFACTS pairs=18`,
+`PASS LIST-CONDITIONAL-REFUSALS cases=36 atomic_output=36`,
+`PASS LIST-CONDITIONAL-ORACLES store=45 luajit=45`,
+`PASS LIST-CONDITIONAL-E2E cases=53 hosts=118 utf8_refusals=2 errors=4
+expired=8`, `PASS LIST-CONDITIONAL-EXAMPLE exec=12` and
+`PASS LIST-CONDITIONAL-TESTS`, the documented numbers, so the count rows of
+the slice hold.
+
+Round 2 closed the two items of the second judge pass.
+
+ND-1-1 (medium, `dev/M1-BUILD-LOG.md` row 5100): the review block of this
+round was in the worktree only. The index held 5098 rows and no
+`### Review round 2026-09-19` heading, the worktree held 5174 rows, and
+`git status --short -uall` printed `MM` for the path, so a commit of that
+index would carry the C1 and C2 fixes with no record of the round. The fix
+stages that one path, `git add -- dev/M1-BUILD-LOG.md`. No other path was
+restaged, and rows 1 to 5021 stay byte identical to `ddf0a7d`.
+
+GATE-1 (high, review kit `run-ladder.sh` row 63): the one FAIL row of round
+1, `FAIL-LEG LIST-CONDITIONAL-COUNTS`, came from the kit driver and not from
+the tree. That row ran `python3 -P dev/hash-conditional-tests.py` for the
+LIST-CONDITIONAL-TESTS-RUN leg, a line held over from the predecessor round,
+so the captured output held the Hash conditional rows and the COUNTS leg
+reported six missing LIST-CONDITIONAL rows. Row 44 of
+`dev/m1-list-conditional.sh` runs `python3 -P dev/list-conditional-tests.py`
+and the baseline ladder prints `PASS LIST-CONDITIONAL-COUNTS`, so no tree
+file needed a change. The fix names the list suite on row 63 of the kit
+driver and on its comment row 15. A control on the recorded captures shows
+that the comparison is not vacuous: the six rows of `gates-fix-1-b.log`, the
+real output of `dev/list-conditional-tests.py`, give COUNTS-PASS, and the six
+Hash conditional rows of `gates-fix-1.log` give COUNTS-FAIL with one MISSING
+ROW line for each expected row. No recorded count moved in this round, so no
+count row of this log and no sentence of `dev/MUTATION-LOG.md` changed.
+
+The socket-free legs on ROOT are green after the fixes, each one rc=0:
+`dune build bin/tether.exe`, the three-target build,
+`PASS LIST-CONDITIONAL-UNIT cases=74`,
+`PASS LIST-CONDITIONAL-ARTIFACTS pairs=18`,
+`PASS LIST-CONDITIONAL-REFUSALS cases=36 atomic_output=36`,
+`PASS LIST-CONDITIONAL-ORACLES store=45 luajit=45`,
+`PASS LIST-CONDITIONAL-TESTS mode=offline`,
+`TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240
+store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK`,
+`PASS HOUSE`, `PASS CHECK definitions=97` and `PASS EMIT prog.wasm prog.sh`
+for `examples/ActiveQueue.tet`.
+
+The fix ladder of round 2 is `gates-fix-2.log`, tag `fix-2`. It has 52 rows
+and no FAIL row, and the last two rows read `EXIT 0` and `EXIT-ALL 0`. It ran
+in COPY mode with the selector list-conditional-only at a one-minute load of
+20.16, so the timing leg was not exercised. Every leg is a PASS-LEG row:
+LIST-CONDITIONAL-BUILD, LIST-CONDITIONAL-UNIT-EXE,
+LIST-CONDITIONAL-TESTS-RUN, LIST-CONDITIONAL-MUTATIONS-RUN,
+LIST-CONDITIONAL-COUNTS, HOUSE, TRUSTED-LINES and PRELUDES. The captured
+rows are `PASS LIST-CONDITIONAL-UNIT cases=74`,
+`PASS LIST-CONDITIONAL-ARTIFACTS pairs=18`,
+`PASS LIST-CONDITIONAL-REFUSALS cases=36 atomic_output=36`,
+`PASS LIST-CONDITIONAL-ORACLES store=45 luajit=45`,
+`PASS LIST-CONDITIONAL-E2E cases=53 hosts=118 utf8_refusals=2 errors=4
+expired=8`, `PASS LIST-CONDITIONAL-EXAMPLE exec=12`,
+`PASS LIST-CONDITIONAL-TESTS`, the 18 KILLED rows with
+`PASS LIST-CONDITIONAL-MUTATIONS killed=18 survived=0 restored=5`,
+`PASS HOUSE`, the same TRUSTED-LINES row as the baseline and
+`PRELUDE-INTEGRITY lines=185 files=2 OK`. The COUNTS leg now compares the
+output of the List conditional suite, so the round ends with the documented
+numbers of the slice and no open FAIL row.
+
+After the fixes the staged set holds 30 paths, +1050/-51. The five added
+paths are the pointer docs of fix C2: dev/LIST-BULK.md, dev/HMGET.md,
+dev/HSET-MANY.md, dev/HDEL-MANY.md and dev/SET-BULK.md. Rows 1 to 5021 of
+this log and rows 1 to 1214 of dev/MUTATION-LOG.md stay byte identical to
+`ddf0a7d`. Of the 3 kept findings, C1 and C2 were fixed and C3 was ruled
+with no fix. ND-1-1 and GATE-1 were defects of the review record and of the
+review kit, not of the slice: the slice fixes number 2.
+
+The close ladder ran in ROOT mode on the full leg and its log of record is
+`gates-close.log` with tag `close`. It started at 07:12:13 and ended at
+07:48:21. Its header row and uptime row read:
+
+```
+LADDER tag=close mode=root leg=full root=/Users/oobi/Documents/tether start 07:12:13
+ 7:12  up 33 days,  9:47, 29 users, load averages: 8.80 9.02 9.61
+```
+
+The log holds 1075 rows, 481 PASS rows and 51 FAIL rows, and its last rows
+read `EXIT 1`, `EXIT-MUT 0` and `EXIT-ALL 1`. The sorted FAIL names equal
+those of the baseline ladder, both hashing to 1d45fb24dac2.
+`FAIL M0-TIME median_ms=200.916 bound_ms=150` is the only FAIL row with a
+measured value; the other 50 FAIL rows are the MEASURE, STAGE-F and nested
+M1 aggregates of that one timing cascade. The four M0-TIME rows read:
+
+```
+MUTANT-M0-TIME exceeded median_ms=226.625 bound_ms=150
+KILLED SPINE-WORK by M0-TIME definitions_added=2000
+PASS M0-TIME-BOUNDARY below=149 at=150
+FAIL M0-TIME median_ms=200.916 bound_ms=150
+```
+
+The LIST-CONDITIONAL leg of the close log reads:
+
+```
+PASS LIST-CONDITIONAL-BUILD
+PASS LIST-CONDITIONAL-UNIT cases=74
+PASS LIST-CONDITIONAL-UNIT-EXE
+PASS LIST-CONDITIONAL-ARTIFACTS pairs=18
+PASS LIST-CONDITIONAL-REFUSALS cases=36 atomic_output=36
+PASS LIST-CONDITIONAL-ORACLES store=45 luajit=45
+PASS LIST-CONDITIONAL-E2E cases=53 hosts=118 utf8_refusals=2 errors=4 expired=8
+PASS LIST-CONDITIONAL-EXAMPLE exec=12
+PASS LIST-CONDITIONAL-TESTS
+PASS LIST-CONDITIONAL-TESTS-RUN
+PASS LIST-CONDITIONAL-MUTATIONS killed=18 survived=0 restored=5
+PASS LIST-CONDITIONAL-MUTATIONS-RUN
+PASS LIST-CONDITIONAL-COUNTS
+FAIL M1-LIST-CONDITIONAL
+```
+
+The TRUSTED-LINES row of the close log reads
+`TRUSTED-LINES kernel=3997/4000 encoder=246/600 OK`.
+`PRELUDE-INTEGRITY lines=185 files=2 OK` appears 5 times, `PASS HOUSE`
+appears 47 times and the full TRUSTED-LINES OK row appears 26 times, the
+same counts as the baseline ladder. Every mutation summary row of the close
+log reads survived=0.
+
+The M0-TIME bound of 150 ms never moved. Every FAIL row of each ladder
+belongs to the ruled timing cascade, and a timing FAIL at a one-minute load
+below 40 leaves GATE-1 open rather than marking a regression. No functional
+FAIL row occurred and every mutation summary row reads survived=0, so each
+ladder is GREEN-FUNCTIONAL under the open GATE-1 timing item. The top
+verdict row reads `FAIL M1-LIST-CONDITIONAL`.
+
+The round ran its finders at opus medium, its verifiers and its judge at
+opus max, its fixer at opus xhigh, and its closer at opus medium; every
+tier ruling of 2026-09-18 is met.
+
+Review pass 1 (2026-09-19) fixed 2 findings.
+
+Fix rounds: 2.

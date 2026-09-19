@@ -142,3 +142,8 @@
  (name set_move_tests)
  (modules set_move_tests)
  (libraries tether_store kanon_kernel))
+
+(executable
+ (name list_conditional_tests)
+ (modules list_conditional_tests)
+ (libraries tether_store kanon_kernel))

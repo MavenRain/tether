@@ -55,7 +55,7 @@ mutation anchors while preserving their existing assertions and counts.
 At the HSET-MANY slice, the pinned preludes totaled 179 lines. Stage D's
 static walk used 12 polls after 64007 checker/erasure polls. Fuel 64013
 left six walk polls and returned `SH-BUDGET` without publishing output.
-See `dev/HASH-CONDITIONAL.md` for the current prelude and fuel counts.
+See `dev/LIST-CONDITIONAL.md` for the current prelude and fuel counts.
 All eight trusted-source bounds and the 150 ms M0 timing bound remain unchanged.
 
 Other Hash commands, List and Set bulk commands, ZSet support, remaining

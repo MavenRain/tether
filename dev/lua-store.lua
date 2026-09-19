@@ -195,9 +195,10 @@ local function list_call(command, key, value, extra, ...)
     return {ok='OK'}
   end
   if command == 'LLEN' then return #items end
-  if command == 'LPUSH' or command == 'RPUSH' then
+  if command == 'LPUSH' or command == 'RPUSH' or command == 'LPUSHX' or command == 'RPUSHX' then
+    if (command == 'LPUSHX' or command == 'RPUSHX') and #items == 0 then return 0 end
     for _, item in ipairs({value, extra, ...}) do
-      table.insert(items, command == 'LPUSH' and 1 or #items + 1, item)
+      table.insert(items, (command == 'LPUSH' or command == 'LPUSHX') and 1 or #items + 1, item)
     end
     values[key] = {[list_kind]=items}
     return #items
@@ -238,7 +239,7 @@ local function data_call(command, key, amount, value, ...)
     or command == 'SUNION' or command == 'SINTER' or command == 'SDIFF' then
     return set_call(command, key, amount, value, ...)
   end
-  if command == 'LPUSH' or command == 'RPUSH' or command == 'LPOP' or command == 'RPOP' or command == 'LLEN'
+  if command == 'LPUSH' or command == 'RPUSH' or command == 'LPUSHX' or command == 'RPUSHX' or command == 'LPOP' or command == 'RPOP' or command == 'LLEN'
     or command == 'LINDEX' or command == 'LSET' or command == 'LTRIM' or command == 'LRANGE' then
     return list_call(command, key, amount, value, ...)
   end

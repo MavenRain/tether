@@ -88,7 +88,7 @@ let run ~budget rows ~entry store =
           | 14, [Octets f; Signed v] -> integer (Store.hincrby key f v store)
           | (15 | 16), [Octets m] -> integer ((if tag = 15 then Store.sadd else Store.srem) key m store)
           | 17, [Octets m] -> integer (keep (Store.sismember key m store))
-          | (19 | 20), [Octets v] -> integer (Store.push (if tag = 19 then Store.Left else Store.Right) key v store)
+          | (19 | 20 | 61 | 62), [Octets v] -> integer (Store.push ~xx:(tag >= 61) (if tag = 19 || tag = 61 then Store.Left else Store.Right) key v store)
           | (21 | 22), [] -> bulk (Store.pop (if tag = 21 then Store.Left else Store.Right) key store)
           | 24, [Signed i] -> bulk (keep (Store.lindex key i store))
           | 25, [Signed i; Octets v] -> status (Store.lset key i v store)
@@ -104,7 +104,7 @@ let run ~budget rows ~entry store =
           | 43, [] -> integer (Ok (Store.persist key store))
           | (48 | 49 | 50 | 51), [Signed duration; Condition condition] -> integer (Store.expire ~condition ~absolute:(tag >= 50) ~seconds:(tag = 48 || tag = 50) key duration store)
           | (52 | 57), [BulkFields (first, rest)] -> if tag = 52 then array nullable (keep (Store.hmget key first rest store)) else integer (Store.hdel ~rest key first store)
-          | (53 | 54), [BulkFields (first, rest)] -> integer (Store.push ~rest (if tag = 53 then Store.Left else Store.Right) key first store)
+          | (53 | 54 | 63 | 64), [BulkFields (first, rest)] -> integer (Store.push ~xx:(tag >= 63) ~rest (if tag = 53 || tag = 63 then Store.Left else Store.Right) key first store)
           | (55 | 56), [BulkFields (first, rest)] -> integer (Store.change_set ~rest (if tag = 55 then Store.Members.add else Store.Members.remove) key first store)
           | _, _ -> Error "STORE-SCRIPT-COMMAND" in
         let* next = apply k [answer] in script store next

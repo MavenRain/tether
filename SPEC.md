@@ -1,6 +1,6 @@
 # tether specification
 
-M1 conditional Hash slice, 2026-09-18. The driver emits the executable Wasm
+M1 conditional List slice, 2026-09-18. The driver emits the executable Wasm
 Client and Bash pair. The foundation, counter surface, printers, store and
 local hosts are implemented. See `dev/STAGE-B.md` through `dev/STAGE-F.md`
 for syntax and limits. The latest build-log entry records whether the
@@ -19,6 +19,8 @@ Set operations now include typed SADD, SREM, SISMEMBER and SCARD.
 See `dev/SETS.md` for member semantics and read-only classification.
 List operations now include typed LPUSH, RPUSH, LPOP, RPOP and LLEN.
 See `dev/LISTS.md` for ordering, reply limits and the FIFO job queue.
+LPUSHX and RPUSHX add single and bulk pushes to existing Lists, leaving
+missing keys absent. See `dev/LIST-CONDITIONAL.md` for typing and order.
 LINDEX, LSET and LTRIM add indexed reads, replacement and range trimming.
 See `dev/LIST-ACCESS.md` for signed indices and error precedence.
 LRANGE returns ordered bulk arrays without changing the List. See
@@ -149,7 +151,7 @@ implementation measures lua 320/320, including flags, SHA-1 and byte lowering; s
 including the shared Client plan and reactor printer; store 200/200;
 host-node 196/300; host-rest 156/300; and bin 404/450, covering the command
 host, the driver and the local process owner. Both trusted preludes are pinned by
-`dev/PRELUDES.sha256`; their 181 lines are reported separately without
+`dev/PRELUDES.sha256`; their 185 lines are reported separately without
 adding or changing a ruled bound.
 The store and printers live outside `lib`.
 OCaml uses explicit Result/Option errors, exhaustive sum matches and total
@@ -168,14 +170,14 @@ compile-time median exceeds its bound, even when all functional gates pass.
 M1 do-notation, EVALSHA_RO dispatch, basic String/key commands and
 single-field Hash commands, conditional writes and byte lengths, bulk writes
 and field deletion, basic Set and List commands, indexed List
-access, trimming, range replies and bulk pushes, bulk Set addition and removal,
+access, trimming, range replies, bulk and conditional pushes, bulk Set addition and removal,
 Set and Hash enumeration and Hash
 projections and variadic field selection, two-key Set algebra, destination writes and member transfers,
 relative, absolute and conditional expiry and persistence, and the FIFO job
 queue, preview, team roster, Hash snapshot, Hash catalog, team access and
 team cache, team transfer, session lease, session deadline, session renewal,
 profile-field, queue-batch, team-batch, profile-cleanup, profile-batch and
-profile-default examples are implemented.
+profile-default and active-queue examples are implemented.
 Other Hash operations,
 other List bulk operations, ZSet commands, other Set bulk operations, the rate limiter,
 leaderboard and session-store examples, the counted Lean 4 exporter,

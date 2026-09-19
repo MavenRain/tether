@@ -4,6 +4,12 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports conditional List pushes with `lpushx`, `rpushx`,
+`lpushxMany` and `rpushxMany`. `./tether exec examples/ActiveQueue.tet --host node`
+appends jobs to an open queue and prints `["open","welcome:alice","welcome:bob"]`.
+Its `missing` entry returns `0` without creating a queue. See
+`dev/LIST-CONDITIONAL.md`; run `sh dev/m1-list-conditional.sh` for validation.
+
 M1 now supports conditional Hash writes with `hsetnx` and byte lengths
 with `hstrlen`. `./tether exec examples/ProfileDefaults.tet --host node`
 initializes missing fields without replacing existing values, prints
