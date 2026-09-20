@@ -1,19 +1,17 @@
-module Keys = Map.Make (String)
-module Members = Set.Make (String)
+module Keys = Map.Make (String) module Members = Set.Make (String)
 type data = Str of string | Hash of (string * string) list | List of string list
   | Set of string list | ZSet of (string * string) list | Stream of (string * string) list
 type t = { values : data Keys.t; deadlines : int64 Keys.t; now : int64 }
-type fault = Wrong_type | Not_integer | Hash_not_integer | Overflow | Missing_key | Index_range | Expire_range of string | Expire_reply
+type fault = Wrong_type | Not_integer | Hash_not_integer | Overflow | Missing_key | Index_range | Expire_range of string | Expire_reply | Remove_range
 let empty = { values = Keys.empty; deadlines = Keys.empty; now = 0L } let put key value store = { store with values = Keys.add key value store.values }
 let remove key store = { store with values = Keys.remove key store.values; deadlines = Keys.remove key store.deadlines }
-let bindings store = Keys.bindings store.values
-let save key value ~empty store = if empty then remove key store else put key value store
+let bindings store = Keys.bindings store.values let save key value ~empty store = if empty then remove key store else put key value store
 let message = function
   | Wrong_type -> "WRONGTYPE Operation against a key holding the wrong kind of value"
   | Not_integer -> "ERR value is not an integer or out of range" | Hash_not_integer -> "ERR hash value is not an integer"
   | Overflow -> "ERR increment or decrement would overflow" | Missing_key -> "ERR no such key" | Index_range -> "ERR index out of range"
   | Expire_range command -> "ERR invalid expire time in '" ^ command ^ "' command"
-  | Expire_reply -> "ERR expiry reply is outside exact integer range"
+  | Expire_reply -> "ERR expiry reply is outside exact integer range" | Remove_range -> "ERR value is out of range, value must between -9223372036854775807 and 9223372036854775807"
 let read empty project key store = Keys.find_opt key store.values |> Option.fold ~none:(Ok empty) ~some:project
 let get = read None (function Str value -> Ok (Some value) | Hash _ | List _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
 let integer text = Result.bind (Int64.of_string_opt text |> Option.to_result ~none:Not_integer) (fun value -> if Int64.to_string value = text then Ok value else Error Not_integer)
@@ -70,8 +68,7 @@ let llen key store = let* values = list key store in Ok (string_of_int (List.len
 let push ?(xx = false) ?(rest = []) side key value store = let* values = list key store in if xx && values = [] then Ok ("0", store) else let values = orient side (List.rev_append rest (value :: orient side values)) in Ok (string_of_int (List.length values), put key (List values) store)
 let pop side key store = let* values = list key store in match orient side values with | [] -> Ok (None, store)
   | value :: rest -> Ok (Some value, save key (List (orient side rest)) ~empty:(rest = []) store)
-let position values index = if index < 0L then Int64.add (Int64.of_int (List.length values)) index else index
-let indexed values = List.mapi (fun i v -> Int64.of_int i, v) values
+let position values index = if index < 0L then Int64.add (Int64.of_int (List.length values)) index else index let indexed values = List.mapi (fun i v -> Int64.of_int i, v) values
 let lindex key index store = let* values = list key store in if values = [] then Ok None else let* index = integer index in Ok (List.assoc_opt (position values index) (indexed values))
 let lset key index value store = let* values = list key store in if values = [] then Error Missing_key else let* index = integer index in let index = position values index in
   if index < 0L || index >= Int64.of_int (List.length values) then Error Index_range else
@@ -79,3 +76,6 @@ let lset key index value store = let* values = list key store in if values = [] 
 let lrange key first last store = let* first = integer first in let* last = integer last in let* values = list key store in let first, last = position values first, position values last in
   Ok (List.filter_map (fun (i, v) -> if i >= first && i <= last then Some v else None) (indexed values))
 let ltrim key first last store = let* values = lrange key first last store in Ok ("OK", save key (List values) ~empty:(values = []) store)
+let lrem key count value store = let* count = integer count in if count = Int64.min_int then Error Remove_range else let* values = list key store in let side = if count < 0L then Right else Left in
+  let removed, kept = List.fold_left (fun (n, kept) v -> if v = value && (count = 0L || (if count < 0L then Int64.neg n > count else n < count)) then Int64.succ n, kept else n, v :: kept) (0L, []) (orient side values) in
+  Ok (Int64.to_string removed, save key (List (orient side (List.rev kept))) ~empty:(kept = []) store)

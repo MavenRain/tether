@@ -1,5 +1,4 @@
-module E = Kanon_kernel.Eterm
-let ( let* ) = Result.bind
+module E = Kanon_kernel.Eterm let ( let* ) = Result.bind
 type value = Data of E.tid * int * value list | Fields of value list
   | Literal of Kanon_kernel.Literal.t | Closure of string * int * value list | Erased
 type reply = Nil | Int of string | Bulk of string | Status of string | Err of string | Array of reply list
@@ -106,6 +105,7 @@ let run ~budget rows ~entry store =
           | (52 | 57), [BulkFields (first, rest)] -> if tag = 52 then array nullable (keep (Store.hmget key first rest store)) else integer (Store.hdel ~rest key first store)
           | (53 | 54 | 63 | 64), [BulkFields (first, rest)] -> integer (Store.push ~xx:(tag >= 63) ~rest (if tag = 53 || tag = 63 then Store.Left else Store.Right) key first store)
           | (55 | 56), [BulkFields (first, rest)] -> integer (Store.change_set ~rest (if tag = 55 then Store.Members.add else Store.Members.remove) key first store)
+          | 65, [Signed count; Octets value] -> integer (Store.lrem key count value store)
           | _, _ -> Error "STORE-SCRIPT-COMMAND" in
         let* next = apply k [answer] in script store next
     | Data _ | Fields _ | Literal _ | Closure _ | Erased -> Error "STORE-SCRIPT" in

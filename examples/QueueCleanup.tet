@@ -1,0 +1,37 @@
+module QueueCleanup
+schema jobs : String -> Key List tag b"queue"
+
+def seed : Script Reply (tag b"queue") := do {
+  r <- rpushMany Reply (tag b"queue") (jobs b"mail")
+    (bulkMore b"cancelled" (bulkMore b"welcome:alice" (bulkMore b"cancelled" (bulkOne b"welcome:bob"))));
+  pure Reply (tag b"queue") r
+}
+def clean : Script Reply (tag b"queue") := do {
+  r <- lrem Reply (tag b"queue") (jobs b"mail") (int64 b"0") b"cancelled";
+  pure Reply (tag b"queue") r
+}
+def preview : Script Reply (tag b"queue") := do {
+  r <- lrange Reply (tag b"queue") (jobs b"mail") (int64 b"0") (int64 b"-1");
+  pure Reply (tag b"queue") r
+}
+def clear : Script Reply (tag b"queue") := do {
+  r <- del Reply List (tag b"queue") (jobs b"mail");
+  pure Reply (tag b"queue") r
+}
+def main : Client Reply := do {
+  _ <- inv Reply (tag b"queue") seed;
+  _ <- inv Reply (tag b"queue") clean;
+  r <- inv Reply (tag b"queue") preview;
+  done Reply r
+}
+def removed : Client Reply := do {
+  _ <- inv Reply (tag b"queue") seed;
+  r <- inv Reply (tag b"queue") clean;
+  done Reply r
+}
+def retained : Client Reply := do {
+  _ <- inv Reply (tag b"queue") seed;
+  r <- inv Reply (tag b"queue") clean;
+  _ <- inv Reply (tag b"queue") clear;
+  done Reply r
+}

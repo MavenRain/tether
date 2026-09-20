@@ -4,6 +4,13 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports typed List removal with `lrem`. Positive and negative
+counts remove matching values from the head and tail; zero removes all
+matches. `./tether exec examples/QueueCleanup.tet --host node` removes
+cancelled jobs and prints `["welcome:alice","welcome:bob"]`. Its `removed`
+and `retained` entries return `2`, including after deleting the queue.
+See `dev/LIST-REMOVE.md`; run `sh dev/m1-list-remove.sh` for validation.
+
 M1 now supports conditional List pushes with `lpushx`, `rpushx`,
 `lpushxMany` and `rpushxMany`. `./tether exec examples/ActiveQueue.tet --host node`
 appends jobs to an open queue and prints `["open","welcome:alice","welcome:bob"]`.

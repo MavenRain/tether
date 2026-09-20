@@ -166,6 +166,12 @@ local function list_offset(index, length)
   return n < 0 and length + n or n
 end
 local function list_call(command, key, value, extra, ...)
+  if command == 'LREM' and not canonical(value) then
+    return {err='ERR value is not an integer or out of range'}
+  end
+  if command == 'LREM' and value == '-9223372036854775808' then
+    return {err='ERR value is out of range, value must between -9223372036854775807 and 9223372036854775807'}
+  end
   if (command == 'LTRIM' or command == 'LRANGE') and (not canonical(value) or not canonical(extra)) then
     return {err='ERR value is not an integer or out of range'}
   end
@@ -174,6 +180,24 @@ local function list_call(command, key, value, extra, ...)
     return {err='WRONGTYPE Operation against a key holding the wrong kind of value'}
   end
   local items = stored and stored[list_kind] or {}
+  if command == 'LREM' then
+    local backward = value:sub(1,1) == '-'
+    local digits = backward and value:sub(2) or value
+    local length = tostring(#items)
+    local limit = (value == '0' or #digits > #length or (#digits == #length and digits > length))
+      and #items or tonumber(digits)
+    local removed = 0
+    local index = backward and #items or 1
+    while index >= 1 and index <= #items and removed < limit do
+      if items[index] == extra then
+        table.remove(items, index)
+        removed = removed + 1
+        if backward then index = index - 1 end
+      else index = index + (backward and -1 or 1) end
+    end
+    if #items == 0 then values[key] = nil end
+    return removed
+  end
   if command == 'LINDEX' or command == 'LSET' then
     if #items == 0 then
       if command == 'LINDEX' then return false end
@@ -240,7 +264,7 @@ local function data_call(command, key, amount, value, ...)
     return set_call(command, key, amount, value, ...)
   end
   if command == 'LPUSH' or command == 'RPUSH' or command == 'LPUSHX' or command == 'RPUSHX' or command == 'LPOP' or command == 'RPOP' or command == 'LLEN'
-    or command == 'LINDEX' or command == 'LSET' or command == 'LTRIM' or command == 'LRANGE' then
+    or command == 'LINDEX' or command == 'LSET' or command == 'LTRIM' or command == 'LRANGE' or command == 'LREM' then
     return list_call(command, key, amount, value, ...)
   end
   if command == 'EXISTS' then return values[key] ~= nil and 1 or 0 end

@@ -1246,3 +1246,35 @@ after restoration. Every mutation was killed by its intended assertion.
 The older List, bulk List, bulk Set and bulk Hash deletion mutation
 anchors follow the new shared command table and optional `xx` argument.
 Their mutation counts and failure assertions remain unchanged.
+
+## 2026-09-19: M1 List removal
+
+`python3 -P dev/list-remove-mutations.py` passed with
+`PASS LIST-REMOVE-MUTATIONS killed=14 survived=0 restored=5` in the
+corrected focused capture `.kanon-exec/run-bcfByX`. Every mutant compiled
+before its semantic probe ran. The runner restores each source in a
+`finally` block, rebuilds, and repeats all five controls.
+
+| Mutant | Assertion |
+| --- | --- |
+| STORE-ZERO | Zero removes every matching value |
+| STORE-DIRECTION | Positive and negative counts select opposite ends |
+| STORE-MATCH | Only byte-equal values are removed |
+| STORE-EMPTY | Removing the final item deletes the key |
+| STORE-EXPIRY | A remaining List keeps its expiry |
+| STORE-PRECEDENCE | Count validation precedes key type checks |
+| STORE-MINIMUM | The minimum signed value returns Redis's range error |
+| INTERPRETER-TAG | Script tag 65 dispatches to LREM |
+| LUA-COUNT | Emitted Lua preserves the requested limit |
+| LUA-VALUE | Emitted Lua preserves the requested byte value |
+| LUA-DIRECTION | Emitted Lua preserves the count's sign |
+| READONLY | LREM never receives a no-writes header |
+| TWIN-DIRECTION | The independent twin selects the correct end |
+| TWIN-ZERO | The independent twin removes every match at zero |
+
+Controls are the 135-case unit suite, seven-case `head`, `tail` and
+`all` probes, and a binary probe. The initial twin-direction mutant
+changed parsing as well as direction and failed a different assertion;
+the final mutant changes only the starting index and is killed by the
+intended order assertion. The 302 statically discovered mutation anchors
+across all suites match exactly once. Existing inventories are unchanged.

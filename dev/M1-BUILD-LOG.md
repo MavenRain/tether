@@ -5302,3 +5302,165 @@ tier ruling of 2026-09-18 is met.
 Review pass 1 (2026-09-19) fixed 2 findings.
 
 Fix rounds: 2.
+
+## 2026-09-19: M1 List removal
+
+This slice starts from `3dddb54696c38c249eaa61b3cc0e8c0cddb8d638` and
+adds `lrem Reply g key count value`, using `Key List g`, `Signed64` and
+`Bytes`. Script tag 65 is appended without changing earlier tags. The
+store, interpreter and Lua printer remove matching values from the head
+or tail, return the removal count, preserve remaining order and expiry,
+and delete empty keys and their expiry. Zero removes every match. Missing
+and expired keys remain absent. LREM always uses write dispatch.
+
+`examples/QueueCleanup.tet` removes cancelled jobs and returns
+`["welcome:alice","welcome:bob"]`. Its `removed` and `retained` entries
+return `2`, including after a later invocation deletes the List.
+`dev/LIST-REMOVE.md` records signatures, errors and validation commands.
+
+The first live run exposed a Redis boundary rule absent from the initial
+model: Redis 8.10.1 rejects `-9223372036854775808` before looking up the
+key. The captured direct probe tested Lists, wrong-type keys and missing
+keys and confirmed the exact range error and unchanged state. The store
+and independent Lua twin now reproduce it, and both generated hosts
+exercise the handled and unhandled error paths. The supported negative
+endpoint `-9223372036854775807` remains a successful removal case.
+
+All source bounds remain fixed. Measured counts are kernel 3997/4000,
+encoder 246/600, Lua 320/320, Bash 227/240, store 200/200, Node 196/300,
+REST 156/300 and driver 404/450. Small adjacent helper declarations share
+lines; the source census, error handling and bounds are unchanged. Both
+trusted preludes total 186 lines, with redis.kan pinned as
+`35d6892bba912ff3cb267240035879be9cd5c24e9b6c1ed37a7e65efe8d461c4`.
+
+The new prelude consumes 77890 checker/erasure polls and 12 static-walk
+polls for M0Spine. Stage D's printer-fuel case is now 77896. Boundary
+checks require CHECK budget at 77889 and 77902, and SH-BUDGET at 77890,
+77896 and 77901, with no published output. A compiling negative control
+removing the printer guard changes 77896 to CHECK budget, demonstrating
+that the gate still detects the guard. Runtime budgets and the 150 ms
+timing bound are unchanged.
+
+Focused evidence is under `/Users/oobi/Documents/gpt18`:
+
+| Capture | Result |
+| --- | --- |
+| `tether-m1-list-remove/.kanon-exec/run-ruUTge` | Build passed. gateledger ran but did not cache an unresolved toolchain. |
+| `tether-m1-list-remove/.kanon-exec/run-gQ7j78` | Initial live test failed at the minimum count; corrected as described above. |
+| `.kanon-exec/run-MB3q1Y` | Direct Redis boundary and precedence probe passed. |
+| `tether-m1-list-remove/.kanon-exec/run-bcfByX` | Corrected feature checks passed: 135 units, 18 artifact pairs, 17 atomic refusals, 41 store and 41 LuaJIT cases, 47 live cases and 104 host runs, nine examples, 14 killed mutants, zero survivors, five restored controls. The wrapper then exited 1 because its restricted PATH omitted panicscan. |
+| `.kanon-exec/run-gknTEl` | Fuel measured at 77890 before the static walk and 77902 after it. |
+| `.kanon-exec/run-BRwFMt` | All five fuel boundaries and the compiling negative control passed. |
+| `tether-list-remove-baseline/.kanon-exec/run-iiWlFS` | Clean base `3dddb54` also fails M0-TIME: median 307.621 ms against 150 ms, with load average 20.26. The baseline tree and vendor remain clean. |
+
+House, prelude integrity and all eight trusted-line checks were rerun
+successfully with the normal tool PATH. The carried foundation and R0
+audit passed. All 302 statically discovered mutation anchors match once.
+The Kanon review packet reports one added constructor and no axiom change.
+
+The full `sh dev/m1-list-remove.sh` ladder completed with exit 1 in
+`tether-m1-list-remove/.kanon-exec/run-5y99Zj`: 1053 stdout rows, 497 PASS
+rows, 53 FAIL rows and empty stderr. All functional checks passed, all
+30 mutation summaries passed, and every required List removal inventory
+row was present. In particular, the full run repeated the 135 units,
+18 artifact pairs, 17 atomic refusals, both 41-case oracles, 104 host
+runs, nine examples and 14 killed mutants with five restored controls.
+Its final house, prelude integrity and trusted-line checks passed.
+
+The only independent failure was `FAIL M0-TIME median_ms=252.832
+bound_ms=150`. Every other FAIL row was MEASURE, STAGE-F or an enclosing
+M1 aggregate carrying that failure forward. The clean baseline also
+exceeded the same bound, as recorded above. The 150 ms limit remains
+unchanged; this run does not establish the timing gate or ratify M0-EXIT.
+The validated patch contains 21 source and documentation paths. Remaining
+command families, examples, the Lean exporter and the M1 performance and
+traversal gates remain open.
+
+### Review round 2026-09-19 (M1 List removal)
+
+The round reviewed the staged slice on `3dddb54696c38c249eaa61b3cc0e8c0cddb8d638`,
+whose parent is `ddf0a7d`: Script tag 65 `lrem`, 21 staged paths, +781/-29. The
+round used 1 finding. The judge kept 1 and the verifiers refuted 0.
+
+C-1 (low, `dev/HASH-CONDITIONAL.md` row 50, with five sibling rows:
+`dev/LIST-BULK.md` row 67, `dev/HMGET.md` row 57, `dev/HDEL-MANY.md` row 54,
+`dev/HSET-MANY.md` row 58 and `dev/SET-BULK.md` row 58): each row still read
+"See `dev/LIST-CONDITIONAL.md` for the current prelude and fuel counts."
+`dev/LIST-CONDITIONAL.md` had its own prelude sentence bumped forward this
+round (75766/75772 to 77890/77896) rather than frozen and repointed at the
+new hub, `dev/LIST-REMOVE.md`, so the six rows fell one hop behind the true
+current slice. This is the same pattern fixed once before for five of these
+six rows when `dev/LIST-CONDITIONAL.md` itself became the hub. The fix
+repoints all six rows at `dev/LIST-REMOVE.md`, following that established
+pattern. The fix is documentation only and no measured number moved.
+
+The baseline ladder of this round is `gates-baseline.log`, tag `baseline`.
+It has 1111 rows and 53 FAIL rows, and the last row reads `EXIT-ALL 1`. Every
+FAIL row belongs to the timing cascade (`M0-TIME`, `MEASURE`, `STAGE-F` and
+the nested M1 aggregates through `M1-LIST-REMOVE`); load at the timing FAILs
+was 19.65, 24.52 and 23.72, each under the ladder's 40 load-artifact
+threshold, so the verdict is GREEN-FUNCTIONAL.
+
+The fix ladder of round 1 is `gates-fix-1.log`, tag `fix-1`. It ran in COPY
+mode with the selector `list-remove-only`, queued at a one-minute load of
+11.10. It has 48 rows and no FAIL row, and the last row reads `EXIT-ALL 0`.
+It holds `PASS LIST-REMOVE-UNIT cases=135`,
+`PASS LIST-REMOVE-ARTIFACTS pairs=18`,
+`PASS LIST-REMOVE-REFUSALS cases=17 atomic_output=17`,
+`PASS LIST-REMOVE-ORACLES store=41 luajit=41`,
+`PASS LIST-REMOVE-E2E cases=47 hosts=104 utf8_refusals=2 errors=4 expired=6`,
+`PASS LIST-REMOVE-EXAMPLE exec=9`, `PASS LIST-REMOVE-TESTS`, the 14 KILLED
+rows with `PASS LIST-REMOVE-MUTATIONS killed=14 survived=0 restored=5`,
+`PASS HOUSE`,
+`TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240
+store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK` and
+`PRELUDE-INTEGRITY lines=186 files=2 OK`, the documented numbers of the
+slice, so the fix carries no regression.
+
+The socket-free legs on ROOT are green after the fix, each one rc=0:
+`dune build bin/tether.exe`, the List conditional three-target build and its
+exe (`PASS LIST-CONDITIONAL-UNIT cases=74`),
+`PASS LIST-CONDITIONAL-ARTIFACTS pairs=18`,
+`PASS LIST-CONDITIONAL-REFUSALS cases=36 atomic_output=36`,
+`PASS LIST-CONDITIONAL-ORACLES store=45 luajit=45`,
+`PASS LIST-CONDITIONAL-TESTS mode=offline`, the same TRUSTED-LINES row as
+above, `PASS HOUSE`, `PASS CHECK definitions=96` for
+`examples/QueueCleanup.tet` and `PASS EMIT prog.wasm prog.sh` for the same
+file. `git diff --check` on the six edited paths returned no hit, and their
+diff holds no em-dash character.
+
+After the fix the staged set holds 27 paths, +787/-35. Rows 1 to 5021 of
+this log and rows 1 to 1280 of `dev/MUTATION-LOG.md` stay byte identical to
+`ddf0a7d`: this round adds no mutant and moves no measured count, so no
+mutation-log row changed. Of the 1 kept finding, C-1 was fixed.
+
+ND-1-1 (medium, check-1 new defect): fix-1 wrote this round's review block
+into `dev/M1-BUILD-LOG.md` but left the hunk unstaged. Fix-2 staged it with
+`git add -- dev/M1-BUILD-LOG.md` and queued the fix ladder of round 2,
+`gates-fix-2.log`, tag `fix-2`. It ran in COPY mode with the leg `full`
+(the whole suite; the fixer asked for the selector `list-conditional-only`,
+the daemon ran the whole suite) from 18:19:53 to 19:36:06 and the last row
+reads
+`EXIT-ALL 1` with 53 FAIL rows, every FAIL name inside the baseline cascade
+set and no new name against the baseline. Check-2 confirmed the worktree
+equals the index, 27 cached paths, 0 unstaged.
+
+The round's tier rulings were builder Opus 5 XHIGH, verifier Opus 5 MAX,
+and finder and closer Opus 5 MEDIUM, all unmet: every Opus 5 spawn died
+on the reasoning-extraction classifier before its first tool call, so
+every unit of this round ran on sonnet with the explicit tier tag.
+
+Review pass 1 (2026-09-19) fixed 2 findings.
+
+Fix rounds: 2.
+
+The close ladder of record for this round is `gates-close.log`, tag
+`close`. It started at 19:36:31 (daemon row, load 14.97 14.06 17.13; log
+started 19:36:54) and finished at 20:31:43. It has 1111 rows, 498 PASS rows
+and 53 FAIL rows, and the last row reads `EXIT-ALL 1`. The FAIL-name
+multiset sha b0d6f5dfc236 equals the baseline sha b0d6f5dfc236: the same
+M0-TIME timing cascade as the baseline (leaf `FAIL M0-TIME
+median_ms=201.915 bound_ms=150`), no other leaf FAIL. The verdict is
+GREEN-FUNCTIONAL; GATE-1 stays open because the M0-TIME timing bound is an
+independent timing failure under load, and this slice does not ratify
+M0-EXIT.
