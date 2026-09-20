@@ -47,8 +47,8 @@ the shared dispatch changes without reducing their case inventories.
 
 The trusted-source limits remain unchanged: Lua 320/320, store 200/200,
 Bash 227/240, kernel 3997/4000 and encoder 246/600. The pinned preludes
-total 186 lines after the List removal slice. Stage D uses 77890
-checker/erasure polls followed by 12 static-walk polls. Fuel 77896 must
+total 188 lines after the List insertion slice. Stage D uses 82228
+checker/erasure polls followed by 12 static-walk polls. Fuel 82234 must
 fail with `SH-BUDGET` and publish no
 output; the zero-fuel checker test remains. Disabling the printer guard
 changes that failure to `CHECK budget`. The independent M0 timing gate

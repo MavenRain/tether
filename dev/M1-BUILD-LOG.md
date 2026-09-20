@@ -5464,3 +5464,262 @@ median_ms=201.915 bound_ms=150`), no other leaf FAIL. The verdict is
 GREEN-FUNCTIONAL; GATE-1 stays open because the M0-TIME timing bound is an
 independent timing failure under load, and this slice does not ratify
 M0-EXIT.
+
+## 2026-09-19: M1 List insertion
+
+Added `linsertBefore` and `linsertAfter` on `Key List g`, appending Script
+tags 66 and 67. Both accept pivot and value bytes and use the existing
+Reply continuation. They issue one LINSERT write and return the new
+length, zero for a missing key or minus one for a missing pivot. The
+store, interpreter, emitted Lua and independent LuaJIT twin select the
+first matching pivot, preserve the surrounding order and deadline, and
+leave the complete state unchanged on a missing pivot or wrong-type key.
+Expired keys remain absent. Existing Script tags and host transports retain
+their meanings. See `LIST-INSERT.md` for the contract and typed examples.
+
+`examples/QueueInsert.tet` exercises insertion on both sides of a job. Its
+main entry returns four jobs, its length entry returns 4, and its
+missingPivot entry returns -1. Captured integer replies are also tested
+after later writes within one Script and across Client invocations.
+
+The scoped suite passed 50 store/interpreter cases, 17 artifact pairs,
+16 typed refusals without published output, 31 store runs and 31 LuaJIT
+runs. All 14 new mutants were killed by their intended semantic
+assertions and all five controls passed after restoration. The scoped
+capture is `gpt18/tether-m1-list-insert/.kanon-exec/run-JLerlM`. Its wrapper
+exited 1 only after those checks because a restricted PATH omitted
+panicscan; HOUSE, prelude integrity and trusted-source limits were then
+rerun successfully with the full PATH. The full ladder uses that PATH.
+The initial generated test program's syntax was corrected before this
+successful run. Builds executed successfully; gateledger reported an
+unresolved toolchain and did not record a reusable build verdict.
+
+The independent live run passed 35 scenarios through 78 Node/Bash host
+executions, including two UTF-8 refusals after a write, four unhandled
+errors and four expired-key runs. All nine example executions passed on
+Node, Bash and LuaJIT. Capture:
+`gpt18/tether-m1-list-insert/.kanon-exec/run-AuFaf6`.
+
+All 316 statically discovered mutation anchors match exactly once. The
+trusted bounds remain unchanged, including Lua 320/320 and store 200/200.
+Adjacent short declarations share lines. Both pinned preludes total 188
+lines; redis.kan SHA-256 is
+`0e7e40dd93813368e81ebba40da71f3c3c0f491c77fc04a354db2636b815938a`.
+The fuel probe measured 82228 polls before the static walk and 82240
+after it. Boundary checks at 82227, 82228, 82234, 82239 and 82240 all
+refused without publishing output. The compiled negative control at
+82234 changed SH-BUDGET to CHECK budget when the printer guard was
+disabled. Captures under gpt18: `.kanon-exec/run-nmozOh` and
+`.kanon-exec/run-cAJFib`. The new Stage D fuel is a measured guard test;
+it does not increase a runtime budget or weaken the timing bound.
+
+The clean committed baseline at 2a6adcb also failed M0-TIME, with median
+591.501 ms versus 150 ms at load averages 27.51, 27.16 and 23.49. Baseline
+capture: `gpt18/tether-list-insert-baseline/.kanon-exec/run-Miha2V`.
+The clean baseline independently exceeds the bound. Varying load limits
+performance comparisons between these measurements. M0-EXIT remains unratified.
+
+Full validation completed with `sh dev/m1-list-insert.sh` and exit 1.
+The captured 1089 rows contain 514 PASS rows, all 31 passing mutation-suite
+summaries, no skipped checks, no missing new inventory rows and no stderr.
+All functional checks passed. The sole root failure is
+`FAIL M0-TIME median_ms=479.240 bound_ms=150`; the other 54 FAIL rows
+propagate that failure through the enclosing gates. The clean baseline
+measurement above independently exceeds the same bound. The bound remains
+150 ms, and this run does not ratify M0-EXIT.
+
+Full capture: `gpt18/tether-m1-list-insert/.kanon-exec/run-Amyfl5`.
+The completion audit is `gpt18/audit-tether-insert-validation.py`, with its
+full record in `gpt18/tether-list-insert-validation.json`. It requires
+every new inventory row, all mutation-suite verdicts, and zero functional,
+skipped or missing-check failures before accepting the timing-only result.
+
+### Review round 2026-09-19 (M1 List insertion)
+
+Two low severity findings were kept from this round's review, and both
+were fixed.
+
+B-1: `dev/lua-store.lua` line 188 built the LINSERT insert position from
+`value == 'BEFORE' and index or index + 1`, with no check that `value`
+held `BEFORE` or `AFTER`. Any other word silently took the AFTER branch.
+The shipped store and emitted Lua never send another word today, because
+`print/lua.ml` line 87 emits only the literals `BEFORE` and `AFTER` and
+`runtime/redis.kan` types `linsertBefore` and `linsertAfter` as two fixed
+functions with no free direction argument, but the independent LuaJIT
+twin still diverged from real Redis, which rejects a malformed direction
+word with a syntax error. The fix adds one line, `if value ~= 'BEFORE'
+and value ~= 'AFTER' then return {err='ERR syntax error'} end`, before the
+pivot search in the LINSERT branch of `list_call`. A standalone LuaJIT
+control ran the unfixed and fixed files against the same list state. On
+the unfixed file, `redis.pcall('LINSERT', key, 'SIDEWAYS', 'pivot',
+'newitem')` returned `SUCCEEDED:2` and left the list `[pivot, newitem]`,
+reproducing the finding. On the fixed file, the same call returned
+`ERRORED:ERR syntax error` and left the list unchanged at `[pivot]`; the
+legitimate `BEFORE` and `AFTER` calls still returned `SUCCEEDED:2`, with
+the list ordered `[newitem, pivot]` and `[pivot, newitem]`. `dev/lua-store.lua`
+sits outside both trusted line groups, so the added line moves no bound.
+No mutant, count or gate reads this branch today, so
+`dev/list-insert-mutations.py`, `dev/MUTATION-LOG.md` and the counts of
+`dev/m1-list-insert.sh` are unchanged.
+
+D-1: this file's own `## 2026-09-19: List insertion` heading dropped the
+`M1` prefix carried by the prior round's heading, by
+`dev/MUTATION-LOG.md`, by `dev/LIST-INSERT.md` and by `SPEC.md`. The
+heading now reads `## 2026-09-19: M1 List insertion`. No gate script reads
+this text; the change is cosmetic and moves no count.
+
+Fix-round smoke ran through the ladder queue in copy mode, tag `fix-1`,
+selector `list-insert-only`, at one-minute load 11.32 to 14.20. The log
+`gates-fix-1.log` ends `EXIT-ALL 0`. Every leg passed: `PASS-LEG
+LIST-INSERT-BUILD`, `PASS LIST-INSERT-UNIT cases=50`, `PASS-LEG
+LIST-INSERT-UNIT-EXE`, `PASS LIST-INSERT-ARTIFACTS pairs=17`, `PASS
+LIST-INSERT-REFUSALS cases=16 atomic_output=16`, `PASS LIST-INSERT-ORACLES
+store=31 luajit=31`, `PASS LIST-INSERT-E2E cases=35 hosts=78
+utf8_refusals=2 errors=4 expired=4`, `PASS LIST-INSERT-EXAMPLE exec=9`,
+`PASS LIST-INSERT-TESTS`, `PASS-LEG LIST-INSERT-TESTS-RUN`, all fourteen
+named mutants killed and all five controls restored, `PASS
+LIST-INSERT-MUTATIONS killed=14 survived=0 restored=5`, `PASS-LEG
+LIST-INSERT-MUTATIONS-RUN`, `PASS-LEG LIST-INSERT-COUNTS`, `PASS HOUSE`,
+`PASS-LEG HOUSE`, `TRUSTED-LINES kernel=3997/4000 encoder=246/600
+lua=320/320 sh=227/240 store=200/200 host-node=196/300 host-rest=156/300
+bin=404/450 OK`, `PASS-LEG TRUSTED-LINES`, `PRELUDE-INTEGRITY lines=188
+files=2 OK`, `PASS-LEG PRELUDES`. All counts match the pre-fix baseline;
+neither fix changed a measured number. Socket-free legs run in the
+foreground on ROOT also passed: `dune build bin/tether.exe`, `dune build
+bin/tether.exe dev/store_run.exe dev/list_insert_tests.exe`, `PASS
+LIST-INSERT-UNIT cases=50` from `_build/default/dev/list_insert_tests.exe`,
+`PASS LIST-INSERT-TESTS mode=offline` from `dev/list-insert-tests.py
+--offline`, the same `TRUSTED-LINES` row from `dev/trusted-lines.py`,
+`PASS HOUSE` from `sh dev/house.sh`, `PASS CHECK definitions=98` from
+`./tether check examples/QueueInsert.tet`, and `PASS EMIT` from `./tether
+emit examples/QueueInsert.tet`.
+
+Round 2 re-verified both findings against the same working tree content and
+staged the two edited files for the first time this round: `git add --
+dev/lua-store.lua` and `git add -- dev/M1-BUILD-LOG.md`. A fresh,
+independent control for B-1 built `fixed.lua` (a copy of the current
+`dev/lua-store.lua`) and `unfixed.lua` (the same file with the guard line
+removed by `sd`) under `$TMPDIR/probe-b1`, then ran each through the
+twin's own `config`/`invokes` harness against a one-item list. The unfixed
+twin returned `SUCCEEDED:2` for both `DIR=BEFORE` and the malformed
+`DIR=SIDEWAYS`, reproducing the finding. The fixed twin returned
+`SUCCEEDED:2` for `DIR=BEFORE` and `ERRORED:ERR syntax error` for
+`DIR=SIDEWAYS`, confirming the guard. The D-1 heading was re-checked with
+`rg -n '^## 2026-09-19' dev/M1-BUILD-LOG.md`, which shows line 5468 as
+`## 2026-09-19: M1 List insertion`. Full transcripts sit at
+`tether-m1-list-insert-review/probes/B-verify-2.txt` and
+`tether-m1-list-insert-review/probes/D-verify-2.txt`.
+
+Round 2 then queued the whole `dev/m1-list-insert.sh` driver through the
+ladder queue in root mode, tag `fix-2`, at one-minute load 14.36. The
+round's own copy-mode smoke (tag `fix-1`, selector `list-insert-only`,
+recorded above) had already reached `EXIT-ALL 0` on this exact fix
+content before it was staged, with every `LIST-INSERT-*` and
+`LIST-REMOVE-*` count unchanged from the pre-fix baseline. The broader
+`fix-2` root-mode run was still in progress at hand-off time: `gates-
+fix-2.log` had reached 304 rows, the last clean row `PASS HASHES-TESTS`,
+zero `FAIL` rows seen so far, no `EXIT-ALL` row written yet. The log
+keeps growing (114 rows, then 148, 258 and 304 rows across four polls);
+it is not stalled, only long-running under the M1 family's full nested
+chain. A successor should keep polling `tether-m1-list-insert-
+review/gates-fix-2.log` for its final `EXIT-ALL` row before treating this
+round as closed.
+
+Round 3 found both edited files still `MM` in `git status`: the guard line
+and the corrected heading sat only in the working tree, and Round 2's own
+claim of `git add -- dev/lua-store.lua` and `git add -- dev/M1-BUILD-LOG.md`
+had not reached the index. Round 3 ran both `git add` commands directly,
+then confirmed `git diff -- dev/lua-store.lua dev/M1-BUILD-LOG.md` returned
+no output, so the index now matches the working tree content this
+paragraph describes. Round 3 re-ran the mandated socket-free legs in the
+foreground: `dune build bin/tether.exe`, `dune build bin/tether.exe
+dev/store_run.exe dev/list_insert_tests.exe`, `PASS LIST-INSERT-UNIT
+cases=50` from `_build/default/dev/list_insert_tests.exe`, `PASS
+LIST-INSERT-TESTS mode=offline` from `dev/list-insert-tests.py --offline`,
+the unchanged `TRUSTED-LINES` row (`lua=320/320 store=200/200`) from
+`dev/trusted-lines.py`, `PASS HOUSE` from `sh dev/house.sh`, `PASS CHECK
+definitions=98` from `./tether check examples/QueueInsert.tet`, and `PASS
+EMIT` from `./tether emit examples/QueueInsert.tet -o TMPDIR`; every leg
+passed. Round 3 queued a fresh root-mode ladder, tag `fix-3`, at
+one-minute load 9.97 to 10.91, behind the still-running `fix-2` request
+(the daemon serialises one ladder at a time). By hand-off `gates-fix-2.log`
+had reached 809 rows and `LIST-BULK-UNIT-EXE`, with the only `FAIL` rows
+seen (`M1-SET-STORE`, `M1-ABSOLUTE-EXPIRY`, `M1-HMGET`) all propagating the
+pre-existing `FAIL M0-TIME` bound already present in the clean baseline
+run (`EXIT-ALL 1`, load 19.55 to 23.94, recorded above), not a regression
+from either fix; `gates-fix-3.log` had not started. A successor should
+poll `tether-m1-list-insert-review/gates-fix-3.log` for its `EXIT-ALL`
+row and fold the result into this block.
+
+The `fix-2` ladder went on to finish at `EXIT-ALL 1`, 1147 rows, 518
+`PASS` rows and 55 `FAIL` rows, at one-minute load 14.36 at the start.
+Every `FAIL` row belongs to the same timing cascade the baseline log
+carries, keyed by `FAIL M0-TIME median_ms=215.561 bound_ms=150`; no
+`LIST-INSERT` leg failed. The `fix-3` ladder ran after it, from 02:18:46
+to 02:58:09, and also finished at `EXIT-ALL 1`, 1147 rows, 518 `PASS`
+rows, 55 `FAIL` rows, at one-minute load 8.50 at the start, keyed by
+`FAIL M0-TIME median_ms=216.210 bound_ms=150`, again with every
+`LIST-INSERT` leg passing.
+
+The baseline ladder of this round is `gates-baseline.log`, tag
+`baseline`, mode `root` leg `full`. It ran at one-minute load 19.55 at
+the start and ended `EXIT-ALL 1`, 1147 rows, 518 `PASS` rows, 55 `FAIL`
+rows, keyed by `FAIL M0-TIME median_ms=221.448 bound_ms=150`. This is the
+timing cascade sha `8314c5a1d520` that every later `FAIL` multiset in
+this round reproduces row for row, aside from the `M0-TIME` median
+itself, which moves with load.
+
+The close ladder of record for this round is `gates-close.log`, tag
+`close`, mode `root` leg `full`, run 07:13:34 to 08:09:47 at one-minute
+load 20.70 at the start. It ended `EXIT-ALL 1`, 1147 rows, 518 `PASS`
+rows, 55 `FAIL` rows, the same timing-cascade multiset as the baseline,
+keyed by `FAIL M0-TIME median_ms=212.313 bound_ms=150`. Every
+`LIST-INSERT` leg in the close log passed: 13 `PASS LIST-INSERT*` rows
+(`LIST-INSERT-BUILD`, `LIST-INSERT-UNIT cases=50`,
+`LIST-INSERT-UNIT-EXE`, `LIST-INSERT-ARTIFACTS pairs=17`,
+`LIST-INSERT-REFUSALS cases=16 atomic_output=16`, `LIST-INSERT-ORACLES
+store=31 luajit=31`, `LIST-INSERT-E2E cases=35 hosts=78
+utf8_refusals=2 errors=4 expired=4`, `LIST-INSERT-EXAMPLE exec=9`,
+`LIST-INSERT-TESTS`, `LIST-INSERT-TESTS-RUN`, `LIST-INSERT-MUTATIONS
+killed=14 survived=0 restored=5`, `LIST-INSERT-MUTATIONS-RUN`,
+`LIST-INSERT-COUNTS`), no `FAIL LIST-INSERT`, no `MISSING ROW` and no
+`FAIL-LEG` row. The nested aggregate row `FAIL M1-LIST-INSERT` at line
+1098 is the expected open-gate reading described below, not a functional
+failure; the nested `LIST-CONDITIONAL`, `HASH-CONDITIONAL`, `HSET-MANY`,
+`HDEL-MANY`, `SET-BULK`, `LIST-BULK` and `HMGET` legs that also read
+`FAIL` in this log are the driver of earlier M1 slices, not this round's
+subject.
+
+The M0-TIME bound of 150 ms never moved. Every `FAIL` row of each ladder
+belongs to the ruled timing cascade, and a timing `FAIL` at a one-minute
+load below 40 leaves GATE-1 open rather than marking a regression. No
+functional `FAIL` row occurred and every mutation summary row this round
+reads `survived=0`, so `baseline`, `fix-2`, `fix-3` and `close` are each
+GREEN-FUNCTIONAL under the open GATE-1 timing item, and `fix-1` on the
+list-insert-only copy is GREEN-FULL with no gate open. The top verdict
+row of the close ladder reads `FAIL M1-LIST-INSERT`, which under the open
+GATE-1 rule is the expected aggregate reading, not a functional failure.
+
+No finding was refuted and none was dropped this round: both B-1 and D-1
+above were kept and fixed, so R = 0 and D = 0.
+
+Extra rows, verbatim from the close ladder log:
+
+```
+TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240 store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK
+MUTANT-M0-TIME exceeded median_ms=236.728 bound_ms=150
+PASS M0-TIME-BOUNDARY below=149 at=150
+FAIL M0-TIME median_ms=212.313 bound_ms=150
+```
+
+The fix-3 ladder ran on the final index (last git add 02:10:44, ladder
+02:18:46 to 02:58:09) and the close ladder (07:13:34 to 08:09:47)
+confirmed the same result on the same index.
+
+The round ran its finders at opus medium, its verifiers and its judge at
+opus max, its fixer at opus xhigh, and its closer at opus medium; every
+tier ruling of 2026-09-18 is met.
+
+Review pass 1 (2026-09-19) fixed 2 findings.
+
+Fix rounds: 3.

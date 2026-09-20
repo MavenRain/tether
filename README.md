@@ -4,6 +4,14 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports insertion around List pivots with `linsertBefore` and
+`linsertAfter`. Each command uses the first matching pivot and returns
+the new length, `0` for a missing key, or `-1` for a missing pivot.
+Run `./tether exec examples/QueueInsert.tet --host node` to insert a
+priority job before another job and an audit job after it. Its `length`
+and `missingPivot` entries return `4` and `-1`. See `dev/LIST-INSERT.md`;
+run `sh dev/m1-list-insert.sh` for validation.
+
 M1 now supports typed List removal with `lrem`. Positive and negative
 counts remove matching values from the head and tail; zero removes all
 matches. `./tether exec examples/QueueCleanup.tet --host node` removes

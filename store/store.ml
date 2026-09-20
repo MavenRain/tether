@@ -15,8 +15,7 @@ let message = function
 let read empty project key store = Keys.find_opt key store.values |> Option.fold ~none:(Ok empty) ~some:project
 let get = read None (function Str value -> Ok (Some value) | Hash _ | List _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
 let integer text = Result.bind (Int64.of_string_opt text |> Option.to_result ~none:Not_integer) (fun value -> if Int64.to_string value = text then Ok value else Error Not_integer)
-let set key value store = "OK", put key (Str value) (remove key store)
-let exists key store = if Keys.mem key store.values then "1" else "0" let del key store = exists key store, remove key store
+let set key value store = "OK", put key (Str value) (remove key store) let exists key store = if Keys.mem key store.values then "1" else "0" let del key store = exists key store, remove key store
 let ( let* ) = Result.bind
 let add value amount = if (amount > 0L && value > Int64.sub Int64.max_int amount) || (amount < 0L && value < Int64.sub Int64.min_int amount) then Error Overflow
   else Ok (Int64.to_string (Int64.add value amount))
@@ -63,19 +62,19 @@ let sadd = change_set Members.add let srem = change_set Members.remove
 let smove key other member store = let* present = sismember key member store in let* _ = if Keys.mem key store.values then members other store else Ok Members.empty in
   if present = "0" || key = other then Ok (present, store) else let* _, next = srem key member store in Result.map (fun (_, after) -> "1", after) (sadd other member next)
 let list = read [] (function List values -> Ok values | Str _ | Hash _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
-type side = Left | Right let orient = function Left -> Fun.id | Right -> List.rev
-let llen key store = let* values = list key store in Ok (string_of_int (List.length values))
+type side = Left | Right let orient = function Left -> Fun.id | Right -> List.rev let llen key store = let* values = list key store in Ok (string_of_int (List.length values))
 let push ?(xx = false) ?(rest = []) side key value store = let* values = list key store in if xx && values = [] then Ok ("0", store) else let values = orient side (List.rev_append rest (value :: orient side values)) in Ok (string_of_int (List.length values), put key (List values) store)
-let pop side key store = let* values = list key store in match orient side values with | [] -> Ok (None, store)
-  | value :: rest -> Ok (Some value, save key (List (orient side rest)) ~empty:(rest = []) store)
+let pop side key store = let* values = list key store in match orient side values with | [] -> Ok (None, store) | value :: rest -> Ok (Some value, save key (List (orient side rest)) ~empty:(rest = []) store)
 let position values index = if index < 0L then Int64.add (Int64.of_int (List.length values)) index else index let indexed values = List.mapi (fun i v -> Int64.of_int i, v) values
 let lindex key index store = let* values = list key store in if values = [] then Ok None else let* index = integer index in Ok (List.assoc_opt (position values index) (indexed values))
 let lset key index value store = let* values = list key store in if values = [] then Error Missing_key else let* index = integer index in let index = position values index in
-  if index < 0L || index >= Int64.of_int (List.length values) then Error Index_range else
-  Ok ("OK", put key (List (List.mapi (fun i v -> if Int64.of_int i = index then value else v) values)) store)
+  if index < 0L || index >= Int64.of_int (List.length values) then Error Index_range else Ok ("OK", put key (List (List.mapi (fun i v -> if Int64.of_int i = index then value else v) values)) store)
 let lrange key first last store = let* first = integer first in let* last = integer last in let* values = list key store in let first, last = position values first, position values last in
   Ok (List.filter_map (fun (i, v) -> if i >= first && i <= last then Some v else None) (indexed values))
 let ltrim key first last store = let* values = lrange key first last store in Ok ("OK", save key (List values) ~empty:(values = []) store)
 let lrem key count value store = let* count = integer count in if count = Int64.min_int then Error Remove_range else let* values = list key store in let side = if count < 0L then Right else Left in
   let removed, kept = List.fold_left (fun (n, kept) v -> if v = value && (count = 0L || (if count < 0L then Int64.neg n > count else n < count)) then Int64.succ n, kept else n, v :: kept) (0L, []) (orient side values) in
   Ok (Int64.to_string removed, save key (List (orient side (List.rev kept))) ~empty:(kept = []) store)
+let linsert side key pivot value store = let* values = list key store in
+  let rec insert prefix = function [] -> None | item :: rest -> if item = pivot then Some (List.rev_append prefix (match side with Left -> value :: item :: rest | Right -> item :: value :: rest)) else insert (item :: prefix) rest in
+  Ok (Option.fold ~none:((if values = [] then "0" else "-1"), store) ~some:(fun after -> string_of_int (List.length after), put key (List after) store) (insert [] values))

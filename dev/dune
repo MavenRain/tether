@@ -152,3 +152,8 @@
  (name list_remove_tests)
  (modules list_remove_tests)
  (libraries tether_store kanon_kernel))
+
+(executable
+ (name list_insert_tests)
+ (modules list_insert_tests)
+ (libraries tether_store kanon_kernel))

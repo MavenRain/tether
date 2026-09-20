@@ -180,6 +180,18 @@ local function list_call(command, key, value, extra, ...)
     return {err='WRONGTYPE Operation against a key holding the wrong kind of value'}
   end
   local items = stored and stored[list_kind] or {}
+  if command == 'LINSERT' then
+    if #items == 0 then return 0 end
+    local element = ...
+    if value ~= 'BEFORE' and value ~= 'AFTER' then return {err='ERR syntax error'} end
+    for index, item in ipairs(items) do
+      if item == extra then
+        table.insert(items, value == 'BEFORE' and index or index + 1, element)
+        return #items
+      end
+    end
+    return -1
+  end
   if command == 'LREM' then
     local backward = value:sub(1,1) == '-'
     local digits = backward and value:sub(2) or value
@@ -264,7 +276,7 @@ local function data_call(command, key, amount, value, ...)
     return set_call(command, key, amount, value, ...)
   end
   if command == 'LPUSH' or command == 'RPUSH' or command == 'LPUSHX' or command == 'RPUSHX' or command == 'LPOP' or command == 'RPOP' or command == 'LLEN'
-    or command == 'LINDEX' or command == 'LSET' or command == 'LTRIM' or command == 'LRANGE' or command == 'LREM' then
+    or command == 'LINDEX' or command == 'LSET' or command == 'LTRIM' or command == 'LRANGE' or command == 'LREM' or command == 'LINSERT' then
     return list_call(command, key, amount, value, ...)
   end
   if command == 'EXISTS' then return values[key] ~= nil and 1 or 0 end

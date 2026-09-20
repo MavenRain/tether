@@ -126,6 +126,8 @@ mu Script (0 A : Type 0) : (0 g : Tag) -> Type 0 :=
 | lpushxMany : (0 g : Tag) -> Key List g -> BulkArgs -> (Reply -> Script A g) -> Script A g
 | rpushxMany : (0 g : Tag) -> Key List g -> BulkArgs -> (Reply -> Script A g) -> Script A g
 | lrem : (0 g : Tag) -> Key List g -> Signed64 -> Bytes -> (Reply -> Script A g) -> Script A g
+| linsertBefore : (0 g : Tag) -> Key List g -> Bytes -> Bytes -> (Reply -> Script A g) -> Script A g
+| linsertAfter : (0 g : Tag) -> Key List g -> Bytes -> Bytes -> (Reply -> Script A g) -> Script A g
 
 mu Client (0 A : Type 0) : Type 0 :=
 | done : A -> Client A

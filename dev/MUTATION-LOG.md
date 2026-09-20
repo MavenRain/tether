@@ -1278,3 +1278,36 @@ changed parsing as well as direction and failed a different assertion;
 the final mutant changes only the starting index and is killed by the
 intended order assertion. The 302 statically discovered mutation anchors
 across all suites match exactly once. Existing inventories are unchanged.
+
+## 2026-09-19: M1 List insertion
+
+The new runner is `dev/list-insert-mutations.py`, included in
+`dev/m1-list-insert.sh`. It mutates disposable source copies, compiles
+each mutation and requires the designated semantic failure. Its inventory
+is 14 killed, zero surviving and five restored controls.
+
+| Mutation | Required detection |
+| --- | --- |
+| STORE-SIDE | BEFORE and AFTER placement differ |
+| STORE-PIVOT | Only equal byte pivots match |
+| STORE-PREFIX | A multi-item prefix retains its order |
+| STORE-COUNT | The reply is the new length |
+| STORE-MISSING | An absent key returns zero |
+| STORE-NO-PIVOT | A missing pivot returns minus one |
+| STORE-EXPIRY | Insertion preserves the full deadline map |
+| INTERP-SIDE | Script tags dispatch to the correct side |
+| LUA-SIDE | Printed commands preserve insertion direction |
+| LUA-OPERANDS | Printed pivot and value positions are correct |
+| WRITE-FLAG | LINSERT bodies cannot be classified as read-only |
+| TWIN-SIDE | The independent twin preserves insertion direction |
+| TWIN-MISSING | The twin returns zero for an absent key |
+| TWIN-NO-PIVOT | The twin returns minus one for a missing pivot |
+
+The five restored controls are the 50-case unit executable and the
+before, after, binaryBefore and computedAfter probes. The successful
+scoped capture is `gpt18/tether-m1-list-insert/.kanon-exec/run-JLerlM`;
+all intended assertions failed on their mutants, and all restored
+controls passed. The wrapper's later PATH-only HOUSE failure is explained
+in the build log. Across the complete repository, 316 statically found
+mutation anchors match exactly once. Earlier mutation inventories and
+timing bounds remain unchanged.

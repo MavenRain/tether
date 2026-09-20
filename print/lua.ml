@@ -16,8 +16,7 @@ let runtime = {|local function bytes(s)
   local b = {tag=0}; for i = #s, 1, -1 do b = {tag=1, string.byte(s,i), b} end
   return b end
 local function text(b) local out = {}; while b.tag == 1 do out[#out+1] = string.char(b[1]); b = b[2] end
-  return table.concat(out)
-end
+  return table.concat(out) end
 local function key(k)
   local wanted = text(k[1]); for i = 1, #KEYS do if KEYS[i] == wanted then return KEYS[i] end end
   error('LUA-KEY missing declared key')
@@ -81,10 +80,11 @@ local function run(s) while s.tag ~= 0 do
         if s.tag ~= 27 and s.tag ~= 52 then table.sort(order,function(a,b) return byte_less(got[a],got[b]) end) end
         local rs = {tag=0}; for n = #order, 1, -1 do for i = order[n]+stride-1, order[n], -1 do rs = {tag=1,got[i] == false and {tag=0} or {tag=2,bytes(got[i])},rs} end end; r = {tag=5,rs}
       elseif got == false then r = {tag=0} else r = {tag=2,bytes(got)} end
-    elseif (s.tag >= 7 and s.tag <= 13) or (s.tag >= 15 and s.tag <= 20) or s.tag == 23 or (s.tag >= 35 and s.tag <= 51) or (s.tag >= 53 and s.tag <= 65) then
+    elseif (s.tag >= 7 and s.tag <= 13) or (s.tag >= 15 and s.tag <= 20) or s.tag == 23 or (s.tag >= 35 and s.tag <= 51) or (s.tag >= 53 and s.tag <= 67) then
       local got; if s.tag == 9 or s.tag == 59 then got = redis.pcall(s.tag == 59 and 'HSETNX' or 'HSET',k,text(s[2]),text(s[3])); next = s[4]
       elseif s.tag == 58 then local args, ps = {k}, s[2]; while ps.tag == 1 do args[#args+1], args[#args+2], ps = text(ps[1]), text(ps[2]), ps[3] end; args[#args+1], args[#args+2] = text(ps[1]), text(ps[2]); got = redis.pcall('HSET',unpack(args)); next = s[3]
       elseif s.tag == 65 then got = redis.pcall('LREM',k,text(s[2][1]),text(s[3])); next = s[4]
+      elseif s.tag == 66 or s.tag == 67 then got = redis.pcall('LINSERT',k,s.tag == 66 and 'BEFORE' or 'AFTER',text(s[2]),text(s[3])); next = s[4]
       elseif (s.tag >= 53 and s.tag <= 57) or s.tag == 63 or s.tag == 64 then local args, vs = {k}, s[2]; while vs.tag == 1 do args[#args+1], vs = text(vs[1]), vs[2] end; args[#args+1] = text(vs[1]); got = redis.pcall(({[53]='LPUSH',[54]='RPUSH',[55]='SADD',[56]='SREM',[57]='HDEL',[63]='LPUSHX',[64]='RPUSHX'})[s.tag],unpack(args)); next = s[3]
       elseif s.tag >= 39 and s.tag <= 51 then
         local args = {k}; if s.tag <= 40 or s.tag == 44 or s.tag == 45 or s.tag >= 48 then args[2], next = text(s[2][1]), s[3] end

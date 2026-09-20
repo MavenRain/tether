@@ -106,6 +106,7 @@ let run ~budget rows ~entry store =
           | (53 | 54 | 63 | 64), [BulkFields (first, rest)] -> integer (Store.push ~xx:(tag >= 63) ~rest (if tag = 53 || tag = 63 then Store.Left else Store.Right) key first store)
           | (55 | 56), [BulkFields (first, rest)] -> integer (Store.change_set ~rest (if tag = 55 then Store.Members.add else Store.Members.remove) key first store)
           | 65, [Signed count; Octets value] -> integer (Store.lrem key count value store)
+          | (66 | 67), [Octets pivot; Octets value] -> integer (Store.linsert (if tag = 66 then Store.Left else Store.Right) key pivot value store)
           | _, _ -> Error "STORE-SCRIPT-COMMAND" in
         let* next = apply k [answer] in script store next
     | Data _ | Fields _ | Literal _ | Closure _ | Erased -> Error "STORE-SCRIPT" in
