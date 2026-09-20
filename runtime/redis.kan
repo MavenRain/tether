@@ -28,6 +28,10 @@ mu ExpiryCondition : Type 0 :=
 | expiryGT : ExpiryCondition
 | expiryLT : ExpiryCondition
 
+mu ListEnd : Type 0 :=
+| listLeft : ListEnd
+| listRight : ListEnd
+
 mu BulkArgs : Type 0 :=
 | bulkOne : Bytes -> BulkArgs
 | bulkMore : Bytes -> BulkArgs -> BulkArgs
@@ -128,6 +132,7 @@ mu Script (0 A : Type 0) : (0 g : Tag) -> Type 0 :=
 | lrem : (0 g : Tag) -> Key List g -> Signed64 -> Bytes -> (Reply -> Script A g) -> Script A g
 | linsertBefore : (0 g : Tag) -> Key List g -> Bytes -> Bytes -> (Reply -> Script A g) -> Script A g
 | linsertAfter : (0 g : Tag) -> Key List g -> Bytes -> Bytes -> (Reply -> Script A g) -> Script A g
+| lmove : (0 g : Tag) -> Key List g -> Key List g -> ListEnd -> ListEnd -> (Reply -> Script A g) -> Script A g
 
 mu Client (0 A : Type 0) : Type 0 :=
 | done : A -> Client A

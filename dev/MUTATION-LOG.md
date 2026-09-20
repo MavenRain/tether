@@ -1311,3 +1311,33 @@ controls passed. The wrapper's later PATH-only HOUSE failure is explained
 in the build log. Across the complete repository, 316 statically found
 mutation anchors match exactly once. Earlier mutation inventories and
 timing bounds remain unchanged.
+
+## 2026-09-20: M1 atomic List moves
+
+`python3 -P dev/list-move-mutations.py` builds each altered implementation
+before requiring its intended assertion to fail. All 14 mutants were
+killed; five controls passed before mutation and after restoration.
+
+The store mutants swap either endpoint, duplicate destination contents,
+retain an empty source, discard an aliased or destination expiry,
+ignore a destination type error, and replace nil with empty bytes.
+Interpreter mutants swap endpoint decoding or argument order. Lua
+mutants change the source endpoint, alias the destination, or classify
+LMOVE as read-only. The independent twin mutant pops the wrong end.
+
+The existing LRANGE error-tag mutation now matches the joined decoder
+line. Its changed reply tag and required failure marker are unchanged.
+No inherited mutation or assertion was removed.
+
+A focused run compiled the adapted `LUA-ERR-TAG` mutation, killed it at
+its intended reply-kind assertion, then rebuilt and passed the restored
+control. It exited zero with
+`PASS LIST-MOVE-LEGACY-MUTATION name=LUA-ERR-TAG killed=1 restored=1`.
+Its capture is `run-yKbF0J` beside the evidence below. A separate static
+audit found all 330 literal mutation anchors present exactly once.
+
+Evidence: `/Users/oobi/Documents/gpt18/tether-m1-list-move/.kanon-exec/run-ehrO22/command-0001.stdout`.
+
+```text
+PASS LIST-MOVE-MUTATIONS killed=14 survived=0 restored=5
+```

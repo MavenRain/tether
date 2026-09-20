@@ -246,6 +246,23 @@ local function list_call(command, key, value, extra, ...)
   return popped
 end
 local function data_call(command, key, amount, value, ...)
+  if command == 'LMOVE' then
+    local destination_side = ...
+    if (value ~= 'LEFT' and value ~= 'RIGHT') or
+      (destination_side ~= 'LEFT' and destination_side ~= 'RIGHT') then return {err='ERR syntax error'} end
+    local source, target = values[key], values[amount]
+    if source == nil then return false end
+    if type(source) ~= 'table' or source[list_kind] == nil
+      or (target ~= nil and (type(target) ~= 'table' or target[list_kind] == nil)) then
+      return {err='WRONGTYPE Operation against a key holding the wrong kind of value'}
+    end
+    local items, destination = source[list_kind], target and target[list_kind] or {}
+    local moved = table.remove(items, value == 'LEFT' and 1 or #items)
+    table.insert(destination, destination_side == 'LEFT' and 1 or #destination + 1, moved)
+    if #items == 0 then values[key] = nil end
+    values[amount] = {[list_kind]=destination}
+    return moved
+  end
   if command == 'SMOVE' then
     local source, target = values[key], values[amount]
     if source == nil then return 0 end

@@ -1,0 +1,39 @@
+module QueueTransfer
+schema jobs : String -> Key List tag b"queue"
+
+def seed : Script Reply (tag b"queue") := do {
+  _ <- del Reply List (tag b"queue") (jobs b"ready");
+  _ <- del Reply List (tag b"queue") (jobs b"processing");
+  r <- rpushMany Reply (tag b"queue") (jobs b"ready")
+    (bulkMore b"welcome:alice" (bulkOne b"welcome:bob"));
+  pure Reply (tag b"queue") r
+}
+def transfer : Script Reply (tag b"queue") := do {
+  r <- lmove Reply (tag b"queue") (jobs b"ready") (jobs b"processing") listLeft listRight;
+  pure Reply (tag b"queue") r
+}
+def clear : Script Reply (tag b"queue") := do {
+  r <- del Reply List (tag b"queue") (jobs b"processing");
+  pure Reply (tag b"queue") r
+}
+def rotate : Script Reply (tag b"queue") := do {
+  _ <- lmove Reply (tag b"queue") (jobs b"ready") (jobs b"ready") listRight listLeft;
+  r <- lrange Reply (tag b"queue") (jobs b"ready") (int64 b"0") (int64 b"-1");
+  pure Reply (tag b"queue") r
+}
+def main : Client Reply := do {
+  _ <- inv Reply (tag b"queue") seed;
+  r <- inv Reply (tag b"queue") transfer;
+  done Reply r
+}
+def retained : Client Reply := do {
+  _ <- inv Reply (tag b"queue") seed;
+  r <- inv Reply (tag b"queue") transfer;
+  _ <- inv Reply (tag b"queue") clear;
+  done Reply r
+}
+def rotated : Client Reply := do {
+  _ <- inv Reply (tag b"queue") seed;
+  r <- inv Reply (tag b"queue") rotate;
+  done Reply r
+}

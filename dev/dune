@@ -157,3 +157,7 @@
  (name list_insert_tests)
  (modules list_insert_tests)
  (libraries tether_store kanon_kernel))
+(executable
+ (name list_move_tests)
+ (modules list_move_tests)
+ (libraries tether_store kanon_kernel))

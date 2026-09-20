@@ -38,11 +38,11 @@ MUTANTS = [
     ('LUA-ARRAY-ELEMENT', 'print/lua.ml', b'{tag=2,bytes(got[i])}', b'{tag=3,bytes(got[i])}',
      probe('head'), b'TWIN reply kind status wanted string'),
     ('LUA-ERR-TAG', 'print/lua.ml',
-     b"      if type(got) == 'table' and got.err then r = {tag=4,bytes(got.err)}\n"
-     b"      elseif type(got) == 'table' and got.ok then r = {tag=3,bytes(got.ok)}\n"
+     b"      if type(got) == 'table' and got.err then r = {tag=4,bytes(got.err)} "
+     b"elseif type(got) == 'table' and got.ok then r = {tag=3,bytes(got.ok)}\n"
      b'      elseif (s.tag >= 27 and s.tag <= 34) or s.tag == 52 then',
-     b"      if type(got) == 'table' and got.err then r = {tag=2,bytes(got.err)}\n"
-     b"      elseif type(got) == 'table' and got.ok then r = {tag=3,bytes(got.ok)}\n"
+     b"      if type(got) == 'table' and got.err then r = {tag=2,bytes(got.err)} "
+     b"elseif type(got) == 'table' and got.ok then r = {tag=3,bytes(got.ok)}\n"
      b'      elseif (s.tag >= 27 and s.tag <= 34) or s.tag == 52 then',
      probe('all'), b'TWIN reply kind string wanted status'),
 ]

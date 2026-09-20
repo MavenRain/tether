@@ -5723,3 +5723,148 @@ tier ruling of 2026-09-18 is met.
 Review pass 1 (2026-09-19) fixed 2 findings.
 
 Fix rounds: 3.
+
+## 2026-09-20: M1 atomic List moves
+
+Continued from clean commit `6a5d7a9` in an isolated local clone.
+Added `ListEnd`, its `listLeft` and `listRight` constructors, and typed
+`lmove` at Script tag 68. Both keys share the List type and tag. Earlier
+tags remain unchanged. The emitter generates one atomic LMOVE and
+declares both keys, deduplicating an aliased key.
+
+The store, interpreter and independent Lua twin cover all four endpoint
+combinations, same-key rotations, single-item expiry preservation,
+last-item source cleanup, absent-source precedence, destination creation
+and atomic type errors. `QueueTransfer.tet` demonstrates queue transfer,
+rotation and a reply retained after deleting the processing queue.
+
+Validation used OCaml 5.2.1 and Dune 3.24.2 from `zxcaml-p1`, with the
+four inherited OCaml environment overrides removed. Local Redis and HTTP
+hosts ran outside the socket-restricted sandbox. The first inherited
+attempt omitted the installed `rg` and `panicscan` directories from PATH
+and was canceled. Its environmental failures are not the final gate result.
+
+The feature checks passed:
+
+```text
+PASS LIST-MOVE-UNIT cases=104
+PASS LIST-MOVE-ARTIFACTS pairs=14
+PASS LIST-MOVE-REFUSALS cases=18 atomic_output=18
+PASS LIST-MOVE-ORACLES store=48 luajit=48
+PASS LIST-MOVE-E2E cases=52 hosts=104 utf8_refusals=2 errors=4 expired=6
+PASS LIST-MOVE-EXAMPLE exec=9
+PASS LIST-MOVE-TESTS
+PASS LIST-MOVE-MUTATIONS killed=14 survived=0 restored=5
+PASS HOUSE
+PRELUDE-INTEGRITY lines=193 files=2 OK
+```
+
+The 104 live host runs include the two expected invalid-UTF-8 refusals.
+Four unhandled-error runs and six expired-key runs execute additionally.
+All live cases inspect both resulting keys and their exact deadlines;
+the store units compare the complete state, including the clock.
+
+Trusted counts remain kernel 3997/4000, encoder 246/600, Lua 320/320,
+Bash 227/240, store 200/200, Node host 196/300, REST host 156/300 and
+bin 404/450. Adjacent declarations share lines to retain existing bounds.
+The prelude pin was refreshed. Instrumentation in a disposable copy
+measured 84753 polls before the static walk and 84765 after it; the
+Stage D refusal uses fuel 84759, keeping six polls for the 12-poll walk.
+Neither runtime budgets nor the M0 timing bound changed.
+
+Feature evidence is retained under
+`/Users/oobi/Documents/gpt18/tether-m1-list-move/.kanon-exec/`:
+`run-smzfgH` (integration), `run-ehrO22` (mutations) and `run-85YG91`
+(fuel instrumentation). Each directory contains full stdout/stderr and
+its command manifest. The complete ladder is `run-8ASZdi`.
+
+At initial staging, the complete ladder was still running. Its Stage D
+artifact emission timed out after 120 seconds while machine load was
+extreme, causing Stage E to be skipped. The unchanged Stage D tests
+subsequently passed in a separate recovery run, including all five
+mutations. The recovery store and host units also passed; its remaining
+Stage E checks were still running. Recovery evidence is `run-nu08Ib`.
+
+The full ladder's timing leg reported `FAIL M0-TIME median_ms=554.455
+bound_ms=150`. An interleaved comparison with clean base `6a5d7a9`
+reported medians 934.562 ms for the base and 4706.317 ms for this slice,
+with one-minute load falling from 272.49 to 203.09. Both exceeded the
+unchanged bound; the heavily loaded samples do not establish the slice's
+isolated timing cost. That comparison is captured in `run-1M13p1`.
+M0-EXIT remains open.
+
+### Validation close (2026-09-20)
+
+The complete inherited attempt was stopped under sustained machine load,
+after the String, Hash and Set functional and mutation suites passed.
+Its early List unit suite also passed. The managed run ended interrupted
+with exit 137; the List test/count failure rows emitted during termination
+are not a completed regression result. The full ladder remains incomplete.
+
+The recovery run passed Stage D's 40 reply checks, 11 refusals and all
+five mutations, plus 25 store units and all 11 host tests, without changing
+timeouts or assertions. It was then stopped during an inherited Stage E
+Wasm fixture build, also with exit 137. Stage E's end-to-end suite remains
+incomplete. The original timeout and M0 timing failure are retained above.
+
+All new List move checks completed successfully before these broader
+runs. A checkpoint verified that the ten source/evidence files for those
+checks retained their validated hashes. A static audit also verified that
+all 330 literal mutation anchors match exactly once. The focused check
+of the adapted LRANGE error-tag mutation compiled both implementations,
+killed the intended error-tag mutation and passed its restored control:
+
+```text
+PASS LIST-MOVE-LEGACY-MUTATION name=LUA-ERR-TAG killed=1 restored=1
+```
+
+That check exited zero; its full capture is `run-yKbF0J`. The completed
+20-file slice is staged, with no commit created. The original trusted
+limits and every test deadline remain intact. Full regression and
+M0-EXIT are not claimed.
+
+### Review round 2026-09-20 (M1 atomic List moves)
+
+Four read-only finder lenses read the staged slice on the clean commit
+6a5d7a9: the store semantics of `Store.lmove` against dev/LIST-MOVE.md,
+the interpreter decode of Script tag 68 with the Lua printer arm, the
+LuaJIT twin in dev/lua-store.lua with its deadline sweep, and the test
+oracles with the mutation and build log counts. The lenses reported no
+finding.
+
+One adversarial pass then attacked eight hypotheses against the staged
+code and refuted all eight with probe rows: the WRONGTYPE precedence of
+the source over the destination, the same-key rotation arithmetic for
+the four LEFT and RIGHT pairs, the deadline kept by a single-item
+same-key rotation, the expired destination case, the write
+classification of tag 68 in print/flags.ml, the operand order of the
+tag 68 decode arm, the LMOVE argument order in the printer, and expired
+values in the twin before its sweep. Findings: 0. Fixes: none. The code
+tree of the slice is byte-identical to the tree the baseline ladder
+proved.
+
+The baseline ladder on the ROOT tree is the ladder of record for this
+round. It ended in EXIT-ALL 1. Every FAIL row is a member of the M0-TIME
+timing cascade. The bound of 150 ms did not move. GATE-1 stays open and
+is reported here, not waived; every functional row is green. No fix
+ladder and no close ladder ran, because no file changed after the
+baseline ladder except this log. R = 0 and D = 0.
+
+Extra rows, verbatim from the baseline ladder log:
+
+    PASS LIST-MOVE-MUTATIONS killed=14 survived=0 restored=5
+    TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240 store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK
+    MUTANT-M0-TIME exceeded median_ms=318.215 bound_ms=150
+    PASS M0-TIME-BOUNDARY below=149 at=150
+    FAIL M0-TIME median_ms=242.990 bound_ms=150
+
+The baseline ladder ran at a host load between 15 and 53 while sibling
+ladders ran on the same host.
+
+Every unit of this round (the finders, the adversarial pass and the
+closer) ran on the sonnet tier with an explicit tier marker. The finder,
+verifier and closer tiers of the standing ruling are not met: the Opus 5
+and Fable 5.1 units end before their first call.
+
+Review pass 1 (2026-09-20) fixed 0 findings.
+Fix rounds: 0.

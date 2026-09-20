@@ -4,6 +4,15 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports atomic List moves with `lmove` and typed `listLeft` and
+`listRight` endpoints. Moves transfer a job between queues or rotate a
+single queue while preserving existing expiries.
+Run `./tether exec examples/QueueTransfer.tet --host node` to move a job
+into a processing queue and print `welcome:alice`. Its `retained` entry
+keeps that reply after deleting the processing queue; `rotated` prints
+`["welcome:bob","welcome:alice"]`. See `dev/LIST-MOVE.md`; run
+`sh dev/m1-list-move.sh` for validation.
+
 M1 now supports insertion around List pivots with `linsertBefore` and
 `linsertAfter`. Each command uses the first matching pivot and returns
 the new length, `0` for a missing key, or `-1` for a missing pivot.
