@@ -60,6 +60,6 @@ Bash 227/240, kernel 3997/4000 and encoder 246/600. Adjacent declarations
 share lines to retain these bounds. At that slice the pinned preludes
 totalled 193 lines and Stage D measured 84753 checker/erasure polls and 12
 static-walk polls; fuel 84759 had to fail with SH-BUDGET and publish no
-artifact. See `dev/LIST-POP.md` for the current prelude and fuel counts.
+artifact. See `dev/STRING-BYTES.md` for the current prelude and fuel counts.
 Runtime budgets and the M0 timing bound remain unchanged. The build log records
 the inherited ladder's result separately from the List move checks.

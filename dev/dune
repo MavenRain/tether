@@ -165,3 +165,7 @@
  (name list_pop_tests)
  (modules list_pop_tests)
  (libraries tether_store kanon_kernel))
+(executable
+ (name string_bytes_tests)
+ (modules string_bytes_tests)
+ (libraries tether_store kanon_kernel))

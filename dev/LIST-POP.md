@@ -56,12 +56,14 @@ additional checks:
 
 The trusted limits remain store 200/200 and Lua 320/320. The existing
 store helpers are packed within that same line budget; no bound is raised.
-`SPEC.md` records all current counts. The two trusted preludes contain
-195 lines and are pinned in `dev/PRELUDES.sha256`.
+`SPEC.md` records all current counts. At that slice the two trusted
+preludes contained 195 lines and were pinned in `dev/PRELUDES.sha256`.
 
-The measured checker and erasure cost for `M0Spine.tet` is 89113 polls.
-The printer walk adds 12. Stage D retains its zero-fuel CHECK refusal and
-uses fuel 89119 for the distinct `SH-BUDGET` refusal, with no output.
+At that slice the measured checker and erasure cost for `M0Spine.tet` was
+89113 polls. The printer walk added 12. Stage D retained its zero-fuel
+CHECK refusal and used fuel 89119 for the distinct `SH-BUDGET` refusal,
+with no output. See `dev/STRING-BYTES.md` for the current prelude and fuel
+counts.
 
 Blocking pops, multi-key pops and other List bulk operations remain
 outside this slice.

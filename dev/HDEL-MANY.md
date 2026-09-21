@@ -51,7 +51,7 @@ write classification and the independent twin.
 At this slice's close, the two pinned preludes totaled 174 lines.
 Stage D's static walk used 12 polls after 62148 checker/erasure polls.
 Fuel 62154 left six walk polls and returned `SH-BUDGET` without
-publishing output. See `dev/LIST-POP.md` for the current prelude and
+publishing output. See `dev/STRING-BYTES.md` for the current prelude and
 fuel counts. All eight trusted-source bounds and the 150 ms M0 timing
 bound remain unchanged.
 The malformed integer reply diagnostic is defensive and has no mutation

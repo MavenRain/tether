@@ -23,7 +23,7 @@ MUTANTS = [
     ('STORE-NOOP-EXPIRY', 'store/store.ml', b'then Ok ("0", store) else let updated',
      b'then Ok ("0", { store with deadlines = Keys.remove key store.deadlines }) else let updated', UNIT,
      b'FAIL HASH-CONDITIONAL-UNIT conditional insert and complete state'),
-    ('STORE-LENGTH', 'store/store.ml', b'~some:String.length value', b'~some:(fun _ -> 1) value', UNIT,
+    ('STORE-LENGTH', 'store/store.ml', b'~some:String.length value)) (hget key field store)', b'~some:(fun _ -> 1) value)) (hget key field store)', UNIT,
      b'FAIL HASH-CONDITIONAL-UNIT byte length'),
     ('INTERPRETER-NX', 'store/interp.ml', b'~nx:(tag = 59)', b'~nx:(tag = 9)', UNIT,
      b'FAIL HASH-CONDITIONAL-UNIT interpreter conditional insert'),

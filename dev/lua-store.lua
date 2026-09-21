@@ -316,6 +316,15 @@ local function data_call(command, key, amount, value, ...)
     return {err='WRONGTYPE Operation against a key holding the wrong kind of value'}
   end
   if command == 'GET' then return values[key] or false end
+  if command == 'STRLEN' then return #(values[key] or '') end
+  if command == 'APPEND' then
+    local previous = values[key] or ''
+    if #amount > 536870912 or #previous > 536870912 - #amount then
+      return {err='ERR string exceeds maximum allowed size (proto-max-bulk-len)'}
+    end
+    values[key] = previous .. amount
+    return #values[key]
+  end
   if command == 'INCR' then amount = '1'
   elseif command == 'DECR' then amount = '-1'
   elseif command ~= 'INCRBY' then error('TWIN unsupported command') end

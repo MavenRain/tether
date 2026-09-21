@@ -6091,3 +6091,257 @@ tier ruling of 2026-09-20 is met.
 Review pass 1 (2026-09-20) fixed 7 findings.
 
 Fix rounds: 3.
+
+## M1 String byte operations, 2026-09-21
+
+Built on `098c52c` (M1 bulk List pops). This slice adds typed `append` on
+Binary String keys and `strlen` on both String encodings as Script tags
+71 and 72. Appends preserve existing expiry, create missing Strings even
+for an empty suffix, and return the resulting byte length. Reads return
+zero for missing Strings without creating them. Both reject non-String
+values without changing their state. Byte lengths and retained replies
+agree across the store, independent LuaJIT model and Redis hosts.
+
+The local store and LuaJIT model enforce the default 512 MiB String limit
+before concatenation. Tests cover its boundary without a large allocation.
+STRLEN joins the read-only allowlist; APPEND remains write-capable.
+`examples/StringBuffer.tet` demonstrates construction, byte lengths,
+retained length replies and reading the length of an Int64 String.
+
+The existing Hash length mutation now names the `hget` call in its anchor,
+so it remains unique after adding the analogous String length function.
+All 13 Hash mutations still fail at their expected assertions and all
+three restored controls pass. No existing mutation or bound was removed.
+
+Validation completed in `/Users/oobi/Documents/gpt4/tether-string-bytes/work`:
+
+| Check | Result |
+| --- | --- |
+| String byte store/interpreter unit suite | PASS, 60 cases |
+| String byte artifacts and type refusals | PASS, 11 pairs, 15 refusals, no output on refusal |
+| String byte store/LuaJIT comparisons | PASS, 45 cases on each |
+| String byte Redis hosts | PASS, 51 cases, 102 Node/Bash runs, four unhandled errors, four expired-key checks |
+| StringBuffer examples | PASS, four entries on each of three hosts |
+| String byte semantic mutations | PASS, 15 killed, zero survived, three restored controls |
+| Stage D printer tests | PASS, 40 reply runs, 11 refusals, five mutations |
+| Existing String integration | PASS, 54 Redis host runs |
+| Existing Hash conditional integration | PASS, 80 Redis host runs, nine example executions |
+| Existing TTL integration | PASS, 70 Redis host runs, three clock cases |
+| Existing read-only integration | PASS, 12 ACL read-only cases, two mixed cases |
+| Existing String, Hash conditional, Hash entries, TTL units | PASS, 46, 32, 16, 146 cases |
+| Foundation Stage A | PASS, unchanged kernel pin and carried files |
+| House, prelude integrity and trusted lines | PASS |
+
+The unit row and the mutation row show the counts after the review round
+of 2026-09-21. That round added one unit case and two mutants. The
+captures below are older than that round.
+
+The preludes total 197 lines. Trusted counts remain Lua 320/320 and store
+200/200, with every other bound unchanged. An isolated temporary probe
+measured 93751 checker/erasure polls and 12 printer polls for M0Spine.
+Stage D's SH-BUDGET fixture now uses 93757 fuel; the zero-fuel CHECK
+refusal and absence of output on either refusal are still checked.
+The temporary probe is not part of the staged changes.
+
+The independent M0 timing gate is OPEN: five warm runs measured
+253.674 ms median (248.548 minimum, 258.543 maximum), against the
+unchanged strict 150 ms limit, at load averages 26.73 24.64 23.84.
+The preceding committed review also recorded a failing M0 timing result;
+these measurements do not isolate this slice's performance delta. The
+complete inherited ladder was not run. This entry records green feature
+and scoped regression checks, not M0-EXIT or a green full ladder.
+
+Full captures under the validation checkout's `.kanon-exec/`:
+
+- `run-alIBpJ`: String byte units, example and trusted counts.
+- `run-3QiObO`: complete String byte artifacts, refusals, oracles, Redis
+  hosts and examples.
+- `run-cCaI79`: String byte mutations and restored controls.
+- `run-NW2Hkm`: Stage D, String, Hash conditional, TTL and read-only regressions.
+- `run-Aq2E7P`: existing Hash conditional mutations and restored controls.
+- `run-p9gqKK`: shared-code units, house, preludes and trusted counts.
+- `run-gxNIcX`: foundation Stage A.
+- `run-0w1H4q`: checker/erasure and printer poll measurements.
+- `run-pSduwl`: M0 timing failure.
+
+The first live attempt was refused by the sandbox's localhost restriction;
+the subsequent authorized run passed. Two new mutation expectations were
+corrected to match the specific integer-decoding and reply-kind failures
+observed in compiling mutants; the final mutation run above passed.
+
+### Review round 2026-09-21 (M1 String bytes)
+
+The round reviewed the 20 staged paths of the slice on `098c52c`. The
+verifiers confirmed 12 findings and refuted none. The judge kept seven
+after the merge, and all seven were ruled fix. Three earlier fix builders
+stopped before they finished. They left the docs edits for D-1, D-2, D-3
+and D-4 in the worktree. Round 4 made the code edits, proved them on a copy
+and staged every fix.
+
+D-1 (medium, C-1 merged): `dev/STAGE-D.md` rows 68-70 held the List pop
+numbers 89113 and 89119, and the staged `dev/stage-d-tests.py` runs at
+93751 and 93757. The rows now state 93751 polls with the M1 String byte
+prelude, the fuel window 93751 through 93762 and the second gate case at
+fuel 93757. The fix is documentation only.
+
+A-1 (low, B-2 and C-3 merged): the 512 MiB limit had a test of the bare
+predicate only. `dev/string_bytes_tests.ml` rows 60-61 now pin the exact
+`S.message S.String_size` text at the size boundary. Rows 64-66 add the
+case `size limit at the append call site`: one 268435457 byte String is the
+stored value and the suffix, and `S.append` must give
+`Error S.String_size`. The unit count moves from 59 to 60.
+`dev/string-bytes-tests.py` rows 89-90 require the limit text once in
+`store/store.ml` and the twin guard once in `dev/lua-store.lua`; that check
+is not a counted case. `dev/STRING-BYTES.md` rows 33-35 and 51-53 state the
+new case. The case is at store level only. The interpreter path has no case
+at the size limit.
+
+B-1 (low, C-2 and D-5 merged): String byte oracle failures carried the
+label `HASH-CONDITIONAL LuaJIT reply`. `dev/string-bytes-tests.py` rows
+76-86 add a local `twin` wrapper that reports `STRING-BYTES LuaJIT reply`,
+and rows 92 and 199 call it. `dev/string-bytes-mutations.py` row 46 pins
+the new label for LUA-LENGTH. `dev/STRING-BYTES.md` row 56 names the label.
+
+C-4 (low): the `dev/MUTATION-LOG.md` block said that each mutant fails at
+its named assertion, but INTERPRETER-APPEND fails at an integer decode and
+no mutant reached `append interpreter`. Rows 1380-1386 now say that each
+mutant must fail with the marker that the driver lists for it.
+`dev/string-bytes-mutations.py` adds STORE-SIZE-WIRING (rows 33-35, marker
+`FAIL STRING-BYTES-UNIT size limit at the append call site`) and
+INTERPRETER-APPEND-WRITE (rows 38-40, marker
+`FAIL STRING-BYTES-UNIT append interpreter`). The killed count moves from
+13 to 15 in `dev/string-bytes-mutations.py`, `dev/m1-string-bytes.sh`,
+`dev/STRING-BYTES.md`, `dev/MUTATION-LOG.md` and the author table above.
+`dev/m1-string-bytes.sh` changed rows 30 and 37 in place and stays at 58
+rows.
+
+D-3 (low): `SPEC.md` row 186 adds `String appends and byte lengths` to the
+implemented-feature sentence, and row 193 adds the string-buffer example.
+No row was added.
+
+D-4 (low): the `README.md` Status paragraph of this slice (rows 10-14) now
+gives the run command, the printed `hello, world`, the `retained` length
+`5` and the validation driver `sh dev/m1-string-bytes.sh`.
+
+D-2 (low): `dev/LIST-POP.md` rows 59-66 state their prelude and fuel
+numbers in the past tense and point at `dev/STRING-BYTES.md`. The pointer
+rows of `dev/HASH-CONDITIONAL.md`, `dev/HDEL-MANY.md`, `dev/HMGET.md`,
+`dev/HSET-MANY.md`, `dev/LIST-BULK.md`, `dev/LIST-CONDITIONAL.md`,
+`dev/LIST-INSERT.md`, `dev/LIST-MOVE.md`, `dev/LIST-REMOVE.md`,
+`dev/SET-BULK.md` and `dev/TTL.md` name `dev/STRING-BYTES.md`. No number
+moved.
+
+No finding was refuted. C-1 merged into D-1, B-2 and C-3 merged into A-1,
+and C-2 and D-5 merged into B-1. No finding was cut for the cap. The fixes
+add 13 staged paths (`dev/STAGE-D.md`, `dev/LIST-POP.md` and the 11 pointer
+docs), so 20 staged paths become 33.
+
+Baseline ladder verdict, in short form from
+`/Users/oobi/Documents/tether-m1-string-bytes-review/VERDICT-BASELINE.txt`:
+
+```text
+GREEN-FUNCTIONAL (GATE-1 waived on load): baseline ladder gates-baseline.log (ROOT full, 03:46:13 to 04:31:20 PDT) EXIT-ALL 1 = EXIT 1 driver + EXIT-MUT 0; 61 FAIL rows, all M0-TIME cascade (M0-TIME median_ms=254.713 bound_ms=150 at load1 30.54); every STRING-BYTES leg PASS
+```
+
+Fix run evidence: copy-mode ladders on `scratch/copy-fix-4a` under
+`/Users/oobi/Documents/tether-m1-string-bytes-review/`, with one log
+`gates-<tag>.log` for each tag. The columns are the tag, the selector, the
+start load1 and the last row of the log:
+
+```text
+fix-4a-unit   string-bytes-unit       load1 17.10  EXIT-ALL 0
+fix-4a-tests  string-bytes-tests      load1 15.58  EXIT-ALL 0
+fix-4a-mut    string-bytes-mutations  load1 19.76  EXIT-ALL 0
+fix-4b-guard  string-bytes-tests      load1 19.26  EXIT-ALL 1 (wanted)
+fix-4a-guard  string-bytes-tests      void         EXIT-ALL 1 (no build)
+```
+
+The three green tags printed these rows, with 15 KILLED rows and no
+SURVIVED row:
+
+```text
+PASS STRING-BYTES-UNIT cases=60
+PASS STRING-BYTES-ARTIFACTS pairs=11
+PASS STRING-BYTES-REFUSALS cases=15 atomic_output=15
+PASS STRING-BYTES-ORACLES store=45 luajit=45
+PASS STRING-BYTES-E2E cases=51 hosts=102 errors=4 expired=4
+PASS STRING-BYTES-EXAMPLE exec=12
+PASS STRING-BYTES-TESTS
+PASS STRING-BYTES-MUTATIONS killed=15 survived=0 restored=3
+```
+
+Tag fix-4b-guard is a negative control. Its copy had `dev/lua-store.lua`
+row 322 changed to `if false then`, and the run printed
+`FAIL STRING-BYTES-TESTS STRING-BYTES size limit text`. The copy was
+restored from ROOT after the run. Tag fix-4a-guard is void: its copy had no
+build, and this selector does not build.
+
+The M0-TIME bound of 150 ms never changed. No file under `store/`,
+`print/`, `bin/`, `runtime/` or `vendor/` changed in this round, and
+`dev/lua-store.lua` did not change in this round.
+
+The close ladder verdict follows.
+
+The close ladder of record for this round is `gates-close.log`, tag
+`close`. It is close attempt 2, a ROOT full ladder on the 33 staged paths,
+10:59:48 to 11:52:08 PDT 2026-09-21. The log holds 1255 rows, 566 PASS rows
+and 61 FAIL rows over 32 distinct FAIL names, the same name multiset as the
+baseline ladder. The last row reads `EXIT-ALL 1`, which is EXIT 1 from the
+driver plus EXIT-MUT 0. The one-minute load at the start was 6.03. The
+M0-TIME reading is median_ms=271.401 against the bound of 150 ms, so every
+FAIL row belongs to the timing cascade.
+
+Close attempt 1 (09:34:00 to 10:52:56 PDT) is not of record. It is kept as
+`gates-close.log.red-1052`. It holds one extra row `FAIL STAGE-E`, a
+subprocess.TimeoutExpired (timeout=120) of `dev/emit-lua.py` inside
+`dev/stage-c-tests.py` at load 40.73 43.27 34.85. No staged path is an
+input of that command, so main moved the log aside and ran the ladder again
+under the load rule.
+
+The M0-TIME bound of 150 ms never changed. Every FAIL row of each ladder
+belongs to the ruled timing cascade, and a timing FAIL at a one-minute load
+below 40 leaves GATE-1 open rather than marking a regression. No functional
+FAIL row occurred and every mutation summary row reads survived=0, so each
+ladder is GREEN-FUNCTIONAL under the open GATE-1 timing item. The top
+verdict row reads `FAIL M1-STRING-BYTES`, which is the aggregate row of the
+M0-TIME cascade. No STRING-BYTES leg fails.
+
+Rows of the close ladder of record, byte for byte:
+
+```text
+PASS M0-TIME-BOUNDARY below=149 at=150
+LOAD 11:07  up 16:51, 28 users, load averages: 7.12 8.61 8.98
+FAIL M0-TIME median_ms=271.401 bound_ms=150
+TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240 store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK
+PASS STRING-BYTES-BUILD
+PASS STRING-BYTES-UNIT cases=60
+PASS STRING-BYTES-UNIT-EXE
+PASS STRING-BYTES-ARTIFACTS pairs=11
+PASS STRING-BYTES-REFUSALS cases=15 atomic_output=15
+PASS STRING-BYTES-ORACLES store=45 luajit=45
+PASS STRING-BYTES-E2E cases=51 hosts=102 errors=4 expired=4
+PASS STRING-BYTES-EXAMPLE exec=12
+PASS STRING-BYTES-TESTS
+PASS STRING-BYTES-TESTS-RUN
+PASS STRING-BYTES-MUTATIONS killed=15 survived=0 restored=3
+PASS STRING-BYTES-MUTATIONS-RUN
+PASS STRING-BYTES-COUNTS
+KILLED STORE-SIZE-WIRING by FAIL STRING-BYTES-UNIT size limit at the append call site
+KILLED INTERPRETER-APPEND-WRITE by FAIL STRING-BYTES-UNIT append interpreter
+```
+
+The close verdict of record is in
+`/Users/oobi/Documents/tether-m1-string-bytes-review/VERDICT-CLOSE.txt` and
+its first sentence reads:
+
+```text
+VERDICT: GREEN-FUNCTIONAL (GATE-1 waived on load).
+```
+
+The round ran its finders at fable xhigh, its verifiers and its judge at
+fable max, its fixers at fable xhigh, its round-4 checker at fable max, and
+its closer at opus medium. Every tier ruling of 2026-09-20 is met.
+
+Review pass 1 (2026-09-21) fixed 7 findings.
+
+Fix rounds: 4 (rounds 1 to 3 staged nothing, round 4 is of record).

@@ -35,7 +35,7 @@ let reachable rows entry =
 let no_writes functions =
   not (List.exists (fun (_, (_, _, body)) -> List.exists (function
     | E.KTag (E.Tid "mu<Script>", tag, _) -> tag <> 0 && tag <> 2 && tag <> 8
-        && tag <> 10 && tag <> 12 && tag <> 13 && tag <> 17 && tag <> 18 && tag <> 23 && tag <> 24 && tag <> 27 && tag <> 28 && tag <> 29 && tag <> 30 && tag <> 31 && tag <> 32 && tag <> 33 && tag <> 34 && tag <> 41 && tag <> 42 && tag <> 46 && tag <> 47 && tag <> 52 && tag <> 60
+        && tag <> 10 && tag <> 12 && tag <> 13 && tag <> 17 && tag <> 18 && tag <> 23 && tag <> 24 && tag <> 27 && tag <> 28 && tag <> 29 && tag <> 30 && tag <> 31 && tag <> 32 && tag <> 33 && tag <> 34 && tag <> 41 && tag <> 42 && tag <> 46 && tag <> 47 && tag <> 52 && tag <> 60 && tag <> 72
     | E.KVar _ | E.KLit _ | E.KGlobal _ | E.KErased | E.KLet _ | E.KClos _
     | E.KApp _ | E.KTail _ | E.KStruct _ | E.KProj _ | E.KTag _ | E.KCase _
     | E.KDelay _ | E.KForce _ -> false) (terms body)) functions)

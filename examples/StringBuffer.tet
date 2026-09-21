@@ -1,0 +1,32 @@
+module StringBuffer
+schema buffer : String -> Key (Str Binary) tag b"buffer"
+schema counter : String -> Key (Str Int64) tag b"buffer"
+
+def build : Script Reply (tag b"buffer") := do {
+  _ <- append Reply (tag b"buffer") (buffer b"greeting") b"hello";
+  _ <- append Reply (tag b"buffer") (buffer b"greeting") b", world";
+  r <- get Reply Binary (tag b"buffer") (buffer b"greeting");
+  pure Reply (tag b"buffer") r
+}
+def measure : Script Reply (tag b"buffer") := do {
+  r <- strlen Reply Binary (tag b"buffer") (buffer b"greeting");
+  pure Reply (tag b"buffer") r
+}
+def snapshot : Script Reply (tag b"buffer") := do {
+  r <- append Reply (tag b"buffer") (buffer b"greeting") b"hello";
+  _ <- append Reply (tag b"buffer") (buffer b"greeting") b", world";
+  pure Reply (tag b"buffer") r
+}
+def digits : Script Reply (tag b"buffer") := do {
+  _ <- setInt64 Reply (tag b"buffer") (counter b"views") (int64 b"9007199254740993");
+  r <- strlen Reply Int64 (tag b"buffer") (counter b"views");
+  pure Reply (tag b"buffer") r
+}
+def main : Client Reply := do { r <- inv Reply (tag b"buffer") build; done Reply r }
+def length : Client Reply := do {
+  _ <- inv Reply (tag b"buffer") build;
+  r <- inv Reply (tag b"buffer") measure;
+  done Reply r
+}
+def retained : Client Reply := do { r <- inv Reply (tag b"buffer") snapshot; done Reply r }
+def integerLength : Client Reply := do { r <- inv Reply (tag b"buffer") digits; done Reply r }

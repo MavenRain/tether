@@ -4,6 +4,15 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports String `append` and `strlen`. Appends preserve existing
+expiry and return the resulting byte length; reads accept Binary and
+Int64 String keys and use read-only dispatch. Empty, binary and UTF-8
+values retain their exact bytes. Run
+`./tether exec examples/StringBuffer.tet --host node` to build a greeting
+and print `hello, world`. Its `retained` entry keeps the first length `5`
+after a later append. See `dev/STRING-BYTES.md`; run
+`sh dev/m1-string-bytes.sh` for validation.
+
 M1 now supports bulk List pops with `lpopMany` and `rpopMany`. Each removes
 up to a signed 64-bit count and returns the removed values in pop order.
 Run `./tether exec examples/QueueDrain.tet --host node` to drain two jobs

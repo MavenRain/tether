@@ -46,7 +46,7 @@ before mutation and after restoration. Existing mutation anchors follow
 the shared dispatch changes without reducing their case inventories.
 
 The trusted-source limits remain unchanged: Lua 320/320, store 200/200,
-Bash 227/240, kernel 3997/4000 and encoder 246/600. See `dev/LIST-POP.md`
+Bash 227/240, kernel 3997/4000 and encoder 246/600. See `dev/STRING-BYTES.md`
 for the current prelude and fuel counts. At that slice the pinned preludes
 totalled 188 lines after the List insertion slice, and Stage D measured
 82228 checker/erasure polls followed by 12 static-walk polls; fuel 82234

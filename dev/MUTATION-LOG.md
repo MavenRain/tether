@@ -1374,3 +1374,47 @@ scalar reply context, because the bulk implementation also saves list
 remainders. The List range error-tag anchor includes the extended array
 dispatch condition. Their mutation semantics and expected failure markers
 are unchanged. Static inspection found all 343 literal anchors exactly once.
+
+## M1 String byte mutations, 2026-09-21
+
+`python3 -P dev/string-bytes-mutations.py` compiles each mutant in a
+temporary copy. Each mutant must fail with the marker that the driver
+lists for that mutant. The driver restores the source in `finally` and
+reruns all three positive controls. INTERPRETER-APPEND fails at the
+integer decode (`FAIL ERR value is not an integer or out of range`)
+before the `append interpreter` assertion. INTERPRETER-APPEND-WRITE
+fails at that assertion (`FAIL STRING-BYTES-UNIT append interpreter`).
+
+| Mutant | Behavior rejected |
+| --- | --- |
+| STORE-ORDER | Prepending the suffix |
+| STORE-COUNT | Returning zero after append |
+| STORE-EMPTY-CREATION | Failing to create a missing empty String |
+| STORE-EXPIRY | Clearing expiry after append |
+| STORE-LENGTH | Treating every present String as one byte |
+| STORE-SIZE | Rejecting the exact maximum String size |
+| STORE-SIZE-WIRING | Dropping the size check at the append call site |
+| INTERPRETER-APPEND | Routing append through SET |
+| INTERPRETER-APPEND-WRITE | Replying with the new length without the write |
+| INTERPRETER-LENGTH | Routing strlen through EXISTS |
+| LUA-APPEND | Emitting SET for APPEND |
+| LUA-LENGTH | Emitting EXISTS for STRLEN |
+| TWIN-ORDER | Prepending in the independent LuaJIT model |
+| READONLY-LENGTH | Marking STRLEN as a write |
+| READONLY-APPEND | Marking APPEND as read-only |
+
+Final result: `PASS STRING-BYTES-MUTATIONS killed=15 survived=0 restored=3`.
+Controls cover the 60-case unit suite and the append and length probes,
+with nine cases each. Build capture, older than the review round:
+`/Users/oobi/Documents/gpt4/tether-string-bytes/work/.kanon-exec/run-cCaI79`.
+Review round 2026-09-21 evidence for the 15-mutant inventory: the
+copy-mode ladder `/Users/oobi/Documents/tether-m1-string-bytes-review/gates-fix-4a-mut.log`
+(string-bytes-mutations selector, row `PASS STRING-BYTES-MUTATIONS killed=15 survived=0 restored=3`).
+That round added STORE-SIZE-WIRING, INTERPRETER-APPEND-WRITE and one
+unit case. The size guard of the Lua twin (`dev/lua-store.lua`) has a
+text check and a code read only. No mutant changes that guard and no
+case makes it fire.
+
+The pre-existing Hash length mutation's anchor is now specific to `hget`.
+Its suite also passed with 13 killed, zero survived and three restored
+controls (`run-Aq2E7P` in the same capture directory).

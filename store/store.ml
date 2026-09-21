@@ -2,23 +2,23 @@ module Keys = Map.Make (String) module Members = Set.Make (String)
 type data = Str of string | Hash of (string * string) list | List of string list
   | Set of string list | ZSet of (string * string) list | Stream of (string * string) list
 type t = { values : data Keys.t; deadlines : int64 Keys.t; now : int64 }
-type fault = Wrong_type | Not_integer | Hash_not_integer | Overflow | Missing_key | Index_range | Expire_range of string | Expire_reply | Remove_range | Pop_range
+type fault = Wrong_type | Not_integer | Hash_not_integer | Overflow | Missing_key | Index_range | Expire_range of string | Expire_reply | Remove_range | Pop_range | String_size
 let empty = { values = Keys.empty; deadlines = Keys.empty; now = 0L } let put key value store = { store with values = Keys.add key value store.values }
 let remove key store = { store with values = Keys.remove key store.values; deadlines = Keys.remove key store.deadlines }
 let bindings store = Keys.bindings store.values let save key value ~empty store = if empty then remove key store else put key value store
 let message = function
   | Wrong_type -> "WRONGTYPE Operation against a key holding the wrong kind of value"
-  | Not_integer -> "ERR value is not an integer or out of range" | Hash_not_integer -> "ERR hash value is not an integer"
+  | String_size -> "ERR string exceeds maximum allowed size (proto-max-bulk-len)" | Not_integer -> "ERR value is not an integer or out of range" | Hash_not_integer -> "ERR hash value is not an integer"
   | Overflow -> "ERR increment or decrement would overflow" | Missing_key -> "ERR no such key" | Index_range -> "ERR index out of range"
   | Expire_range command -> "ERR invalid expire time in '" ^ command ^ "' command"
   | Expire_reply -> "ERR expiry reply is outside exact integer range" | Remove_range -> "ERR value is out of range, value must between -9223372036854775807 and 9223372036854775807" | Pop_range -> "ERR value is out of range, must be positive"
 let read empty project key store = Keys.find_opt key store.values |> Option.fold ~none:(Ok empty) ~some:project
-let get = read None (function Str value -> Ok (Some value) | Hash _ | List _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type)
+let get = read None (function Str value -> Ok (Some value) | Hash _ | List _ | Set _ | ZSet _ | Stream _ -> Error Wrong_type) let strlen key store = Result.map (fun value -> string_of_int (Option.fold ~none:0 ~some:String.length value)) (get key store)
 let integer text = Result.bind (Int64.of_string_opt text |> Option.to_result ~none:Not_integer) (fun value -> if Int64.to_string value = text then Ok value else Error Not_integer)
 let set key value store = "OK", put key (Str value) (remove key store) let exists key store = if Keys.mem key store.values then "1" else "0" let del key store = exists key store, remove key store
 let ( let* ) = Result.bind
-let add value amount = if (amount > 0L && value > Int64.sub Int64.max_int amount) || (amount < 0L && value < Int64.sub Int64.min_int amount) then Error Overflow
-  else Ok (Int64.to_string (Int64.add value amount))
+let append_size current extra = if extra > 536870912 || current > 536870912 - extra then Error String_size else Ok () let append key suffix store = let* previous = get key store in let previous = Option.value ~default:"" previous in let* () = append_size (String.length previous) (String.length suffix) in let value = previous ^ suffix in Ok (string_of_int (String.length value), put key (Str value) store)
+let add value amount = if (amount > 0L && value > Int64.sub Int64.max_int amount) || (amount < 0L && value < Int64.sub Int64.min_int amount) then Error Overflow else Ok (Int64.to_string (Int64.add value amount))
 let incrby key amount store = let* amount = integer amount in let* value = get key store in
   let* value = integer (Option.value ~default:"0" value) in let* text = add value amount in Ok (text, put key (Str text) store)
 let incr key store = incrby key "1" store let decr key store = incrby key "-1" store
