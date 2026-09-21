@@ -5868,3 +5868,226 @@ and Fable 5.1 units end before their first call.
 
 Review pass 1 (2026-09-20) fixed 0 findings.
 Fix rounds: 0.
+
+## M1 bulk List pop slice, 2026-09-20
+
+Added `lpopMany` and `rpopMany` with Signed64 counts and nullable array
+replies, appending Script tags 69 and 70. The store, interpreter, Redis
+Lua lowering and LuaJIT oracle agree on pop order, zero and missing
+replies, negative-count precedence, expiry preservation and last-value
+deletion. Counts stay decimal strings through Redis command dispatch.
+
+`examples/QueueDrain.tet` demonstrates head and tail batches, remaining
+jobs, and replies retained after clearing the queue. All four entries
+passed through Node/Wasm, Bash and LuaJIT.
+
+The new gate is `sh dev/m1-list-pop.sh`, extending the List move ladder.
+Its focused suite passed 109 unit cases, 19 artifact pairs, 14 atomic
+refusals, 69 store and LuaJIT cases, 146 live host executions, four binary
+output refusals, two unhandled-error checks, four expiry checks and 12
+example executions. Integration evidence:
+`/Users/oobi/Documents/gpt18/tether-m1-list-pop/.kanon-exec/run-ztTf4a`.
+
+All 12 compiling semantic mutants of the author run were killed, and four
+positive controls passed again after restoration. Mutation evidence:
+`/Users/oobi/Documents/gpt18/tether-m1-list-pop/.kanon-exec/run-qxjoJi`.
+The review round of 2026-09-20 added a thirteenth mutant (twin direction);
+its evidence is the copy-mode ladder
+`/Users/oobi/Documents/tether-m1-list-pop-review/gates-fix-2-b.log` (see the
+review block below). Three inherited source anchors were updated without
+changing their mutations or expected failures. All 342 literal anchors of
+the author run were unique; the twin mutant raises the count to 343.
+
+Trusted store and Lua counts remain 200/200 and 320/320. The two preludes
+have 195 lines; the Redis prelude is pinned at
+`00a9cfc37ad4aaa66b4fa7cbbf74862143921ef2c5ecb3443f5396faccd1be3e`.
+An isolated counter measured 89113 polls before the M0Spine static walk
+and 89125 afterward. Stage D preserves its zero-fuel CHECK refusal and
+the distinct SH-BUDGET refusal at 89119. Fuel evidence:
+`/Users/oobi/Documents/gpt18/.kanon-exec/run-fQPcJF`.
+
+The inherited ladder capture
+`/Users/oobi/Documents/gpt18/tether-m1-list-pop/.kanon-exec/run-eUDYFU`
+passed the completed functional checks through Stage F, but reported
+`FAIL M0-TIME median_ms=808.934 bound_ms=150`. The timing failure
+propagated through parent gate labels. The run was explicitly stopped
+during List access, with exit 137; its shutdown diagnostics are from
+cancellation. This is not a completed full-ladder validation.
+
+A clean checkout at `19c73d08a98874981242127f6f033e6053626fab` and this
+slice were measured in alternating order, with one warmup and five
+recorded samples each. Their medians were 459.164 ms and 500.392 ms,
+respectively. Both exceed the existing 150 ms bound. The host was under
+load, so this confirms a pre-existing bound failure without isolating
+the change's performance delta. The timing bound was not changed.
+Evidence: `/Users/oobi/Documents/gpt18/tether-list-pop-timing.json` and
+`/Users/oobi/Documents/gpt18/.kanon-exec/run-dcis2k`.
+
+The directly affected List access, range, removal and move suites were
+then run independently, with their unit executables, integration scripts
+and mutation scripts. All four passed, followed by house, prelude-integrity
+and trusted-line checks. The scoped runner exited 0:
+
+```text
+PASS LIST-POP-SHARED-REGRESSIONS suites=4
+```
+
+Runner: `/Users/oobi/Documents/gpt18/validate-tether-list-pop-regressions.sh`.
+Capture: `/Users/oobi/Documents/gpt18/.kanon-exec/run-dRHORz`.
+Captured stdout SHA-256:
+`c53a28b5a8d48652db19429ac70f3bfa46afd412c5bb7a318c2e7128104bf09f`.
+
+### Review round 2026-09-20 (M1 bulk List pops)
+
+Seven findings were ruled fix. Round 1 left its edits unstaged and unproved;
+round 2 proved them on a copy, staged them and ran the copy-mode ladder.
+
+A-1 (low, B-1 merged): `store/store.ml` row 68 maps every `integer` parse
+failure of the count to `Pop_range`, so non-canonical, overflowing and
+negative counts reply `ERR value is out of range, must be positive` before
+the key type is inspected, as Redis 8.10.1 does. `dev/lua-store.lua` rows
+170-171 fold into one LPOP/RPOP guard with that text. `dev/list_pop_tests.ml`
+row 53 pins the 36 non-canonical cases to `S.Pop_range` (cases=109 kept).
+`dev/LIST-POP.md` rows 11-15 state the rule. The store group stays 200/200.
+Control on a copy: the unit prints `PASS LIST-POP-UNIT cases=109`; with row
+68 reverted to `integer count` it prints `FAIL LIST-POP-UNIT store
+validation` (exit 1); restored, it passes again.
+
+C-2 (low): `dev/list-pop-mutations.py` adds `twin-direction` (the
+`dev/lua-store.lua` count block pops the wrong end, probe `rightTwo`,
+marker `TWIN list order mismatch`). The killed count moves from 12 to 13 in
+`dev/list-pop-mutations.py`, `dev/m1-list-pop.sh`, `dev/LIST-POP.md`,
+`dev/MUTATION-LOG.md` and the author block above; the anchor count moves
+from 342 to 343. Control on a copy: `--probe rightTwo` passes clean, exits 1
+with `TWIN list order mismatch` after the swap (`leftTwo` too), and passes
+after the restore; all 13 anchors occur exactly once.
+
+D-3 (low): the `dev/MUTATION-LOG.md` block names the combined marker
+`LIST-POP-UNIT store reply and complete state` for the count and direction
+mutants instead of two assertions the unit does not have.
+
+D-1 (low): `SPEC.md` rows 30-32 add the LPOP/RPOP count couple with the
+`dev/LIST-POP.md` pointer, after the LMOVE couple.
+
+C-1 (low, D-2 merged): `dev/TTL.md`, `dev/LIST-CONDITIONAL.md`,
+`dev/LIST-REMOVE.md`, `dev/LIST-INSERT.md` and `dev/LIST-MOVE.md` state their
+prelude and fuel numbers in the past tense and point at `dev/LIST-POP.md`;
+the pointer rows of `dev/HMGET.md`, `dev/HDEL-MANY.md`, `dev/HSET-MANY.md`,
+`dev/SET-BULK.md`, `dev/LIST-BULK.md` and `dev/HASH-CONDITIONAL.md` point at
+`dev/LIST-POP.md`. No number moved.
+
+ND-1-1 and ND-1-2 (medium): the 13-mutant evidence rows of
+`dev/MUTATION-LOG.md` and of the author block above cite the copy-mode
+ladder `gates-fix-2-b.log` of this round; the author block keeps its 12
+mutants and 342 anchors against `run-qxjoJi`.
+
+Ladder evidence: copy-mode ladders with the list-pop-only selector,
+`/Users/oobi/Documents/tether-m1-list-pop-review/gates-fix-2.log` (load1
+24.63) and `gates-fix-2-b.log` (load1 25.22), both `EXIT-ALL 0`:
+
+```text
+PASS LIST-POP-UNIT cases=109
+PASS LIST-POP-ARTIFACTS pairs=19
+PASS LIST-POP-REFUSALS cases=14 atomic_output=14
+PASS LIST-POP-ORACLES store=69 luajit=69
+PASS LIST-POP-E2E cases=73 hosts=146 utf8_refusals=4 errors=2 expired=4
+PASS LIST-POP-EXAMPLE exec=12
+PASS LIST-POP-TESTS
+PASS LIST-POP-MUTATIONS killed=13 survived=0 restored=4
+PASS HOUSE
+TRUSTED-LINES kernel=3997/4000 encoder=246/600 lua=320/320 sh=227/240 store=200/200 host-node=196/300 host-rest=156/300 bin=404/450 OK
+PRELUDE-INTEGRITY lines=195 files=2 OK
+```
+
+`gates-fix-2.log` shows `FAIL-LEG LIST-POP-COUNTS` because the review kit's
+own leg runner still pinned killed=12 (no ROOT file); that pin moved to 13
+and `gates-fix-2-b.log` shows `PASS-LEG LIST-POP-COUNTS`. The nested
+drivers were not rerun this round; the baseline rows stand.
+
+Round 3 (2026-09-20, builder): the gate verdict of round 2 read both fix-2
+logs and carried the `FAIL-LEG LIST-POP-COUNTS` row of `gates-fix-2.log`
+(the stale kit pin killed=12 of that first run) into the item GATE-2. No
+ROOT path carried that cause: `dev/m1-list-pop.sh` row 37,
+`dev/list-pop-mutations.py` row 73 and the kit runner row 60 all pin
+`PASS LIST-POP-MUTATIONS killed=13 survived=0 restored=4`. Control on a
+copy: the `counts()` function of `dev/m1-list-pop.sh` accepts the captured
+rows of the green ladder (exit 0) and refuses the same rows with killed=12
+(`MISSING ROW PASS LIST-POP-MUTATIONS killed=13 survived=0 restored=4`,
+exit 1). A fresh copy of the staged tree ran the list-pop-only selector as
+`/Users/oobi/Documents/tether-m1-list-pop-review/gates-fix-3.log` (load1
+12.50, `EXIT-ALL 0`, zero FAIL rows): the eight count rows above, all 13
+KILLED rows, `PASS-LEG LIST-POP-COUNTS`, `PASS HOUSE`, the TRUSTED-LINES
+row (lua=320/320, store=200/200) and `PRELUDE-INTEGRITY lines=195 files=2
+OK`. The foreground legs from ROOT passed as well: the two dune builds,
+`PASS LIST-POP-UNIT cases=109`, the three probes leftTwo, rightTwo and
+nilRetained, `PASS CHECK definitions=103` and `PASS EMIT` on
+examples/QueueDrain.tet. No count and no source file changed in round 3.
+
+ND-3-1 (low, leftover of round 3): the block row for D-1 above cited
+`SPEC.md` rows 31-33, which is not where the LPOP/RPOP count couple sits.
+Main fixed the row by hand at 23:24 PDT 2026-09-20; it now reads rows 30-32,
+matching `SPEC.md`. No source file and no recorded count changed.
+
+GATE-2 (kit pin, no ROOT path): `run-ladder.sh` row 60 of the review kit
+pinned `killed=12`; the fix moved it to 13 so that the kit agrees with
+`PASS LIST-POP-MUTATIONS killed=13 survived=0 restored=4`.
+
+The baseline ladder of this round is `gates-baseline.log`, tag `baseline`:
+1217 rows, 549 PASS rows, 59 FAIL rows, start load averages 16.67 12.33
+at 21:12 PDT, last row `EXIT-ALL 1` = `EXIT 1` (driver) with `EXIT-MUT 0`.
+The M0-TIME reading is `FAIL M0-TIME median_ms=228.924 bound_ms=150` at
+load1 26.53. The FAIL multiset is the timing cascade and nothing else, so
+`VERDICT-BASELINE.txt` records GREEN-FUNCTIONAL with GATE-1 waived on load.
+
+The fix ladders of record are `gates-fix-2-b.log` (copy mode, list-pop-only
+selector, load1 25.22, `EXIT-ALL 0`, zero FAIL rows) and `gates-fix-3.log`
+(copy mode, list-pop-only selector, load1 12.50, `EXIT-ALL 0`, zero FAIL
+rows). Three fix rounds ran in all.
+
+The close ladder of record for this round is `gates-close.log`, tag
+`close`: ROOT full, 23:24 to 00:23 PDT, 1218 rows, 549 PASS rows, 59 FAIL
+rows, start load averages 10.88 12.33 15.85, last row `EXIT-ALL 1` =
+`EXIT 1` (driver) with `EXIT-MUT 0`. The M0-TIME rows read:
+
+```text
+FAIL M0-TIME median_ms=350.887 bound_ms=150
+PASS M0-TIME-BOUNDARY below=149 at=150
+```
+
+The LIST-POP leg rows of the close ladder read:
+
+```text
+PASS LIST-POP-UNIT-EXE
+PASS LIST-POP-ARTIFACTS pairs=19
+PASS LIST-POP-REFUSALS cases=14 atomic_output=14
+PASS LIST-POP-ORACLES store=69 luajit=69
+PASS LIST-POP-E2E cases=73 hosts=146 utf8_refusals=4 errors=2 expired=4
+PASS LIST-POP-EXAMPLE exec=12
+PASS LIST-POP-TESTS
+PASS LIST-POP-TESTS-RUN
+PASS LIST-POP-MUTATIONS killed=13 survived=0 restored=4
+PASS LIST-POP-MUTATIONS-RUN
+PASS LIST-POP-COUNTS
+```
+
+The M0-TIME bound of 150 ms never changed. Every FAIL row of each ladder
+belongs to the ruled timing cascade, and a timing FAIL at a one-minute load
+below 40 leaves GATE-1 open rather than marking a regression. No functional
+FAIL row occurred and every mutation summary row reads survived=0, so each
+ladder is GREEN-FUNCTIONAL under the open GATE-1 timing item. The top
+verdict row reads `FAIL M1-LIST-POP`, which is the open GATE-1 cascade and
+not a functional failure.
+
+Close verdict, verbatim:
+
+```text
+GREEN-FUNCTIONAL (GATE-1 waived on load): close ladder W/gates-close.log (ROOT full, 23:24 to 00:23 PDT) EXIT-ALL 1 = EXIT 1 driver + EXIT-MUT 0; 59 FAIL rows are all M0-TIME cascade wrappers (M0-TIME median_ms=350.887 bound_ms=150 under load), no non-timing FAIL row, LIST-POP-MUTATIONS killed=13 survived=0 restored=4, every functional leg PASS; same shape as the baseline ladder (59 timing FAIL rows, VERDICT-BASELINE.txt).
+```
+
+The round ran its finders at fable xhigh, its verifiers and its judge at
+fable max, its fixer at fable xhigh, and its closer at opus medium; every
+tier ruling of 2026-09-20 is met.
+
+Review pass 1 (2026-09-20) fixed 7 findings.
+
+Fix rounds: 3.

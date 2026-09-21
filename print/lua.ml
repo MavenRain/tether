@@ -61,23 +61,23 @@ local function run(s) while s.tag ~= 0 do
         elseif read == false then r = {tag=0}
         else r = {tag=1,{tag=0,bytes(read)}} end
       end
-    elseif s.tag == 2 or s.tag == 3 or s.tag == 4 or s.tag == 10 or s.tag == 21 or s.tag == 22 or (s.tag >= 24 and s.tag <= 34) or s.tag == 52 or s.tag == 68 then
+    elseif s.tag == 2 or s.tag == 3 or s.tag == 4 or s.tag == 10 or s.tag == 21 or s.tag == 22 or (s.tag >= 24 and s.tag <= 34) or s.tag == 52 or (s.tag >= 68 and s.tag <= 70) then
       local got; if s.tag == 10 then got = redis.pcall('HGET',k,text(s[2])); next = s[3]
       elseif s.tag == 2 then got = redis.pcall('GET',k)
       elseif s.tag == 52 then local args, fs = {k}, s[2]; while fs.tag == 1 do args[#args+1], fs = text(fs[1]), fs[2] end; args[#args+1] = text(fs[1]); got = redis.pcall('HMGET',unpack(args)); next = s[3]
       elseif s.tag >= 28 and s.tag <= 34 then
         local args = {k}; if s.tag >= 32 then args[2], next = key(s[2]), s[3] end
         got = redis.pcall(({[28]='SMEMBERS',[29]='HGETALL',[30]='HKEYS',[31]='HVALS',[32]='SUNION',[33]='SINTER',[34]='SDIFF'})[s.tag],unpack(args))
-      elseif s.tag == 21 or s.tag == 22 then got = redis.pcall(s.tag == 21 and 'LPOP' or 'RPOP',k)
+      elseif s.tag == 21 or s.tag == 22 or s.tag == 69 or s.tag == 70 then local args = {k}; if s.tag >= 69 then args[2], next = text(s[2][1]), s[3] end; got = redis.pcall((s.tag == 21 or s.tag == 69) and 'LPOP' or 'RPOP',unpack(args))
       elseif s.tag == 68 then got = redis.pcall('LMOVE',k,key(s[2]),s[3].tag == 0 and 'LEFT' or 'RIGHT',s[4].tag == 0 and 'LEFT' or 'RIGHT'); next = s[5]
       elseif s.tag == 24 then got = redis.pcall('LINDEX',k,text(s[2][1])); next = s[3]
       elseif s.tag == 25 then got = redis.pcall('LSET',k,text(s[2][1]),text(s[3])); next = s[4]
       elseif s.tag == 26 or s.tag == 27 then got = redis.pcall(s.tag == 26 and 'LTRIM' or 'LRANGE',k,text(s[2][1]),text(s[3][1])); next = s[4]
       else got = redis.pcall('SET',k,text(s.tag == 3 and s[2] or s[2][1])); next = s[3] end
       if type(got) == 'table' and got.err then r = {tag=4,bytes(got.err)} elseif type(got) == 'table' and got.ok then r = {tag=3,bytes(got.ok)}
-      elseif (s.tag >= 27 and s.tag <= 34) or s.tag == 52 then
+      elseif (s.tag >= 27 and s.tag <= 34) or s.tag == 52 or (s.tag >= 69 and got ~= false) then
         local stride, order = s.tag == 29 and 2 or 1, {}; for i = 1, #got, stride do order[#order+1] = i end
-        if s.tag ~= 27 and s.tag ~= 52 then table.sort(order,function(a,b) return byte_less(got[a],got[b]) end) end
+        if s.tag ~= 27 and s.tag ~= 52 and s.tag < 69 then table.sort(order,function(a,b) return byte_less(got[a],got[b]) end) end
         local rs = {tag=0}; for n = #order, 1, -1 do for i = order[n]+stride-1, order[n], -1 do rs = {tag=1,got[i] == false and {tag=0} or {tag=2,bytes(got[i])},rs} end end; r = {tag=5,rs}
       elseif got == false then r = {tag=0} else r = {tag=2,bytes(got)} end
     elseif (s.tag >= 7 and s.tag <= 13) or (s.tag >= 15 and s.tag <= 20) or s.tag == 23 or (s.tag >= 35 and s.tag <= 51) or (s.tag >= 53 and s.tag <= 67) then

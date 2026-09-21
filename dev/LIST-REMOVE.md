@@ -56,9 +56,10 @@ five controls repeated after restoration.
 
 Existing source bounds remain unchanged: Lua 320/320, store 200/200,
 Bash 227/240, kernel 3997/4000 and encoder 246/600. Adjacent small helper
-declarations share lines to keep the existing bounds. Both pinned
-preludes total 188 lines. Stage D uses 82228 checker/erasure polls and
-12 static-walk polls; fuel 82234 must fail with `SH-BUDGET` without
-publishing an artifact. The runtime budget and timing bounds are unchanged.
+declarations share lines to keep the existing bounds. At that slice both
+pinned preludes totalled 188 lines and Stage D measured 82228 checker/erasure
+polls and 12 static-walk polls; fuel 82234 had to fail with `SH-BUDGET`
+without publishing an artifact. See `dev/LIST-POP.md` for the current
+prelude and fuel counts. The runtime budget and timing bounds are unchanged.
 This slice does not complete M1 or ratify M0-EXIT. The build log records
 actual validation results, including any independent timing failure.

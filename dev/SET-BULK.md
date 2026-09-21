@@ -55,7 +55,7 @@ write classification and the independent twin.
 At the Set bulk slice, the two pinned preludes totaled 173 lines.
 Stage D's static walk used 12 polls after 60327 checker/erasure polls.
 Fuel 60333 left six walk polls and returned `SH-BUDGET` without publishing
-output. See `dev/LIST-REMOVE.md` for the current prelude and fuel counts.
+output. See `dev/LIST-POP.md` for the current prelude and fuel counts.
 All eight trusted-source bounds and the 150 ms M0 timing bound are
 unchanged.
 The integer reply type checks remain defensive: Redis and the twin return

@@ -15,9 +15,9 @@ BUILD = ['dune', 'build', '-j', '2', 'bin/tether.exe', 'dev/store_run.exe', 'dev
 MUTANTS = [
     ('RIGHT-ORIENTATION', 'store/store.ml', b'Right -> List.rev', b'Right -> Fun.id',
      UNIT, b'FAIL LISTS-UNIT right push order'),
-    ('RPOP-REMAINDER', 'store/store.ml', b'List (orient side rest)', b'List rest',
+    ('RPOP-REMAINDER', 'store/store.ml', b'Some value, save key (List (orient side rest))', b'Some value, save key (List rest)',
      UNIT, b'FAIL LISTS-UNIT right pop order'),
-    ('POP-EMPTY-KEY', 'store/store.ml', b'~empty:(rest = [])', b'~empty:false',
+    ('POP-EMPTY-KEY', 'store/store.ml', b'Some value, save key (List (orient side rest)) ~empty:(rest = [])', b'Some value, save key (List (orient side rest)) ~empty:false',
      UNIT, b'FAIL LISTS-UNIT left deletes last key'),
     ('LLEN-COUNT', 'store/store.ml', b'Ok (string_of_int (List.length values))',
      b'Ok (string_of_int (0 * List.length values))',

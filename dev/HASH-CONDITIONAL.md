@@ -47,7 +47,7 @@ Stage D's static walk used 12 polls after 67862 checker/erasure polls.
 Fuel 67868 left six walk polls and returned `SH-BUDGET` without
 publishing output. The checker zero-fuel refusal, all eight
 trusted-source bounds and the 150 ms M0 timing bound remain unchanged.
-See `dev/LIST-REMOVE.md` for the current prelude and fuel counts.
+See `dev/LIST-POP.md` for the current prelude and fuel counts.
 The store shares HSET's update path with an `nx` guard; the existing
 bulk-write mutation retains its type-check assertion.
 

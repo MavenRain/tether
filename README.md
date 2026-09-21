@@ -4,6 +4,13 @@ tether is a small language for Redis scripts.  A tether program compiles to two 
 
 ## Status
 
+M1 now supports bulk List pops with `lpopMany` and `rpopMany`. Each removes
+up to a signed 64-bit count and returns the removed values in pop order.
+Run `./tether exec examples/QueueDrain.tet --host node` to drain two jobs
+and print `["welcome:alice","welcome:bob"]`. Its `retained` entry keeps
+that reply after deleting the queue. See `dev/LIST-POP.md`; run
+`sh dev/m1-list-pop.sh` for validation.
+
 M1 now supports atomic List moves with `lmove` and typed `listLeft` and
 `listRight` endpoints. Moves transfer a job between queues or rotate a
 single queue while preserving existing expiries.

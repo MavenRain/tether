@@ -1,0 +1,45 @@
+module QueueDrain
+schema jobs : String -> Key List tag b"mail"
+def seed : Script Reply (tag b"mail") := do {
+  _ <- del Reply List (tag b"mail") (jobs b"pending");
+  r <- rpushMany Reply (tag b"mail") (jobs b"pending") (bulkMore b"welcome:alice" (bulkMore b"welcome:bob" (bulkOne b"welcome:carol")));
+  pure Reply (tag b"mail") r
+}
+def drain : Script Reply (tag b"mail") := do {
+  r <- lpopMany Reply (tag b"mail") (jobs b"pending") (int64 b"2");
+  pure Reply (tag b"mail") r
+}
+def drainNewest : Script Reply (tag b"mail") := do {
+  r <- rpopMany Reply (tag b"mail") (jobs b"pending") (int64 b"2");
+  pure Reply (tag b"mail") r
+}
+def clear : Script Reply (tag b"mail") := do {
+  r <- del Reply List (tag b"mail") (jobs b"pending");
+  pure Reply (tag b"mail") r
+}
+def view : Script Reply (tag b"mail") := do {
+  r <- lrange Reply (tag b"mail") (jobs b"pending") (int64 b"0") (int64 b"-1");
+  pure Reply (tag b"mail") r
+}
+def main : Client Reply := do {
+  _ <- inv Reply (tag b"mail") seed;
+  r <- inv Reply (tag b"mail") drain;
+  done Reply r
+}
+def retained : Client Reply := do {
+  _ <- inv Reply (tag b"mail") seed;
+  r <- inv Reply (tag b"mail") drain;
+  _ <- inv Reply (tag b"mail") clear;
+  done Reply r
+}
+def remaining : Client Reply := do {
+  _ <- inv Reply (tag b"mail") seed;
+  _ <- inv Reply (tag b"mail") drain;
+  r <- inv Reply (tag b"mail") view;
+  done Reply r
+}
+def newest : Client Reply := do {
+  _ <- inv Reply (tag b"mail") seed;
+  r <- inv Reply (tag b"mail") drainNewest;
+  done Reply r
+}

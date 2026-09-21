@@ -54,8 +54,9 @@ dispatch, emitted operands, write classification and the independent twin.
 
 Trusted-source limits remain unchanged: Lua 320/320, store 200/200,
 Bash 227/240, kernel 3997/4000 and encoder 246/600. Adjacent small
-declarations share lines to retain these bounds. The pinned preludes
-total 188 lines. Stage D measures 82228 checker/erasure polls and 12
-static-walk polls; fuel 82234 must fail with SH-BUDGET and publish no
-artifact. Runtime budgets and timing bounds remain unchanged.
+declarations share lines to retain these bounds. At that slice the pinned
+preludes totalled 188 lines and Stage D measured 82228 checker/erasure
+polls and 12 static-walk polls; fuel 82234 had to fail with SH-BUDGET and
+publish no artifact. See `dev/LIST-POP.md` for the current prelude and
+fuel counts. Runtime budgets and timing bounds remain unchanged.
 This slice leaves the remaining M1 work and M0-EXIT status to their gates.

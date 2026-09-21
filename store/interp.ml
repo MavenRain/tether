@@ -74,7 +74,7 @@ let run ~budget rows ~entry store =
         let finish encode result = Ok (Result.fold ~ok:(fun (s, st) -> encode s, st) ~error:(fun e -> data "Reply" 4 [bytes (Store.message e)], store) result) in
         let scalar tag s = data "Reply" tag [bytes s] in let keep r = Result.map (fun s -> s, store) r in let integer = finish (fun s -> data "Reply" 1 [data "Signed64" 0 [bytes s]]) in
         let nullable = Option.fold ~none:(data "Reply" 0 []) ~some:(scalar 2) in let bulk = finish nullable in let status = finish (scalar 3) in
-        let array encode = finish (fun ss -> data "Reply" 5 [List.fold_right (fun s rs -> data "Replies" 1 [encode s; rs]) ss (data "Replies" 0 [])]) in
+        let collection encode ss = data "Reply" 5 [List.fold_right (fun s rs -> data "Replies" 1 [encode s; rs]) ss (data "Replies" 0 [])] in let array encode = finish (collection encode) in
         let* answer, store = match tag, args with
           | (1 | 6), [] -> integer (Store.incrby key (if tag = 1 then "1" else "-1") store)
           | 2, [] -> bulk (keep (Store.get key store))
@@ -89,8 +89,7 @@ let run ~budget rows ~entry store =
           | 17, [Octets m] -> integer (keep (Store.sismember key m store))
           | (19 | 20 | 61 | 62), [Octets v] -> integer (Store.push ~xx:(tag >= 61) (if tag = 19 || tag = 61 then Store.Left else Store.Right) key v store)
           | (21 | 22), [] -> bulk (Store.pop (if tag = 21 then Store.Left else Store.Right) key store)
-          | 24, [Signed i] -> bulk (keep (Store.lindex key i store))
-          | 25, [Signed i; Octets v] -> status (Store.lset key i v store)
+          | 24, [Signed i] -> bulk (keep (Store.lindex key i store)) | 25, [Signed i; Octets v] -> status (Store.lset key i v store)
           | 26, [Signed i; Signed j] -> status (Store.ltrim key i j store)
           | 27, [Signed i; Signed j] -> array (scalar 2) (keep (Store.lrange key i j store))
           | (28 | 29), [] -> array (scalar 2) (keep ((if tag = 28 then Store.smembers else Store.hgetall) key store))
@@ -108,6 +107,7 @@ let run ~budget rows ~entry store =
           | 65, [Signed count; Octets value] -> integer (Store.lrem key count value store)
           | (66 | 67), [Octets pivot; Octets value] -> integer (Store.linsert (if tag = 66 then Store.Left else Store.Right) key pivot value store)
           | 68, [KeyName other; End from_side; End to_side] -> bulk (Store.lmove from_side to_side key other store)
+          | (69 | 70), [Signed count] -> finish (Option.fold ~none:(data "Reply" 0 []) ~some:(collection (scalar 2))) (Store.pop_many (if tag = 69 then Store.Left else Store.Right) key count store)
           | _, _ -> Error "STORE-SCRIPT-COMMAND" in
         let* next = apply k [answer] in script store next
     | Data _ | Fields _ | Literal _ | Closure _ | Erased -> Error "STORE-SCRIPT" in

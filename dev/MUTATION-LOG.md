@@ -1341,3 +1341,36 @@ Evidence: `/Users/oobi/Documents/gpt18/tether-m1-list-move/.kanon-exec/run-ehrO2
 ```text
 PASS LIST-MOVE-MUTATIONS killed=14 survived=0 restored=5
 ```
+
+## M1 bulk List pop mutations, 2026-09-20
+
+The bulk List pop mutation suite compiles every mutant before requiring
+its intended semantic assertion. It covers direction, count, missing
+versus empty replies, reply order, zero-count state, expiry preservation,
+negative-count validation, interpreter dispatch, Lua count dispatch,
+Lua direction, accidental sorting, nil reply tags and the LuaJIT twin's
+pop direction.
+
+The count and direction mutants both fail the combined store reply and
+complete-state assertion (marker `LIST-POP-UNIT store reply and complete
+state`). Other mutants pin explicit store, interpreter or reply
+assertions. The twin direction mutant, added in the review round of
+2026-09-20, pops the wrong end inside the twin's count block and fails the
+`TWIN list order mismatch` assertion of the `rightTwo` probe. All four
+positive controls pass again after restoring the source.
+
+```text
+PASS LIST-POP-MUTATIONS killed=13 survived=0 restored=4
+```
+
+Evidence:
+`/Users/oobi/Documents/gpt18/tether-m1-list-pop/.kanon-exec/run-qxjoJi`.
+Review round 2026-09-20 evidence for the 13-mutant inventory: the
+copy-mode ladder `/Users/oobi/Documents/tether-m1-list-pop-review/gates-fix-2-b.log`
+(list-pop-only selector, row `PASS LIST-POP-MUTATIONS killed=13 survived=0 restored=4`).
+
+The older scalar-pop remainder and empty-key anchors now include their
+scalar reply context, because the bulk implementation also saves list
+remainders. The List range error-tag anchor includes the extended array
+dispatch condition. Their mutation semantics and expected failure markers
+are unchanged. Static inspection found all 343 literal anchors exactly once.

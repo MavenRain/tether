@@ -166,6 +166,9 @@ local function list_offset(index, length)
   return n < 0 and length + n or n
 end
 local function list_call(command, key, value, extra, ...)
+  if (command == 'LPOP' or command == 'RPOP') and value ~= nil then
+    if not canonical(value) or value:sub(1,1) == '-' then return {err='ERR value is out of range, must be positive'} end
+  end
   if command == 'LREM' and not canonical(value) then
     return {err='ERR value is not an integer or out of range'}
   end
@@ -241,6 +244,12 @@ local function list_call(command, key, value, extra, ...)
   end
   if command ~= 'LPOP' and command ~= 'RPOP' then error('TWIN unsupported list command') end
   if #items == 0 then return false end
+  if value ~= nil then
+    local count, popped = list_offset(value, #items), {}
+    for _ = 1, count do popped[#popped+1] = table.remove(items, command == 'LPOP' and 1 or #items) end
+    if #items == 0 then values[key] = nil end
+    return popped
+  end
   local popped = table.remove(items, command == 'LPOP' and 1 or #items)
   if #items == 0 then values[key] = nil end
   return popped

@@ -46,10 +46,11 @@ before mutation and after restoration. Existing mutation anchors follow
 the shared dispatch changes without reducing their case inventories.
 
 The trusted-source limits remain unchanged: Lua 320/320, store 200/200,
-Bash 227/240, kernel 3997/4000 and encoder 246/600. The pinned preludes
-total 188 lines after the List insertion slice. Stage D uses 82228
-checker/erasure polls followed by 12 static-walk polls. Fuel 82234 must
-fail with `SH-BUDGET` and publish no
+Bash 227/240, kernel 3997/4000 and encoder 246/600. See `dev/LIST-POP.md`
+for the current prelude and fuel counts. At that slice the pinned preludes
+totalled 188 lines after the List insertion slice, and Stage D measured
+82228 checker/erasure polls followed by 12 static-walk polls; fuel 82234
+had to fail with `SH-BUDGET` and publish no
 output; the zero-fuel checker test remains. Disabling the printer guard
 changes that failure to `CHECK budget`. The independent M0 timing gate
 still requires a median strictly below 150 ms.

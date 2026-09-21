@@ -94,10 +94,11 @@ that path is tested in LuaJIT and on both live hosts. The LuaJIT fixtures
 treat unsupported ZSet and Stream seeds as opaque values because these
 commands inspect only existence and expiry metadata.
 
-The current prelude consumes 82228 checker/erasure polls for M0Spine,
-followed by the unchanged 12-poll static walk. Stage D gives that walk
-six polls at fuel 82234 and requires `SH-BUDGET`; its zero-fuel checker
-refusal remains in place. SPEC records the current prelude count.
+At that slice the prelude consumed 82228 checker/erasure polls for M0Spine,
+followed by the unchanged 12-poll static walk, and Stage D gave that walk
+six polls at fuel 82234 and required `SH-BUDGET`; its zero-fuel checker
+refusal remains in place. SPEC records the current prelude count. See
+`dev/LIST-POP.md` for the current prelude and fuel counts.
 Trusted bounds remain unchanged: Lua 320/320,
 store 200/200, and the other six measured bounds also retain their limits.
 
